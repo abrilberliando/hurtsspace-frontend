@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/shared/Navbar";
-import { ThemeProvider } from "@/components/theme-provider"; // 👈 Import ini
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner"; // 👈 1. Import Toaster
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,8 +19,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning> 
-      {/* 👆 suppressHydrationWarning wajib biar gak error warning antara server/client */}
-      
       <body className={`${inter.className} bg-background text-foreground antialiased`}>
         <ThemeProvider
             attribute="class"
@@ -31,6 +30,8 @@ export default function RootLayout({
             <div className="pt-20"> 
                 {children}
             </div>
+            {/* 👇 2. Pasang Toaster disini, paling bawah */}
+            <Toaster position="top-center" richColors />
         </ThemeProvider>
       </body>
     </html>
