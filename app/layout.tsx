@@ -3,7 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/shared/Navbar";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner"; // 👈 1. Import Toaster
+import { Toaster } from "@/components/ui/sonner"; 
+import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -33,6 +34,11 @@ export default function RootLayout({
             {/* 👇 2. Pasang Toaster disini, paling bawah */}
             <Toaster position="top-center" richColors />
         </ThemeProvider>
+        <Script
+           src="https://app.sandbox.midtrans.com/snap/snap.js"
+           data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+           strategy="lazyOnload"
+         />
       </body>
     </html>
   );
