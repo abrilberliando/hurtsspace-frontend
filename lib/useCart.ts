@@ -1,9 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-// Tipe data barang di keranjang
 export interface CartItem {
-  id: string; // Unik: combinasi productID + variantID
+  id: string;
   productId: number;
   name: string;
   price: number;
@@ -11,16 +10,18 @@ export interface CartItem {
   variantId: number;
   size: string;
   quantity: number;
-  maxStock: number; // Biar gak bisa add lebih dari stok
+  maxStock: number;
   weight: number;
 }
 
 interface CartStore {
   items: CartItem[];
   addItem: (item: CartItem) => void;
+  decreaseItem: (id: string) => void; // 👇 FITUR BARU
   removeItem: (id: string) => void;
   clearCart: () => void;
   totalPrice: () => number;
+  totalWeight: () => number; // 👇 FITUR BARU (Buat Ongkir nanti)
 }
 
 export const useCart = create<CartStore>()(
@@ -33,10 +34,7 @@ export const useCart = create<CartStore>()(
         const existingItem = currentItems.find((item) => item.id === data.id);
 
         if (existingItem) {
-          // Kalau barang udah ada, tambah quantity aja
-          // Cek stok dulu
           if (existingItem.quantity + 1 > existingItem.maxStock) return; 
-
           set({
             items: currentItems.map((item) =>
               item.id === data.id
@@ -45,8 +43,27 @@ export const useCart = create<CartStore>()(
             ),
           });
         } else {
-          // Barang baru, masukin ke array
           set({ items: [...get().items, { ...data, quantity: 1 }] });
+        }
+      },
+
+      // 👇 LOGIC KURANGI BARANG
+      decreaseItem: (id) => {
+        const currentItems = get().items;
+        const existingItem = currentItems.find((item) => item.id === id);
+
+        if (existingItem) {
+            if (existingItem.quantity > 1) {
+                // Kalau qty > 1, kurangi 1
+                set({
+                    items: currentItems.map((item) => 
+                        item.id === id ? { ...item, quantity: item.quantity - 1 } : item
+                    )
+                });
+            } else {
+                // Kalau sisa 1 dikurangin, hapus aja
+                set({ items: currentItems.filter((item) => item.id !== id) });
+            }
         }
       },
 
@@ -56,10 +73,12 @@ export const useCart = create<CartStore>()(
 
       clearCart: () => set({ items: [] }),
       
-      totalPrice: () => get().items.reduce((total, item) => total + (item.price * item.quantity), 0)
+      totalPrice: () => get().items.reduce((total, item) => total + (item.price * item.quantity), 0),
+      
+      totalWeight: () => get().items.reduce((total, item) => total + (item.weight * item.quantity), 0),
     }),
     {
-      name: "hurtsspace-cart", // Nama key di LocalStorage
+      name: "hurtsspace-cart",
       storage: createJSONStorage(() => localStorage),
     }
   )
