@@ -8,6 +8,10 @@ interface User {
   role: "admin" | "member";
   points: number;
   avatar?: string;
+  phone?: string;
+  address_detail?: string;
+  city_id?: string;
+  province_id?: string; // Kita pake buat simpen nama kota
 }
 
 interface AuthStore {
