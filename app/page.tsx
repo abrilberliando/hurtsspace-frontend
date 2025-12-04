@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
 import Hero from "@/components/shared/Hero";
-// 👇 IMPORT Product DARI SINI BIAR TIPE DATANYA LENGKAP (ADA SLUG)
 import ProductCard, { Product } from "@/components/shared/ProductCard";
 
 export default function Home() {
