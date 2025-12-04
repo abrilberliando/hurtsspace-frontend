@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 // 👇 Tambah icon TicketPercent
-import { LayoutDashboard, ShoppingCart, Package, LogOut, Camera, TicketPercent } from "lucide-react"; 
+import { LayoutDashboard, ShoppingCart, Package, LogOut, Camera, TicketPercent, Image } from "lucide-react"; 
 import { useAuth } from "@/lib/useAuth";
 import { Button } from "@/components/ui/button";
 
@@ -28,6 +28,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Manage Lookbook", href: "/admin/lookbooks", icon: Camera },
     // 👇 MENU BARU
     { name: "Manage Vouchers", href: "/admin/vouchers", icon: TicketPercent }, 
+    { name: "Manage Banners", href: "/admin/banners", icon: Image },
   ];
 
   return (
