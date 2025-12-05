@@ -29,6 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // 👇 MENU BARU
     { name: "Manage Vouchers", href: "/admin/vouchers", icon: TicketPercent }, 
     { name: "Manage Banners", href: "/admin/banners", icon: Image },
+    { name: "Manage Hero Utama", href: "/admin/hero", icon: Image },
   ];
 
   return (

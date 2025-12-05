@@ -16,8 +16,8 @@ export interface SplitBannerData {
 }
 
 interface BannerSplitProps {
-  position: number; // 1 = Hero, 2 = Tengah
-  fallback?: React.ReactNode; // Komponen cadangan kalau banner gak ada
+  position: number;
+  fallback?: React.ReactNode;
 }
 
 export default function BannerSplit({ position, fallback }: BannerSplitProps) {
@@ -28,7 +28,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
   useEffect(() => {
     const fetchBanner = async () => {
       try {
-        const res = await api.get("/banners/active");
+        const res = await api.get("/banner/active");
         const banners: SplitBannerData[] = res.data.data;
         
         // Filter banner sesuai posisi yang diminta props
