@@ -1,12 +1,21 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "**", // Biar bisa load gambar dari mana aja
+        protocol: 'http',
+        hostname: 'localhost', // Kalau backend di localhost
+        port: '8000',          // Port backend (sesuaikan)
       },
+      {
+        protocol: 'https',
+        hostname: '**.example.com', // Kalau backend udah online
+      },
+      // Kalau pake placeholder sementara:
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
+      }
     ],
   },
 };

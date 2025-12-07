@@ -2,35 +2,36 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import api from "@/lib/axios";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react"; // 👈 Hapus Loader2
 import Link from "next/link";
-import ProductForm from "@/components/admin/ProductForm"; 
-import { toast } from "sonner";
 import { AxiosError } from "axios";
+import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+
+import api from "@/lib/axios";
+import ProductForm from "@/components/admin/ProductForm";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Interface Lokal buat Mapping Data
+// --- INTERFACES ---
 interface APIImage {
-    image_url: string;
+  image_url: string;
 }
 
 interface APIVariant {
-    size: string;
+  size: string;
 }
 
-// Sesuaikan dengan interface di ProductForm
 interface ProductData {
-    id?: number;
-    name: string;
-    description: string;
-    price: string;
-    weight: string;
-    category_id: string;
-    is_collab: boolean;
-    image_urls: string[];
-    selected_sizes: string[];
+  id?: number;
+  name: string;
+  description: string;
+  price: string;
+  weight: string;
+  category_id: string;
+  is_collab: boolean;
+  image_urls: string[];
+  selected_sizes: string[];
+  stock?: string;
 }
 
 export default function EditProductPage() {
@@ -40,7 +41,6 @@ export default function EditProductPage() {
   
   const [loadingForm, setLoadingForm] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  // 👇 Ganti 'any' jadi ProductData | null
   const [initialData, setInitialData] = useState<ProductData | null>(null);
 
   // 1. Fetch Data Produk Lama
@@ -50,16 +50,15 @@ export default function EditProductPage() {
         const res = await api.get(`/products/${productId}`); 
         const product = res.data.data;
 
-        // Map data dari API ke format yang dibutuhkan Form
         setInitialData({
           id: product.id,
           name: product.name,
           description: product.description,
           price: product.price.toString(),
           weight: product.weight.toString(),
+          stock: product.stock ? product.stock.toString() : "",
           category_id: product.category_id.toString(),
-          is_collab: !!product.is_collab, // Force boolean
-          // 👇 FIX ANY: Kasih tipe data eksplisit di map
+          is_collab: !!product.is_collab, 
           image_urls: product.images.map((img: APIImage) => img.image_url),
           selected_sizes: product.variants.map((v: APIVariant) => v.size),
         });
@@ -70,25 +69,25 @@ export default function EditProductPage() {
         setLoadingForm(false);
       }
     };
+
     if (productId) fetchData();
   }, [productId, router]);
 
-
-  // 2. Submit Logic buat UPDATE
+  // 2. Submit Logic (Update)
   const handleUpdateSubmit = async (formData: FormData, id?: number) => {
     setSubmitting(true);
     try {
-        await api.post(`/products/${id}`, formData, { 
-            headers: { 
-                "Content-Type": "multipart/form-data" 
-            }
-        });
-        
+        // Method Spoofing untuk Laravel (Wajib)
+        formData.set("_method", "PUT"); 
+
+        await api.post(`/products/${id}`, formData);
+
         toast.success("Produk Berhasil Diupdate!");
         router.push("/admin/products");
 
     } catch (error) {
         const err = error as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
+        
         if (err.response?.status === 422) {
             const errorData = err.response.data.errors;
             if (errorData) {
@@ -96,32 +95,56 @@ export default function EditProductPage() {
                 const firstErrorMessage = errorData[firstErrorKey][0];
                 toast.error(`Gagal: ${firstErrorMessage}`);
             } else {
-                toast.error("Data tidak valid.");
+                toast.error("Data tidak valid, periksa kembali inputan.");
             }
+        } else if (err.response?.status === 404) {
+             toast.error("Produk tidak ditemukan.");
+        } else if (err.response?.status === 413) {
+            toast.error("File terlalu besar (Max server limit).");
         } else {
-            toast.error("Terjadi kesalahan server.");
+            toast.error("Terjadi kesalahan server. Coba lagi nanti.");
         }
     } finally {
         setSubmitting(false);
     }
   };
 
+  // 3. Loading State
   if (loadingForm || !initialData) {
-    return <div className="p-8 max-w-2xl mx-auto"><Skeleton className="h-[600px] w-full" /></div>;
+    return (
+        <div className="max-w-3xl mx-auto pb-10 px-4 space-y-6">
+            <div className="flex items-center gap-4">
+                <Skeleton className="h-10 w-10 rounded-md" />
+                <div className="space-y-2">
+                    <Skeleton className="h-8 w-64" />
+                    <Skeleton className="h-4 w-40" />
+                </div>
+            </div>
+            <Skeleton className="h-[600px] w-full rounded-xl border border-border bg-card" />
+        </div>
+    );
   }
 
+  // 4. Render UI
   return (
-    <div className="max-w-2xl mx-auto pb-10 px-4">
+    <div className="max-w-3xl mx-auto pb-10 px-4">
         <div className="flex items-center gap-4 mb-6">
-            <Button variant="ghost" size="icon" asChild>
+            <Button variant="ghost" size="icon" asChild className="hover:bg-muted">
                 <Link href="/admin/products"><ArrowLeft className="w-5 h-5" /></Link>
             </Button>
-            <h1 className="text-2xl font-bold">Edit Product: {initialData.name}</h1>
+            <div>
+                <h1 className="text-2xl font-bold tracking-tight">Edit Product</h1>
+                <p className="text-sm text-muted-foreground">
+                    Perbarui informasi produk: <span className="font-semibold text-foreground">{initialData.name}</span>
+                </p>
+            </div>
         </div>
         
-        {/* Panggil komponen form dengan data lama */}
-        <ProductForm initialData={initialData} onSubmit={handleUpdateSubmit} isLoading={submitting} />
-        
+        <ProductForm 
+            initialData={initialData} 
+            onSubmit={handleUpdateSubmit} 
+            isLoading={submitting} 
+        />
     </div>
   );
 }

@@ -49,7 +49,7 @@ export default function HomeShop() {
   }, []);
 
   return (
-    <section className="container mx-auto px-4 pb-10">
+    <section className="container mx-auto px-4 py-10">
       <div className="flex justify-between items-end mb-5">
         <h2 className="text-2xl md:text-2xl font-black tracking-tighter uppercase">
           Shop Collection

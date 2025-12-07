@@ -1,108 +1,148 @@
 "use client";
 
-import { useState, useEffect } from "react"; // Tambah useEffect
-import api from "@/lib/axios"; // Pastikan import api ada buat fetch kategori
+import { useState, useEffect } from "react";
+import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, UploadCloud, X, Save } from "lucide-react"; 
+import { Loader2, X, Save, MoveLeft, MoveRight, Star, Plus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Image from "next/image";
+import { Switch } from "@/components/ui/switch";
 
-// Interface Produk
+// --- INTERFACES ---
 interface ProductData {
-    id?: number;
-    name: string;
-    description: string;
-    price: string;
-    weight: string;
-    category_id: string;
-    is_collab: boolean;
-    image_urls: string[];
-    selected_sizes: string[];
+  id?: number;
+  name: string;
+  description: string;
+  price: string;
+  weight: string;
+  category_id: string;
+  is_collab: boolean;
+  image_urls: string[];
+  selected_sizes: string[];
+  stock?: string;
 }
 
-// 👇 Interface Kategori Baru
 interface Category {
-    id: number;
-    name: string;
+  id: number;
+  name: string;
+}
+
+interface GalleryItem {
+  id: string;
+  type: "EXISTING" | "NEW";
+  file?: File;
+  url?: string;
+  preview: string;
 }
 
 interface ProductFormProps {
-    initialData?: ProductData;
-    onSubmit: (formData: FormData, productId?: number) => void;
-    isLoading: boolean;
+  initialData?: ProductData | null;
+  onSubmit: (formData: FormData, productId?: number) => void;
+  isLoading: boolean;
 }
 
 export default function ProductForm({ initialData, onSubmit, isLoading }: ProductFormProps) {
-  // State
+  // --- STATE ---
   const [name, setName] = useState(initialData?.name || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [price, setPrice] = useState(initialData?.price || "");
   const [weight, setWeight] = useState(initialData?.weight || "");
-  
-  // 👇 State Category (Default string kosong biar user milih)
-  const [category, setCategory] = useState(initialData?.category_id || ""); 
-  const [categories, setCategories] = useState<Category[]>([]); // List Kategori
+  const [stock, setStock] = useState(initialData?.stock || "");
+  const [category, setCategory] = useState(initialData?.category_id?.toString() || "");
+  const [isCollab, setIsCollab] = useState(initialData?.is_collab || false);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>(initialData?.selected_sizes || []);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
-  const [newImageFiles, setNewImageFiles] = useState<File[]>([]); 
-  const [existingImageUrls, setExistingImageUrls] = useState<string[]>(initialData?.image_urls || []);
-  const [isCollab, setIsCollab] = useState(initialData?.is_collab || false);
-  
   const availableSizes = ["S", "M", "L", "XL", "XXL", "ALL SIZE"];
-  const [selectedSizes, setSelectedSizes] = useState<string[]>(initialData?.selected_sizes || []);
 
-  const totalImages = existingImageUrls.length + newImageFiles.length;
+  const [gallery, setGallery] = useState<GalleryItem[]>(() => {
+    if (initialData?.image_urls) {
+      return initialData.image_urls.map((url, idx) => {
+        let previewUrl = url;
+        if (!url.startsWith("http")) {
+          previewUrl = `http://localhost:8000${url.startsWith("/") ? "" : "/"}${url}`;
+        }
+        return {
+          id: `existing-${idx}`,
+          type: "EXISTING",
+          url: url,
+          preview: previewUrl,
+        };
+      });
+    }
+    return [];
+  });
 
-  // 👇 FETCH KATEGORI DARI DATABASE PAS COMPONENT MOUNT
+  useEffect(() => {
+    return () => {
+      gallery.forEach((item) => {
+        if (item.type === "NEW" && item.preview) URL.revokeObjectURL(item.preview);
+      });
+    };
+  }, [gallery]);
+
   useEffect(() => {
     const fetchCategories = async () => {
-        try {
-            const res = await api.get("/categories");
-            setCategories(res.data.data);
-            
-            // Kalau Create Baru (bukan Edit) dan belum ada kategori dipilih, set default ke yg pertama
-            if (!initialData && res.data.data.length > 0 && !category) {
-                setCategory(res.data.data[0].id.toString());
-            }
-        } catch {
-            toast.error("Gagal load list kategori.");
-        } finally {
-            setLoadingCategories(false);
+      try {
+        const res = await api.get("/categories");
+        setCategories(res.data.data);
+        if (!initialData && res.data.data.length > 0 && !category) {
+          setCategory(res.data.data[0].id.toString());
         }
+      } catch {
+        toast.error("Gagal load list kategori.");
+      } finally {
+        setLoadingCategories(false);
+      }
     };
     fetchCategories();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Jalan sekali aja
+  }, []);
 
+  // --- HANDLERS ---
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setNewImageFiles(prev => [...prev, ...files]);
-    e.target.value = ''; 
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      const newItems: GalleryItem[] = filesArray.map((file, idx) => ({
+        id: `new-${Date.now()}-${idx}`,
+        type: "NEW",
+        file: file,
+        preview: URL.createObjectURL(file),
+      }));
+      setGallery((prev) => [...prev, ...newItems]);
+      e.target.value = "";
+    }
   };
-  
-  const handleRemoveExistingImage = (url: string) => {
-    setExistingImageUrls(prev => prev.filter(u => u !== url));
+
+  const moveImage = (index: number, direction: "left" | "right") => {
+    const newIndex = direction === "left" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= gallery.length) return;
+    const newGallery = [...gallery];
+    [newGallery[index], newGallery[newIndex]] = [newGallery[newIndex], newGallery[index]];
+    setGallery(newGallery);
   };
-  
-  const handleRemoveNewImage = (index: number) => {
-    setNewImageFiles(prev => prev.filter((_, i) => i !== index));
+
+  const removeImage = (index: number) => {
+    setGallery((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSizeChange = (size: string) => {
-    setSelectedSizes(prev => 
-        prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
+    setSelectedSizes((prev) =>
+      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
     );
   };
 
+  // --- SUBMIT LOGIC (MAJOR UPDATE) ---
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (totalImages === 0) return toast.error("Wajib upload minimal 1 foto!");
+
+    if (gallery.length === 0) return toast.error("Wajib upload minimal 1 foto!");
     if (selectedSizes.length === 0) return toast.error("Pilih minimal 1 size!");
     if (!category) return toast.error("Pilih kategori dulu!");
 
@@ -111,159 +151,128 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
     formData.append("description", description);
     formData.append("price", price);
     formData.append("weight", weight);
+    if (stock) formData.append("stock", stock);
     formData.append("category_id", category);
     formData.append("is_collab", isCollab ? "1" : "0");
+
+    if (initialData) formData.append("_method", "PUT");
+
+    // 👇 LOGIC URUTAN KONGKRIT (SORT ORDER)
+    // Kita kirim 'image_order[]' yang isinya urutan visual user saat ini.
+    // Format: "existing|URL" atau "new|INDEX_UPLOAD"
     
-    newImageFiles.forEach(file => {
-        formData.append("images[]", file);
+    let newImageIndexCounter = 0; // Buat ngitung index khusus foto baru
+
+    gallery.forEach((item) => {
+        if (item.type === "EXISTING" && item.url) {
+            // Kalau foto lama, kirim kodenya "existing|url"
+            formData.append("image_order[]", `existing|${item.url}`);
+            // Kita juga tetep kirim ini biar validasi 'nullable|array' di backend aman (opsional)
+            formData.append("existing_images[]", item.url);
+        } 
+        else if (item.type === "NEW" && item.file) {
+            // Kalau foto baru, kita upload filenya ke "images[]"
+            formData.append("images[]", item.file);
+            
+            // DAN kita catat urutannya: "new|0", "new|1", dst.
+            formData.append("image_order[]", `new|${newImageIndexCounter}`);
+            
+            newImageIndexCounter++;
+        }
     });
 
-    existingImageUrls.forEach(url => {
-        formData.append("existing_images[]", url);
-    });
-    
-    selectedSizes.forEach((size) => {
-        formData.append("sizes[]", size); 
-    });
+    selectedSizes.forEach((size) => formData.append("sizes[]", size));
 
-    onSubmit(formData, initialData?.id); 
+    onSubmit(formData, initialData?.id);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="bg-card border-border">
-            <CardContent className="p-6 space-y-4">
-                
-                <div className="space-y-2">
-                    <Label>Product Name</Label>
-                    <Input placeholder="Ex: Hurts Oversized Tee" value={name} onChange={e => setName(e.target.value)} required />
+    <form onSubmit={handleSubmit} className="space-y-6 pb-36 md:pb-0">
+      
+      {/* SECTION 1: GALLERY */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-end">
+          <div>
+            <Label className="text-base font-bold">Product Gallery</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Urutkan foto sesuai keinginan. <strong>Foto pertama = Cover Utama.</strong>
+            </p>
+          </div>
+          <Badge variant="secondary" className="h-6">{gallery.length} Items</Badge>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {gallery.map((item, index) => (
+            <div key={item.id} className={`group relative aspect-square rounded-xl overflow-hidden border bg-muted transition-all ${index === 0 ? "ring-2 ring-primary ring-offset-2" : "border-border"}`}>
+              <Image src={item.preview} alt="preview" fill className="object-cover" unoptimized={true} />
+
+              {index === 0 && (
+                <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-current" /> UTAMA
                 </div>
+              )}
+              {item.type === "NEW" && (
+                <div className="absolute bottom-0 left-0 right-0 bg-green-500/90 text-white text-[10px] font-bold text-center py-1">BARU</div>
+              )}
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Price (IDR)</Label>
-                        <Input type="number" placeholder="150000" value={price} onChange={e => setPrice(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Weight (Gram)</Label>
-                        <Input type="number" placeholder="200" value={weight} onChange={e => setWeight(e.target.value)} required />
-                    </div>
+              {/* OVERLAY CONTROLS */}
+              <div className="absolute inset-0 bg-black/40 transition-opacity flex flex-col items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100">
+                <div className="flex items-center gap-2">
+                  {index > 0 && (
+                    <Button type="button" size="icon" variant="secondary" className="h-8 w-8 rounded-full shadow-sm bg-white/90 text-black hover:bg-white dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700" onClick={() => moveImage(index, "left")}>
+                      <MoveLeft className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <Button type="button" size="icon" variant="destructive" className="h-8 w-8 rounded-full shadow-md border border-white/20" onClick={() => removeImage(index)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                  {index < gallery.length - 1 && (
+                    <Button type="button" size="icon" variant="secondary" className="h-8 w-8 rounded-full shadow-sm bg-white/90 text-black hover:bg-white dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700" onClick={() => moveImage(index, "right")}>
+                      <MoveRight className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
+              </div>
+            </div>
+          ))}
+          <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-muted-foreground/25 hover:border-primary hover:bg-primary/5 cursor-pointer transition-all active:scale-95 bg-muted/30">
+            <div className="bg-background p-3 rounded-full shadow-sm border mb-2"><Plus className="w-5 h-5 text-primary" /></div>
+            <span className="text-xs font-semibold text-muted-foreground">Tambah Foto</span>
+            <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
+          </label>
+        </div>
+      </div>
 
-                {/* 👇 BAGIAN KATEGORI YANG DI-UPGRADE */}
-                <div className="space-y-2">
-                    <Label>Category</Label>
-                    {loadingCategories ? (
-                        <div className="h-10 w-full bg-muted animate-pulse rounded-md" />
-                    ) : (
-                        <select 
-                            className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-                            value={category}
-                            onChange={e => setCategory(e.target.value)}
-                            required
-                        >
-                            <option value="" disabled>-- Select Category --</option>
-                            {categories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                </option>
-                            ))}
-                        </select>
-                    )}
-                </div>
+      <div className="h-px bg-border my-6" />
 
-                <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Textarea placeholder="Detail produk..." value={description} onChange={e => setDescription(e.target.value)} required />
-                </div>
+      {/* SECTION 2: INFO & SECTION 3: ATTRIBUTES (Sama persis kayak sebelumnya, dipersingkat biar gak kepanjangan) */}
+      <div className="grid gap-6">
+        <div className="space-y-2"><Label>Nama Produk</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
+        <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+                <Label>Kategori</Label>
+                {loadingCategories ? <div className="h-10 bg-muted animate-pulse rounded" /> : 
+                <Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger><SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent></Select>}
+             </div>
+             <div className="space-y-2"><Label>Stok</Label><Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} /></div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2"><Label>Harga</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required /></div>
+            <div className="space-y-2"><Label>Berat</Label><Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} required /></div>
+        </div>
+        <div className="space-y-2"><Label>Deskripsi</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} required className="min-h-[120px]" /></div>
+      </div>
 
-                {/* MULTI FILE UPLOAD UI */}
-                <div className="space-y-2">
-                    <Label>Product Gallery (Max 2MB per file)</Label>
-                    <div className={`border-2 border-dashed rounded-lg p-6 text-center transition cursor-pointer relative ${totalImages > 0 ? 'border-green-500/50 bg-green-500/5' : 'border-border hover:bg-muted/50'}`}>
-                        <Input 
-                            type="file" 
-                            accept="image/*" 
-                            multiple
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            onChange={handleImageChange}
-                        />
-                        <div className="text-muted-foreground flex flex-col items-center gap-2">
-                            <UploadCloud className="w-8 h-8 opacity-50" />
-                            <span className="font-bold text-sm">Click / Drag to Upload Photos ({totalImages} files total)</span>
-                            <span className="text-xs">Wajib minimal 1 foto | Max 2MB per file</span>
-                        </div>
-                    </div>
+      <div className="h-px bg-border my-6" />
 
-                    {/* Image Previews */}
-                    {totalImages > 0 && (
-                        <div className="flex flex-wrap gap-3 pt-3">
-                            {existingImageUrls.map((url, index) => (
-                                <div key={url} className="relative w-20 h-20 rounded-md overflow-hidden border border-border">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={url} alt={`Existing ${index}`} className="w-full h-full object-cover" />
-                                    <Button 
-                                        variant="destructive" 
-                                        size="icon" 
-                                        className="h-4 w-4 absolute top-0 right-0 z-10 p-0 rounded-none" 
-                                        onClick={() => handleRemoveExistingImage(url)} 
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </Button>
-                                    {index === 0 && <Badge className="absolute bottom-0 left-0 bg-primary/80 text-[8px]">PRIMARY</Badge>}
-                                </div>
-                            ))}
+      <div className="space-y-4">
+        <div className="space-y-3"><Label>Pilih Ukuran</Label><div className="flex flex-wrap gap-3">{availableSizes.map(s => <div key={s} className="flex items-center space-x-2 border rounded-md px-3 py-2 bg-muted/20"><Checkbox id={`s-${s}`} checked={selectedSizes.includes(s)} onCheckedChange={() => handleSizeChange(s)} /><label htmlFor={`s-${s}`} className="text-sm font-medium cursor-pointer">{s}</label></div>)}</div></div>
+        <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/10"><div className="space-y-0.5"><Label className="text-base">Kolaborasi?</Label></div><Switch checked={isCollab} onCheckedChange={setIsCollab} /></div>
+      </div>
 
-                            {newImageFiles.map((file, index) => (
-                                <div key={`new-${index}`} className="relative w-20 h-20 rounded-md overflow-hidden border border-border">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={URL.createObjectURL(file)} alt={`New ${index}`} className="w-full h-full object-cover opacity-70" />
-                                    <Button 
-                                        variant="destructive" 
-                                        size="icon" 
-                                        className="h-4 w-4 absolute top-0 right-0 z-10 p-0 rounded-none" 
-                                        onClick={() => handleRemoveNewImage(index)}
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <Label>Available Sizes (Wajib Pilih!)</Label>
-                    <div className="flex flex-wrap gap-4 mt-2 border p-4 rounded-md border-border">
-                        {availableSizes.map(size => (
-                            <div key={size} className="flex items-center space-x-2">
-                                <Checkbox 
-                                    id={`size-${size}`} 
-                                    checked={selectedSizes.includes(size)}
-                                    onCheckedChange={() => handleSizeChange(size)}
-                                />
-                                <label htmlFor={`size-${size}`} className="text-sm font-medium leading-none cursor-pointer">
-                                    {size}
-                                </label>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex items-center space-x-2 pt-2">
-                    <Checkbox id="collab" checked={isCollab} onCheckedChange={(c) => setIsCollab(c as boolean)} />
-                    <label htmlFor="collab" className="text-sm font-medium leading-none">
-                        Is Collaboration Item?
-                    </label>
-                </div>
-
-            </CardContent>
-        </Card>
-
-        <Button type="submit" disabled={isLoading} className="w-full font-bold h-12">
-            {isLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-            {initialData ? 'UPDATE PRODUCT' : 'PUBLISH PRODUCT'}
-        </Button>
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t md:static md:border-0 md:p-0 md:bg-transparent z-50 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] md:shadow-none">
+        <div className="max-w-3xl mx-auto"><Button type="submit" disabled={isLoading} className="w-full font-bold h-12 text-base shadow-lg">{isLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}{initialData ? "SIMPAN PERUBAHAN" : "PUBLISH PRODUK"}</Button></div>
+      </div>
     </form>
   );
 }
