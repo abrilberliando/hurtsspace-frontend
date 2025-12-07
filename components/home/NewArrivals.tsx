@@ -117,7 +117,7 @@ export default function Featured() {
   };
 
   return (
-    <section className="md:py-10 border-b border-border bg-background">
+    <section className="py-10 border-b border-border bg-background">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="flex justify-between items-end mb-5">

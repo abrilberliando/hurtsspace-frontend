@@ -22,7 +22,7 @@ interface ProductDetail {
   id: number;
   name: string;
   description: string;
-  price: number;
+  price: number | string;
   weight: number;
   images: { image_url: string }[];
   variants: Variant[];
@@ -75,9 +75,17 @@ export default function ProductDetailPage() {
     if (slug) fetchData();
   }, [slug, user]);
 
+  const displayPrice = (val: string | number): number => {
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      if (isNaN(num)) return 0;
+      return Math.floor(num); 
+  };
+
   // 2. Logic Add to Cart + Animation
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!product || !selectedSize) return toast.error("Pilih size dulu, G!");
+
+    const safePrice = displayPrice(product.price);
 
     // Masukin ke Store
     cart.addItem({
@@ -85,7 +93,7 @@ export default function ProductDetailPage() {
       productId: product.id,
       variantId: selectedSize.id,
       name: product.name,
-      price: product.price,
+      price: safePrice,
       image: product.images[0]?.image_url,
       size: selectedSize.size,
       maxStock: selectedSize.stock,
@@ -165,7 +173,7 @@ export default function ProductDetailPage() {
               {product.name}
             </h1>
             <p className="text-2xl font-medium text-muted-foreground mb-6">
-              Rp {product.price.toLocaleString("id-ID")}
+              Rp {displayPrice(product.price).toLocaleString("id-ID")}
             </p>
 
             <div className="prose prose-invert text-muted-foreground text-sm mb-8 leading-relaxed whitespace-pre-line border-l-2 border-border pl-4">

@@ -9,9 +9,9 @@ import { AxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input"; // 👈 Tambah ini
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { TicketPercent, X } from "lucide-react"; // 👈 Tambah Icon
+import { TicketPercent, X } from "lucide-react";
 import AddressForm, { AddressData } from "@/components/shared/AddressForm";
 
 interface MidtransWindow extends Window {
@@ -131,18 +131,32 @@ export default function CheckoutPage() {
     try {
         const payload = {
             items: cart.items.map(item => ({
+                product_id: item.productId,
                 variant_id: item.variantId,
                 quantity: item.quantity
             })),
             shipping_cost: selectedRate.price,
             shipping_courier: selectedRate.courier_name.toLowerCase(),
             shipping_service: selectedRate.courier_service_name,
+            // 👇 FIX: Ganti 'address' jadi 'shipping_address' biar match sama Backend Laravel
             shipping_address: `${checkoutData.name} (${checkoutData.phone}) - ${checkoutData.street}, ${checkoutData.areaName}`,
-            // Kirim Kode Voucher
             voucher_code: appliedVoucher?.code || null 
         };
 
-        const res = await api.post("/checkout", payload);
+        // 1. Hit API Backend buat Create Order
+        const res = await api.post("/checkout", payload); 
+
+        // 2. BERSIHIN KERANJANG DISINI G!
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cartStore = cart as any;
+
+        if (cartStore.removeAll) {
+            cartStore.removeAll(); 
+        } else if (cartStore.clearCart) {
+            cartStore.clearCart(); 
+        }
+
+        // 3. Munculin Midtrans Snap
         const snap = (window as unknown as MidtransWindow).snap;
 
         if (snap) {
@@ -163,7 +177,8 @@ export default function CheckoutPage() {
         }
     } catch (error) {
         const err = error as AxiosError<{ message: string }>;
-        toast.error(err.response?.data?.message || "Gagal checkout.");
+        // Tampilkan pesan error spesifik dari backend jika ada
+        toast.error(err.response?.data?.message || "Gagal checkout. Cek koneksi atau data lo.");
     } finally {
         setProcessing(false);
     }
