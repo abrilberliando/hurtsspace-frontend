@@ -16,8 +16,8 @@ export interface SplitBannerData {
 }
 
 interface BannerSplitProps {
-  position: number;
-  fallback?: React.ReactNode;
+  position: number; 
+  fallback?: React.ReactNode; 
 }
 
 export default function BannerSplit({ position, fallback }: BannerSplitProps) {
@@ -31,13 +31,12 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
         const res = await api.get("/banner/active");
         const banners: SplitBannerData[] = res.data.data;
         
-        // Filter banner sesuai posisi yang diminta props
         const found = banners.find(b => b.position === position);
         
         if (found) {
             setBanner(found);
         } else {
-            setIsError(true); // Gak nemu banner di posisi ini
+            setIsError(true); 
         }
       } catch {
         setIsError(true);
@@ -49,60 +48,69 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
     fetchBanner();
   }, [position]);
 
-  // 1. Loading State (Tampilin Skeleton biar smooth)
+  // 1. Loading State
   if (loading) {
     return (
-      <div className="h-[500px] md:h-[90vh] w-full bg-background flex items-center justify-center">
+      <div className="h-[60vh] md:h-[90vh] w-full bg-background flex items-center justify-center">
         <Skeleton className="h-full w-full bg-muted animate-pulse" />
       </div>
     );
   }
 
-  // 2. Fallback State (Kalau banner gak ada / error)
+  // 2. Fallback State
   if (!banner || isError) {
-    // Kalau ada komponen fallback (misal Hero), render itu. Kalau gak, render null (ilang).
     return fallback ? <>{fallback}</> : null;
   }
 
-  // 3. Success State (Banner Muncul)
+  // 3. Success State
   return (
-    <section className="relative w-full h-[500px] md:h-[90vh] group overflow-hidden bg-black">
+    // 👇 REVISI: Hapus 'my-10' biar nempel (flush) sama komponen atas/bawah
+    // 👇 Tetap pertahankan h-[30vh] buat mobile (biar gak kepotong) dan h-[90vh] desktop
+    <section className="relative w-full h-[30vh] md:h-[90vh] group overflow-hidden bg-black">
         
         <Link href={banner.link_url} className="absolute inset-0 z-20" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 h-full w-full gap-0">
+        {/* Grid 2 Kolom */}
+        <div className="grid grid-cols-2 h-full w-full gap-0">
             {/* Kiri */}
             <div className="relative h-full w-full overflow-hidden">
-                 <div 
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out"
-                    style={{ backgroundImage: `url(${banner.image_left})` }}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                    src={banner.image_left} 
+                    alt="Banner Left"
+                    className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-1000 ease-out"
                 />
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition-colors duration-500" />
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-500" />
             </div>
 
             {/* Kanan */}
-            <div className="relative h-full w-full overflow-hidden hidden md:block">
-                <div 
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out"
-                    style={{ backgroundImage: `url(${banner.image_right})` }}
+            {/* 👇 REVISI: Hapus 'border-l' biar bener-bener nyatu tanpa garis tengah */}
+            <div className="relative h-full w-full overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                    src={banner.image_right} 
+                    alt="Banner Right"
+                    className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-1000 ease-out"
                 />
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition-colors duration-500" />
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-500" />
             </div>
         </div>
 
         {/* Content Overlay */}
-        <div className="absolute inset-0 z-30 pointer-events-none flex flex-col justify-end p-6 md:p-12">
-            <div className="container mx-auto w-full flex flex-col md:flex-row justify-between items-end gap-4">
+        <div className="absolute inset-0 z-30 pointer-events-none flex flex-col justify-end p-4 md:p-12">
+            <div className="container mx-auto w-full flex flex-row justify-between items-end gap-2 md:gap-6">
                 
-                <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-white uppercase tracking-tighter leading-[0.9] drop-shadow-lg max-w-2xl">
+                {/* Judul */}
+                <h2 className="text-3xl md:text-6xl lg:text-7xl font-black text-white uppercase tracking-tighter leading-[0.9] drop-shadow-lg max-w-[60%] md:max-w-3xl break-words">
                     {banner.title.split(" ").map((word, i) => (
                         <span key={i} className="block">{word}</span>
                     ))}
                 </h2>
 
-                <div className="flex items-center gap-2 text-white font-bold tracking-widest text-lg md:text-xl group-hover:translate-x-2 transition-transform duration-300">
-                    SHOP NOW
-                    <ArrowRight className="w-6 h-6" />
+                {/* Tombol Shop */}
+                <div className="flex items-center gap-1 md:gap-2 text-white font-bold tracking-widest text-xs md:text-xl group-hover:translate-x-2 transition-transform duration-300 pb-1">
+                    <span>SHOP NOW</span>
+                    <ArrowRight className="w-4 h-4 md:w-6 md:h-6" />
                 </div>
 
             </div>

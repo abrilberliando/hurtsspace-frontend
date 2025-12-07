@@ -31,7 +31,7 @@ export default function BottomNav() {
 
         {/* 2. NEW (New Arrivals) */}
         <Link 
-            href="/shop?sort=new" // Nanti bisa disesuaikan filternya
+            href="/new-arrivals" // Nanti bisa disesuaikan filternya
             className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${pathname.includes('sort=new') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
         >
             <Sparkles className="w-5 h-5" />

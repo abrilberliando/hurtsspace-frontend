@@ -62,7 +62,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative w-full h-[85vh] flex items-center justify-center overflow-hidden bg-black">
+    <section className="relative w-full h-[90vh] flex items-center justify-center overflow-hidden bg-black">
       
       {/* 1. Background Image Dinamis */}
       <div 

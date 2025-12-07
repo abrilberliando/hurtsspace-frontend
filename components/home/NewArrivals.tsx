@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+// Badge import dihapus karena kita pake custom styling div merah
+// import { Badge } from "@/components/ui/badge"; 
 
 // --- TYPES ---
 interface Variant {
@@ -20,33 +21,50 @@ interface Product {
   name: string;
   slug: string;
   price: number;
-  is_new_arrival: boolean;
+  is_new_arrival: boolean | number | string; 
+  // 👇 Tambahin ini buat filter Featured
+  is_featured?: boolean | number | string;
+  created_at?: string;
   images: { image_url: string }[];
   variants: Variant[];
   category?: { name: string };
 }
 
 // --- MAIN COMPONENT ---
-export default function NewArrivals() {
+export default function Featured() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Refs & State untuk Drag Scroll
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [isDragging, setIsDragging] = useState(false); 
+  const [isDragging, setIsDragging] = useState(false);
 
   // Fetch Data
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await api.get("/products?limit=8");
-        const productData = res.data?.data || [];
-        setProducts(productData);
+        // Fetch products (ambil agak banyak biar bisa di-filter)
+        const res = await api.get("/products?limit=50"); 
+        const fetchedData = res.data?.data || [];
+        
+        let dataFix: Product[] = [];
+        if (Array.isArray(res.data)) dataFix = res.data;
+        else if (Array.isArray(res.data?.data)) dataFix = res.data.data;
+        else if (Array.isArray(fetchedData)) dataFix = fetchedData;
+
+        // 👇 LOGIC MAGIC: Filter cuma yang "Featured"
+        const featuredDrops = dataFix.filter(p => {
+             const val = p.is_featured;
+             return val === 1 || val === "1" || val === true || val === "true";
+        });
+
+        // Ambil 8 data Featured teratas
+        setProducts(featuredDrops.slice(0, 15));
       } catch (error) {
-        console.error("Gagal load new arrivals:", error);
+        console.error("Gagal load featured products", error);
       } finally {
         setLoading(false);
       }
@@ -54,14 +72,15 @@ export default function NewArrivals() {
     fetchProducts();
   }, []);
 
+
   // Logic Tombol Panah
   const scrollButton = (direction: "left" | "right") => {
     if (scrollRef.current) {
       const { current } = scrollRef;
       const scrollAmount = 350;
-      current.scrollBy({ 
-        left: direction === "left" ? -scrollAmount : scrollAmount, 
-        behavior: "smooth" 
+      current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
       });
     }
   };
@@ -82,7 +101,6 @@ export default function NewArrivals() {
 
   const handleMouseUp = () => {
     setIsDown(false);
-    // Reset isDragging di next tick
     setTimeout(() => setIsDragging(false), 0);
   };
 
@@ -90,228 +108,267 @@ export default function NewArrivals() {
     if (!isDown || !scrollRef.current) return;
     e.preventDefault();
     const x = e.pageX - scrollRef.current.offsetLeft;
-    const walk = (x - startX) * 2; 
+    const walk = (x - startX) * 2;
     scrollRef.current.scrollLeft = scrollLeft - walk;
-    
+
     if (Math.abs(walk) > 5) {
-        setIsDragging(true);
+      setIsDragging(true);
     }
   };
 
   return (
-    <section className="py-10 border-b border-border bg-background">
+    <section className="md:py-10 border-b border-border bg-background">
       <div className="container mx-auto px-4">
-        
         {/* Header */}
         <div className="flex justify-between items-end mb-5">
-            <div>
-                <h2 className="text-3xl md:text-5xl font-black tracking-tighter uppercase mb-2">
-                    New Arrivals
-                </h2>
-            </div>
-            
-            {/* Nav Buttons */}
-            <div className="hidden md:flex gap-2">
-    <Button 
-        variant="outline" 
-        size="icon" 
-        onClick={() => scrollButton("left")} 
-        className="rounded-full border-zinc-700 hover:bg-zinc-800 hover:text-white w-12 h-12"
-    >
-        <ChevronLeft className="w-6 h-6" />
-    </Button>
-    <Button 
-        variant="outline" 
-        size="icon" 
-        onClick={() => scrollButton("right")} 
-        className="rounded-full border-zinc-700 hover:bg-zinc-800 hover:text-white w-12 h-12"
-    >
-        <ChevronRight className="w-6 h-6" />
-    </Button>
-</div>
+          <div>
+            <h2 className="text-2xl md:text-2xl font-black tracking-tighter uppercase mb-2">
+              Featured
+            </h2>
+          </div>
+
+          {/* Nav Buttons */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => scrollButton("left")}
+              className="rounded-full border-zinc-700 hover:bg-zinc-800 hover:text-white w-12 h-12"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => scrollButton("right")}
+              className="rounded-full border-zinc-700 hover:bg-zinc-800 hover:text-white w-12 h-12"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </Button>
+          </div>
         </div>
 
         {/* CONTENT CAROUSEL */}
         <div className="relative">
-            {loading ? (
-                <div className="flex gap-6 overflow-hidden">
-                    {[...Array(4)].map((_, i) => (
-                        <div key={i} className="w-[280px] md:w-[350px] flex-none space-y-4">
-                            <Skeleton className="aspect-3/4 w-full rounded-lg bg-muted" />
-                            <Skeleton className="h-4 w-2/3 bg-muted" />
-                            <Skeleton className="h-4 w-1/3 bg-muted" />
-                        </div>
-                    ))}
+          {loading ? (
+            <div className="flex gap-4 md:gap-6 overflow-hidden">
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-[220px] md:w-[350px] flex-none space-y-4"
+                >
+                  <Skeleton className="aspect-3/4 w-full rounded-lg bg-muted" />
+                  <Skeleton className="h-4 w-2/3 bg-muted" />
+                  <Skeleton className="h-4 w-1/3 bg-muted" />
                 </div>
-            ) : (
-                <div 
-                    ref={scrollRef}
-                    onMouseDown={handleMouseDown}
-                    onMouseLeave={handleMouseLeave}
-                    onMouseUp={handleMouseUp}
-                    onMouseMove={handleMouseMove}
-                    className={`
-                        flex gap-6 overflow-x-auto pb-8 
+              ))}
+            </div>
+          ) : (
+            <div
+              ref={scrollRef}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+              className={`
+                        flex gap-4 md:gap-6 overflow-x-auto pb-8 
                         /* Hide Scrollbar */
                         [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]
                         /* Cursor Style */
-                        ${isDown ? 'cursor-grabbing' : 'cursor-grab'}
-                    `}
-                    style={{ scrollBehavior: isDown ? "auto" : "smooth" }}
-                >
-                    {Array.isArray(products) && products.length > 0 ? (
-                        products.map((item) => (
-                            <ArrivalCard key={item.id} item={item} isDraggingParent={isDragging} />
-                        ))
-                    ) : (
-                        <div className="w-full text-center py-10 text-muted-foreground">
-                            Belum ada barang baru nih, G.
-                        </div>
-                    )}
+                        ${isDown ? "cursor-grabbing" : "cursor-grab"}
+                      `}
+              style={{ scrollBehavior: isDown ? "auto" : "smooth" }}
+            >
+              {Array.isArray(products) && products.length > 0 ? (
+                products.map((item) => (
+                  <ArrivalCard
+                    key={item.id}
+                    item={item}
+                    isDraggingParent={isDragging}
+                  />
+                ))
+              ) : (
+                <div className="w-full text-center py-10 text-muted-foreground">
+                  Belum ada barang featured nih, G.
                 </div>
-            )}
+              )}
+            </div>
+          )}
         </div>
-
-        {/* Bottom Action */}
-        <div className="mt-3 text-center">
-             <Button asChild variant="default" size="lg" className="px-10 h-12 font-bold tracking-widest text-xs md:text-sm rounded-none">
-                <Link href="/shop?sort=new">
-                    ALL NEW ARRIVALS
-                </Link>
-             </Button>
-        </div>
-
       </div>
     </section>
   );
 }
 
-// --- SUB-COMPONENT: CARD DENGAN HOVER SWAP (INSTANT LOAD) ---
-function ArrivalCard({ item, isDraggingParent }: { item: Product, isDraggingParent: boolean }) {
-    const images = item.images || [];
-    const variants = item.variants || [];
+// --- SUB-COMPONENT: CARD (Tetap sama, badge NEW tetep nongol kalo featured item-nya baru) ---
+function ArrivalCard({
+  item,
+  isDraggingParent,
+}: {
+  item: Product;
+  isDraggingParent: boolean;
+}) {
+  const images = item.images || [];
+  const variants = item.variants || [];
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Helper: Display Price Safe Format
+  const displayPrice = (val: string | number) => {
+    if (typeof val === 'number') return val;
+    const clean = val.toString().replace(/\D/g, '');
+    return parseInt(clean) || 0;
+  };
+
+  // Logic New Arrival (Badge tetep berguna buat nandain barang baru di list featured)
+  const isNewCalculated = useMemo(() => {
+    const val = item.is_new_arrival;
+    if (val === 1 || val === "1" || val === true || val === "true") return true;
+    if (val === 0 || val === "0" || val === false || val === "false") return false;
     
-    // State untuk gambar aktif
-    const [activeIndex, setActiveIndex] = useState(0);
-    const containerRef = useRef<HTMLDivElement>(null);
+    if (item.created_at) {
+        const createdDate = new Date(item.created_at);
+        const now = new Date();
+        const diffTime = Math.abs(now.getTime() - createdDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        return diffDays <= 30; 
+    }
+    return false;
+  }, [item.is_new_arrival, item.created_at]);
 
-    // Logic Ganti Gambar berdasarkan Posisi Mouse
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        // Kalau lagi nge-drag parent (geser list), jangan ganti gambar
-        if (isDraggingParent) return;
-        if (!containerRef.current || images.length <= 1) return;
-        
-        const { left, width } = containerRef.current.getBoundingClientRect();
-        const x = e.clientX - left; // Posisi X mouse relatif terhadap kartu
-        
-        const percentage = x / width;
-        const index = Math.floor(percentage * images.length);
-        
-        const safeIndex = Math.min(Math.max(index, 0), images.length - 1);
-        setActiveIndex(safeIndex);
-    };
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDraggingParent) return;
+    if (!containerRef.current || images.length <= 1) return;
 
-    const handleMouseLeave = () => {
-        setActiveIndex(0); // Reset ke gambar pertama pas mouse keluar
-    };
+    const { left, width } = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - left;
 
-    const handleLinkClick = (e: React.MouseEvent) => {
-        if (isDraggingParent) e.preventDefault();
-    };
+    const percentage = x / width;
+    const index = Math.floor(percentage * images.length);
+    const safeIndex = Math.min(Math.max(index, 0), images.length - 1);
+    setActiveIndex(safeIndex);
+  };
 
-    return (
-        <div className="w-[230px] md:w-[270px] flex-none snap-start group relative select-none">
-            
-            {/* 1. IMAGE CONTAINER (STACKED IMAGES) */}
-            <div 
-                ref={containerRef}
-                className="relative aspect-3/4 bg-muted overflow-hidden rounded-md mb-4 border border-border"
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-            >
-                {/* Badge */}
-                <div className="absolute top-3 left-3 z-30 pointer-events-none">
-                    <Badge className="bg-white text-black hover:bg-white font-bold rounded-none text-[10px]">NEW</Badge>
-                </div>
+  const handleMouseLeave = () => {
+    setActiveIndex(0);
+  };
 
-                {/* Wrapper Link */}
-                <Link 
-                    href={`/products/${item.slug}`} 
-                    onClick={handleLinkClick}
-                    draggable={false}
-                    className="block w-full h-full relative"
-                >
-                    {images.length > 0 ? (
-                        // 👇 TEKNIK STACKING: Render SEMUA gambar, mainkan opacity
-                        images.map((img, idx) => (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img 
-                                key={idx}
-                                src={img.image_url} 
-                                alt={`${item.name} - ${idx}`}
-                                className={`
+  const handleLinkClick = (e: React.MouseEvent) => {
+    if (isDraggingParent) e.preventDefault();
+  };
+
+  return (
+    <div className="w-[220px] md:w-[280px] flex-none snap-start group relative select-none">
+      {/* 1. IMAGE CONTAINER */}
+      <div
+        ref={containerRef}
+        className="relative aspect-3/4 bg-muted overflow-hidden rounded-md mb-3 md:mb-4 border border-border cursor-pointer"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
+        {/* Badge New tetap muncul kalau featured item-nya emang baru */}
+        {isNewCalculated && (
+            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
+              New
+            </div>
+        )}
+
+        <Link
+          href={`/products/${item.slug}`}
+          onClick={handleLinkClick}
+          draggable={false}
+          className="block w-full h-full relative"
+        >
+          {images.length > 0 ? (
+            images.map((img, idx) => (
+              <img
+                key={idx}
+                src={img.image_url}
+                alt={`${item.name} - ${idx}`}
+                className={`
                                     absolute inset-0 w-full h-full object-cover object-center 
                                     transition-opacity duration-300 ease-in-out
-                                    ${idx === activeIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}
+                                    ${
+                                      idx === activeIndex
+                                        ? "opacity-100 z-10"
+                                        : "opacity-0 z-0"
+                                    }
                                 `}
-                                draggable={false} 
-                            />
-                        ))
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700 font-bold text-2xl">HURTS</div>
-                    )}
-                </Link>
-
-                {/* Dots Indicator */}
-                {images.length > 1 && (
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 pointer-events-none">
-                        {images.map((_, i) => (
-                            <div 
-                                key={i} 
-                                className={`h-1.5 rounded-full shadow-sm backdrop-blur-sm transition-all duration-300 ${i === activeIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`} 
-                            />
-                        ))}
-                    </div>
-                )}
-                
-                {/* Overlay Hitam Transparan buat Indikasi Area (Opsional) */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none bg-black z-20" />
+                draggable={false}
+              />
+            ))
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700 font-bold text-2xl">
+              HURTS
             </div>
+          )}
+        </Link>
 
-            {/* 2. INFO & SIZES */}
-            <div className="space-y-2 px-1">
-                <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                        <h3 className="font-bold uppercase text-sm tracking-wide leading-tight truncate">
-                            <Link href={`/products/${item.slug}`} onClick={handleLinkClick} className="hover:underline underline-offset-4">
-                                {item.name}
-                            </Link>
-                        </h3>
-                        <p className="text-xs text-muted-foreground mt-1 truncate">{item.category?.name || "Streetwear"}</p>
-                    </div>
-                    <p className="text-sm font-bold whitespace-nowrap">Rp {item.price.toLocaleString("id-ID")}</p>
-                </div>
+        {/* Dots Indicator */}
+        {images.length > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex">
+            {images.map((_, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full shadow-sm backdrop-blur-sm transition-all duration-300 ${
+                  i === activeIndex ? "w-4 bg-white" : "w-1.5 bg-white/50"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
-                {/* 3. AVAILABLE SIZES */}
-                <div className="flex flex-wrap gap-1 pt-1">
-                    {variants.map((variant) => {
-                        const isAvailable = variant.stock > 0;
-                        return (
-                            <span 
-                                key={variant.id}
-                                className={`
-                                    text-[10px] px-2 py-1 border rounded-sm font-medium transition-colors
-                                    ${isAvailable 
-                                        ? 'border-zinc-700 text-foreground cursor-default' 
-                                        : 'border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed'}
-                                `}
-                            >
-                                {variant.size}
-                            </span>
-                        );
-                    })}
-                </div>
-            </div>
+      {/* 2. INFO & SIZES */}
+      <div className="space-y-1 px-1">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-4">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold uppercase text-xs md:text-sm tracking-wide leading-tight truncate">
+              <Link
+                href={`/products/${item.slug}`}
+                onClick={handleLinkClick}
+                className="hover:underline underline-offset-4"
+              >
+                {item.name}
+              </Link>
+            </h3>
+            <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate">
+              {item.category?.name || "Streetwear"}
+            </p>
+          </div>
+          <p className="text-xs md:text-sm font-bold whitespace-nowrap">
+            Rp {displayPrice(item.price).toLocaleString("id-ID")}
+          </p>
         </div>
-    );
+
+        <div className="flex flex-wrap gap-1 pt-1">
+          {variants.length > 0 ? (
+             variants.map((variant) => {
+                const isAvailable = variant.stock > 0;
+                return (
+                  <span
+                    key={variant.id}
+                    className={`
+                      text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
+                      ${
+                        isAvailable
+                          ? "border-zinc-700 text-foreground cursor-default"
+                          : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
+                      }
+                    `}
+                  >
+                    {variant.size}
+                  </span>
+                );
+             })
+          ) : (
+            <span className="text-[9px] md:text-[10px] text-muted-foreground italic">
+                No size info
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
