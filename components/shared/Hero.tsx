@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // Interface khusus data HeroSection (Sesuai Database)
 interface HeroData {
-  background_image: string;
+  // 👇 background_images (Array of string)
+  background_images: string[] | null; 
   subtitle: string;
   title: string;
   description: string | null;
@@ -16,9 +17,22 @@ interface HeroData {
   button_link: string;
 }
 
+// Default Images kalau dari API kosong
+const DEFAULT_IMAGES = [
+    "https://images.unsplash.com/photo-1523396870179-16a196759575?q=80&w=1920&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?q=80&w=1920&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1550302568-d65e917d23d9?q=80&w=1920&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1542475734-b2586e3f05c4?q=80&w=1920&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1528699264426-5b4860b72a6a?q=80&w=1920&auto=format&fit=crop",
+];
+
+
 export default function Hero() {
   const [data, setData] = useState<HeroData | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // State: Index gambar yang sedang ditampilkan
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0); 
 
   useEffect(() => {
     const fetchHeroData = async () => {
@@ -35,6 +49,30 @@ export default function Hero() {
 
     fetchHeroData();
   }, []);
+  
+  // 👇 LOGIC BARU: Auto-Slide tiap 5 Detik (SUDAH LOOPING)
+  useEffect(() => {
+      // Pastikan data udah ada dan ada gambar buat di-slide
+      if (!data) return;
+      
+      // Filter out URL yang kosong, dan fallback ke DEFAULT_IMAGES
+      const images = (Array.isArray(data.background_images) ? data.background_images.filter(url => url) : []).slice(0, 5);
+      const activeImages = images.length > 0 ? images : DEFAULT_IMAGES;
+
+      // Cuma jalanin kalau ada lebih dari 1 gambar
+      if (activeImages.length <= 1) return;
+
+      const slideInterval = setInterval(() => {
+          setCurrentSlideIndex(prevIndex => 
+              // Hitung index selanjutnya, kembali ke 0 kalau udah mentok (INI LOGIC LOOPING-nya)
+              (prevIndex + 1) % activeImages.length
+          );
+      }, 5000); // 👈 UBAH: 5000ms = 5 Detik
+
+      // Cleanup saat component unmount atau data berubah
+      return () => clearInterval(slideInterval);
+  }, [data]); // Effect jalan ulang kalau data berubah
+
 
   if (loading) {
     return (
@@ -50,34 +88,45 @@ export default function Hero() {
     );
   }
 
-  // 👇 FIX: Pastikan default value lengkap, dan gunakan OR (||) operator di setiap properti penting
-  // biar kalau data dari API ada yang null/undefined, dia fallback ke default string.
+  // Fallback dan filter data
   const content = {
-    background_image: data?.background_image || "https://images.unsplash.com/photo-1523396870179-16a196759575?q=80&w=1920&auto=format&fit=crop",
     title: data?.title || "REDEFINE YOUR STREETWEAR.",
     subtitle: data?.subtitle || "EST. 2025 • INDONESIA",
     description: data?.description || "Minimalist cuts. Premium materials. Designed for the urban explorer who values silence in the noise.",
     button_text: data?.button_text || "SHOP COLLECTION",
-    button_link: data?.button_link || "/shop" // 👈 INI OBATNYA: Fallback ke "/shop" kalau kosong
+    button_link: data?.button_link || "/shop"
   };
+
+  const images = (Array.isArray(data?.background_images) ? data.background_images.filter(url => url) : []).slice(0, 5);
+  // Pake gambar yang sudah ada, kalau kosong, pake default 5 gambar
+  const activeImages = images.length > 0 ? images : DEFAULT_IMAGES;
+  const currentImage = activeImages[currentSlideIndex];
 
   return (
     <section className="relative w-full h-[90vh] flex items-center justify-center overflow-hidden bg-black">
       
-      {/* 1. Background Image Dinamis */}
-      <div 
-        className="absolute inset-0 z-0 animate-in fade-in duration-1000"
-        style={{
-            backgroundImage: `url('${content.background_image}')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-        }}
-      >
-        {/* Overlay Hitam Pekat */}
-        <div className="absolute inset-0 bg-black/60" />
+      {/* 1. Background Image SLIDER Dinamis */}
+      <div className="absolute inset-0 z-0">
+          {activeImages.map((image, index) => (
+            <div 
+                key={index}
+                // STYLE: Transisi opacity buat efek slide/fade
+                className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${
+                    index === currentSlideIndex ? 'opacity-100' : 'opacity-0'
+                }`}
+                style={{
+                    backgroundImage: `url('${image}')`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                }}
+            >
+                {/* Overlay Hitam Pekat */}
+                <div className="absolute inset-0 bg-black/60" />
+            </div>
+          ))}
       </div>
 
-      {/* 2. Content Tengah */}
+      {/* 2. Content Tengah (Text & Button - Tetap di atas) */}
       <div className="relative z-10 text-center px-4 max-w-4xl mx-auto mt-16 text-white">
         
         {/* Subtitle */}
@@ -100,19 +149,20 @@ export default function Hero() {
         {/* Button Shop Now */}
         <div className="flex flex-col md:flex-row gap-4 justify-center items-center animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200">
             <Button asChild size="lg" className="bg-white text-black hover:bg-zinc-200 font-black px-10 py-7 text-xl rounded-none transition-transform hover:scale-105 tracking-wider">
-                {/* 👇 Pastikan href SELALU string, jangan undefined */}
                 <Link href={content.button_link || "/shop"}>
                     {content.button_text}
                 </Link>
             </Button>
 
-             {/* Tombol Lookbook (Statis) */}
-             <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-black font-bold px-8 py-7 text-lg rounded-none bg-transparent transition-transform hover:scale-105">
+            {/* Tombol Lookbook (Statis) */}
+            <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-black font-bold px-8 py-7 text-lg rounded-none bg-transparent transition-transform hover:scale-105">
                 <Link href="/lookbook">
                     VIEW LOOKBOOK
                 </Link>
             </Button>
         </div>
+        
+        {/* BARU: Dot Indicator Slider - DIHAPUS SESUAI PERMINTAAN */}
 
       </div>
     </section>
