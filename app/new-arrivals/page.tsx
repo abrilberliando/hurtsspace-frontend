@@ -19,6 +19,7 @@ interface Product {
     id: number;
     name: string;
     slug: string;
+    // 👇 UPDATE: Allow string biar aman
     price: number | string;
     is_new_arrival: boolean;
     images: { image_url: string }[];
@@ -38,7 +39,6 @@ interface DropdownOption {
     label: string;
 }
 
-// Interface props buat CustomDropdown biar gak kena 'any'
 interface CustomDropdownProps {
     options: DropdownOption[];
     value: string;
@@ -119,12 +119,11 @@ function NewArrivalsContent() {
         fetchProducts();
     }, []);
 
-    // --- HELPER ---
-    const parsePrice = (value: number | string): number => {
-        if (typeof value === 'number') return value;
-        if (!value) return 0;
-        const cleanString = value.toString().replace(/\D/g, ''); 
-        return parseInt(cleanString) || 0;
+    // 🔥 HELPER BARU: Logic Penyelamat Harga (Gantiin parsePrice yang lama)
+    const displayPrice = (val: string | number): number => {
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        if (isNaN(num)) return 0;
+        return Math.floor(num); 
     };
 
     // 3. LOGIC PROCESSING
@@ -139,12 +138,12 @@ function NewArrivalsContent() {
             });
         }
 
-        // Sorting
+        // Sorting (Updated pake displayPrice)
         switch (sortBy) {
             case "price_asc":
-                return data.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+                return data.sort((a, b) => displayPrice(a.price) - displayPrice(b.price));
             case "price_desc":
-                return data.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
+                return data.sort((a, b) => displayPrice(b.price) - displayPrice(a.price));
             case "latest":
             default:
                 return data.sort((a, b) => b.id - a.id);
@@ -212,7 +211,7 @@ function NewArrivalsContent() {
                             value={sortBy}
                             onChange={(val) => setSortBy(val)}
                             placeholder="Sort By"
-                            className="w-full sm:w-60" // Fixed: w-[240px] -> w-60
+                            className="w-full sm:w-60" 
                         />
                     </div>
                 </div>
@@ -267,14 +266,14 @@ function NewArrivalsContent() {
 
 // --- COMPONENTS ---
 
-// 1. Custom Dropdown (Fixed Types)
+// 1. Custom Dropdown
 function CustomDropdown({ 
     options, 
     value, 
     onChange, 
     placeholder = "Select", 
     className = "" 
-}: CustomDropdownProps) { // Pake Interface, bukan any lagi
+}: CustomDropdownProps) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const selectedLabel = options.find((opt) => opt.value === value)?.label || placeholder;
@@ -297,7 +296,6 @@ function CustomDropdown({
                 <span className="truncate mr-2 text-foreground">{selectedLabel}</span>
                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-300 ${isOpen ? 'rotate-180 text-foreground' : ''}`} />
             </button>
-            {/* Fixed z-index warning */}
             <div className={`absolute z-50 left-0 right-0 top-[calc(100%+4px)] bg-background border border-border shadow-2xl max-h-[300px] overflow-y-auto transition-all duration-200 origin-top ${isOpen ? 'opacity-100 scale-y-100 translate-y-0' : 'opacity-0 scale-y-95 -translate-y-2 pointer-events-none'}`}>
                 <ul className="py-1">
                     {options.map((opt) => (
@@ -311,12 +309,19 @@ function CustomDropdown({
     );
 }
 
-// 2. Shop Card (Fixed Aspect Ratio warning)
+// 2. Shop Card
 function ShopCard({ item }: { item: Product }) {
     const images = item.images || [];
     const variants = item.variants || [];
     const [activeIndex, setActiveIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // 🔥 HELPER BARU: Logic Penyelamat Harga
+    const displayPrice = (val: string | number): number => {
+        const num = typeof val === 'string' ? parseFloat(val) : val;
+        if (isNaN(num)) return 0;
+        return Math.floor(num); 
+    };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!containerRef.current || images.length <= 1) return;
@@ -327,15 +332,8 @@ function ShopCard({ item }: { item: Product }) {
         setActiveIndex(Math.min(Math.max(index, 0), images.length - 1));
     };
 
-    const displayPrice = (val: string | number) => {
-         if (typeof val === 'number') return val;
-         const clean = val.toString().replace(/\D/g, '');
-         return parseInt(clean) || 0;
-    };
-
     return (
         <div className="w-full max-w-[350px] group relative select-none">
-            {/* Fixed: aspect-[3/4] jadi aspect-3/4 (kalau config tailwind support) atau dibiarin kalau error */}
             <div ref={containerRef} className="relative aspect-3/4 bg-muted overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer" onMouseMove={handleMouseMove} onMouseLeave={() => setActiveIndex(0)}>
                 <Link href={`/products/${item.slug}`} className="block w-full h-full relative">
                     {images.length > 0 ? images.map((img, idx) => (
@@ -351,6 +349,7 @@ function ShopCard({ item }: { item: Product }) {
                         <h3 className="font-bold uppercase text-xs md:text-sm tracking-wide leading-tight truncate"><Link href={`/products/${item.slug}`} className="hover:underline underline-offset-4">{item.name}</Link></h3>
                         <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate">{item.category?.name || "Streetwear"}</p>
                     </div>
+                    {/* 👇 UPDATE: Pake displayPrice disini */}
                     <p className="text-xs md:text-sm font-bold whitespace-nowrap">Rp {displayPrice(item.price).toLocaleString("id-ID")}</p>
                 </div>
                 <div className="flex flex-wrap gap-1 pt-1">

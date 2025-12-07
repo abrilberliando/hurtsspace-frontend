@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Sparkles, ShoppingBag, ShoppingCart, User } from "lucide-react";
+import { Home, Sparkles, ShoppingCart, User, ClipboardList } from "lucide-react";
 import { useCart } from "@/lib/useCart";
 import { useAuth } from "@/lib/useAuth";
 
@@ -31,37 +31,36 @@ export default function BottomNav() {
 
         {/* 2. NEW (New Arrivals) */}
         <Link 
-            href="/new-arrivals" // Nanti bisa disesuaikan filternya
-            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${pathname.includes('sort=new') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            href="/new-arrivals" 
+            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${isActive('/new-arrivals') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
         >
             <Sparkles className="w-5 h-5" />
             <span className="text-[10px] font-medium">New</span>
         </Link>
 
-        {/* 3. SHOP (DITONJOLKAN / Floating) */}
+        {/* 3. CART (MIDDLE - FLOATING) 🛒 */}
         <div className="relative -top-5">
             <Link 
-                href="/shop"
-                className="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg border-4 border-background transition-transform active:scale-95"
+                href="/cart"
+                className="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg border-4 border-background transition-transform active:scale-95 relative"
             >
-                <ShoppingBag className="w-6 h-6" />
-            </Link>
-        </div>
-
-        {/* 4. CART */}
-        <Link 
-            href="/cart" 
-            className={`flex flex-col items-center justify-center w-full h-full space-y-1 relative ${isActive('/cart') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-            <div className="relative">
-                <ShoppingCart className="w-5 h-5" />
+                <ShoppingCart className="w-6 h-6" />
+                {/* Badge Cart Count */}
                 {cartCount > 0 && (
-                    <span className="absolute -top-1 -right-2 w-4 h-4 bg-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full">
+                    <span className="absolute top-0 right-0 w-4 h-4 bg-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-background">
                         {cartCount}
                     </span>
                 )}
-            </div>
-            <span className="text-[10px] font-medium">Cart</span>
+            </Link>
+        </div>
+
+        {/* 4. ORDER HISTORY (Gantiin posisi Cart lama) */}
+        <Link 
+            href="/dashboard/orders" 
+            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${isActive('/dashboard/orders') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+            <ClipboardList className="w-5 h-5" />
+            <span className="text-[10px] font-medium">History</span>
         </Link>
 
         {/* 5. PROFILE */}

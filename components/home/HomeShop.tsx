@@ -17,7 +17,8 @@ interface Product {
   id: number;
   name: string;
   slug: string;
-  price: number;
+  // 👇 UPDATE: Allow string biar aman
+  price: number | string;
   is_new_arrival: boolean;
   images: { image_url: string }[];
   variants: Variant[];
@@ -33,7 +34,7 @@ export default function HomeShop() {
       try {
         const res = await api.get("/products?limit=8");
         const fetchedData = res.data?.data || [];
-        // Safe navigation & limit
+        
         const limitedData = Array.isArray(fetchedData)
           ? fetchedData.slice(0, 8)
           : [];
@@ -48,14 +49,11 @@ export default function HomeShop() {
   }, []);
 
   return (
-    // 👇 FIX 1: Hapus border-b di section
     <section className="container mx-auto px-4 pb-10">
-      {/* 👇 FIX 2: Ganti SectionHeader dengan Judul Manual Tanpa Garis */}
       <div className="flex justify-between items-end mb-5">
         <h2 className="text-2xl md:text-2xl font-black tracking-tighter uppercase">
           Shop Collection
         </h2>
-        {/* Optional: Link view all kecil di atas kalau mau */}
       </div>
 
       {loading ? (
@@ -103,6 +101,13 @@ function ShopCard({ item }: { item: Product }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // 🔥 HELPER BARU: Logic Penyelamat Harga
+  const displayPrice = (val: string | number): number => {
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num)) return 0;
+    return Math.floor(num); 
+  };
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current || images.length <= 1) return;
     const { left, width } = containerRef.current.getBoundingClientRect();
@@ -122,7 +127,6 @@ function ShopCard({ item }: { item: Product }) {
       {/* IMAGE CONTAINER */}
       <div
         ref={containerRef}
-        // 👇 FIX 3: Hapus 'border border-border' biar clean
         className="relative aspect-[3/4] bg-muted overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
@@ -157,7 +161,7 @@ function ShopCard({ item }: { item: Product }) {
           )}
         </Link>
 
-        {/* Dots Indicator (Tetap ada di desktop, hidden di mobile) */}
+        {/* Dots Indicator */}
         {images.length > 1 && (
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex">
             {images.map((_, i) => (
@@ -188,8 +192,9 @@ function ShopCard({ item }: { item: Product }) {
               {item.category?.name || "Streetwear"}
             </p>
           </div>
+          {/* 👇 UPDATE: Pake displayPrice disini */}
           <p className="text-xs md:text-sm font-bold whitespace-nowrap">
-            Rp {item.price.toLocaleString("id-ID")}
+            Rp {displayPrice(item.price).toLocaleString("id-ID")}
           </p>
         </div>
 

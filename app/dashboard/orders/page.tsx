@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, CreditCard, RefreshCw, XCircle, Truck, Copy, ExternalLink } from "lucide-react";
+import { Package, CreditCard, RefreshCw, XCircle, Truck, Copy, ExternalLink, Calendar, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -29,10 +29,11 @@ interface MidtransWindow extends Window {
 interface Order {
   id: number;
   invoice_number: string;
-  total_price: number;
+  // 👇 UPDATE: Allow string biar aman
+  total_price: number | string;
   status: string;
   shipping_resi: string | null;
-  shipping_courier: string | null; // Tambahin ini biar tau kurirnya apa
+  shipping_courier: string | null;
   snap_token: string | null;
   created_at: string;
   items: {
@@ -47,13 +48,10 @@ export default function OrderHistoryPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = async () => {
-    // setLoading(true); // Opsional
     try {
       const res = await api.get("/orders");
       setOrders(res.data.data);
     } catch { 
-      // 👇 HAPUS '(error)' DI SINI BIAR BERSIH
-      // Dan ganti console.error jadi toast biar user tau kalau error
       toast.error("Gagal mengambil riwayat pesanan.");
     } finally {
       setLoading(false);
@@ -63,6 +61,13 @@ export default function OrderHistoryPage() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  // 🔥 HELPER BARU: Logic Penyelamat Harga
+  const displayPrice = (val: string | number): number => {
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num)) return 0;
+    return Math.floor(num); 
+  };
 
   const handlePayNow = (snapToken: string | null) => {
     if (!snapToken) return toast.error("Token pembayaran hilang.");
@@ -88,152 +93,182 @@ export default function OrderHistoryPage() {
     }
   };
 
-  // 👇 FUNGSI COPY RESI
   const copyResi = (resi: string) => {
     navigator.clipboard.writeText(resi);
     toast.success("Nomor Resi disalin!");
   };
 
-  // 👇 FUNGSI LACAK PAKET (Buka CekResi.com)
   const trackPackage = (courier: string, resi: string) => {
-    // Redirect ke web tracking pihak ketiga
     const url = `https://cekresi.com/?noresi=${resi}`; 
     window.open(url, '_blank');
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "paid": return "bg-green-500 hover:bg-green-600";
-      case "pending": return "bg-yellow-500 hover:bg-yellow-600";
-      case "shipped": return "bg-blue-500 hover:bg-blue-600";
-      case "cancelled": return "bg-red-500 hover:bg-red-600";
-      default: return "bg-zinc-500";
+      case "paid": return "bg-green-500/10 text-green-600 border-green-200 hover:bg-green-500/20";
+      case "pending": return "bg-yellow-500/10 text-yellow-600 border-yellow-200 hover:bg-yellow-500/20";
+      case "shipped": return "bg-blue-500/10 text-blue-600 border-blue-200 hover:bg-blue-500/20";
+      case "cancelled": return "bg-red-500/10 text-red-600 border-red-200 hover:bg-red-500/20";
+      default: return "bg-zinc-500/10 text-zinc-600 border-zinc-200";
     }
   };
 
-  if (loading) return <div className="space-y-4"><Skeleton className="h-32 w-full" /><Skeleton className="h-32 w-full" /></div>;
+  if (loading) return (
+    <div className="container mx-auto px-4 py-10 max-w-5xl space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-black uppercase tracking-tight">Order History</h1>
-          <Button variant="ghost" size="sm" onClick={() => { setLoading(true); fetchOrders(); }}>
-            <RefreshCw className="w-4 h-4 mr-2" /> Refresh
-          </Button>
-      </div>
-
-      {orders.length === 0 ? (
-        <div className="text-center py-20 border border-dashed border-border rounded-lg">
-           <Package className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
-           <p className="text-muted-foreground">Belum ada pesanan, G.</p>
+    <main className="min-h-screen bg-background pb-20 pt-10">
+      <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-5xl space-y-8">
+        
+        {/* HEADER SECTION */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border pb-6">
+            <div>
+                <h1 className="text-3xl font-black uppercase tracking-tight">Order History</h1>
+                <p className="text-muted-foreground text-sm mt-1">Lacak status pesanan dan riwayat belanja lo di sini.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchOrders(); }} className="gap-2">
+                <RefreshCw className="w-4 h-4" /> Refresh Data
+            </Button>
         </div>
-      ) : (
-        orders.map((order) => (
-          <Card key={order.id} className={`bg-card border overflow-hidden ${order.status === 'pending' ? 'border-yellow-500/50 shadow-sm' : 'border-border'}`}>
-             
-             {/* Header */}
-             <div className="bg-muted/30 p-4 flex justify-between items-center text-sm border-b border-border">
-                <div>
-                    <span className="font-bold mr-4">{order.invoice_number}</span>
-                    <span className="text-muted-foreground">
-                        {new Date(order.created_at).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </span>
-                </div>
-                <Badge className={`${getStatusColor(order.status)} text-white border-none uppercase font-bold`}>
-                    {order.status}
-                </Badge>
-             </div>
 
-             <CardContent className="p-4">
-                {/* List Barang */}
-                <div className="space-y-4 mb-6">
-                    {order.items.map((item, idx) => (
-                        <div key={idx} className="flex gap-4 items-center">
-                            <div className="w-12 h-12 bg-muted rounded overflow-hidden border border-border">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img 
-                                    src={item.product?.images?.[0]?.image_url || "https://ui-avatars.com/api/?name=Product&background=random"} 
-                                    className="w-full h-full object-cover" 
-                                    alt="Product"
-                                />
+        {/* CONTENT LIST */}
+        {orders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-border rounded-xl bg-muted/20">
+                <div className="bg-muted p-4 rounded-full mb-4">
+                    <Package className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-bold">Belum ada pesanan</h3>
+                <p className="text-muted-foreground text-sm mb-6">Lo belum checkout barang apapun, G.</p>
+                <Button asChild>
+                    <a href="/shop">Mulai Belanja</a>
+                </Button>
+            </div>
+        ) : (
+            <div className="space-y-6">
+                {orders.map((order) => (
+                <Card 
+                    key={order.id} 
+                    className={`overflow-hidden transition-all duration-200 hover:shadow-md ${order.status === 'pending' ? 'border-yellow-500/50 ring-1 ring-yellow-500/20' : 'border-border'}`}
+                >
+                    {/* CARD HEADER */}
+                    <div className="bg-muted/40 p-4 md:p-6 flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-border">
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-sm font-bold">
+                                <Receipt className="w-4 h-4 text-muted-foreground" />
+                                {order.invoice_number}
                             </div>
-                            <div className="text-sm">
-                                <p className="font-bold">
-                                    {item.product?.name || <span className="text-red-500 italic">Produk dihapus</span>}
-                                </p>
-                                <p className="text-muted-foreground text-xs">
-                                    Size: {item.variant?.size || "-"} x{item.quantity}
-                                </p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Calendar className="w-3 h-3" />
+                                {new Date(order.created_at).toLocaleDateString("id-ID", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </div>
                         </div>
-                    ))}
-                </div>
-                
-                {/* Footer Action */}
-                <div className="flex flex-col md:flex-row justify-between items-end md:items-center border-t border-border pt-4 gap-4">
-                    <div>
-                        <p className="text-xs text-muted-foreground">Total Tagihan</p>
-                        <p className="font-black text-lg">Rp {order.total_price.toLocaleString("id-ID")}</p>
+                        <Badge variant="outline" className={`${getStatusColor(order.status)} px-3 py-1 text-xs font-bold uppercase tracking-wider`}>
+                            {order.status}
+                        </Badge>
                     </div>
 
-                    <div className="flex gap-2 items-center w-full md:w-auto">
+                    {/* CARD CONTENT */}
+                    <CardContent className="p-4 md:p-6">
+                        <div className="space-y-6">
+                            {/* List Item */}
+                            <div className="space-y-4">
+                                {order.items.map((item, idx) => (
+                                    <div key={idx} className="flex gap-4 items-start">
+                                        <div className="w-16 h-16 bg-muted rounded-md overflow-hidden border border-border shrink-0">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img 
+                                                src={item.product?.images?.[0]?.image_url || "https://ui-avatars.com/api/?name=Product&background=random"} 
+                                                className="w-full h-full object-cover" 
+                                                alt="Product"
+                                            />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-sm truncate pr-4">
+                                                {item.product?.name || <span className="text-red-500 italic">Produk dihapus</span>}
+                                            </p>
+                                            <p className="text-muted-foreground text-xs mt-1">
+                                                Size: <span className="font-medium text-foreground">{item.variant?.size || "-"}</span> &bull; Qty: {item.quantity}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </CardContent>
+
+                    {/* CARD FOOTER (ACTIONS & TOTAL) */}
+                    <div className="bg-muted/20 p-4 md:p-6 border-t border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         
-                        {/* AKSI: PENDING */}
-                        {order.status === 'pending' && (
-                            <>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button size="sm" variant="outline" className="text-red-500 border-red-500 hover:bg-red-500/10 flex-1 md:flex-none font-bold">
-                                            <XCircle className="w-4 h-4 mr-2" /> BATAL
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Batalkan Pesanan?</AlertDialogTitle>
-                                            <AlertDialogDescription>Stok akan dikembalikan ke toko.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Gak Jadi</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => executeCancelOrder(order.id)} className="bg-red-600 hover:bg-red-700 text-white">Ya, Batalin</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                        <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Total Tagihan</span>
+                            {/* 👇 UPDATE: Pake displayPrice disini */}
+                            <span className="text-xl font-black">
+                                Rp {displayPrice(order.total_price).toLocaleString("id-ID")}
+                            </span>
+                        </div>
 
-                                <Button size="sm" className="font-bold bg-yellow-500 hover:bg-yellow-600 text-white flex-1 md:flex-none" onClick={() => handlePayNow(order.snap_token)}>
-                                    <CreditCard className="w-4 h-4 mr-2" /> BAYAR
-                                </Button>
-                            </>
-                        )}
+                        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                            {/* ACTION: PENDING */}
+                            {order.status === 'pending' && (
+                                <>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-500/10 font-bold">
+                                                <XCircle className="w-4 h-4 mr-2" /> Batalkan
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Batalkan Pesanan?</AlertDialogTitle>
+                                                <AlertDialogDescription>Pesanan akan dihapus dan stok dikembalikan ke toko.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Gak Jadi</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => executeCancelOrder(order.id)} className="bg-red-600 hover:bg-red-700 text-white">Ya, Batalin</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
 
-                        {/* AKSI: SHIPPED / DIKIRIM */}
-                        {order.status === 'shipped' && order.shipping_resi && (
-                            <div className="flex flex-col items-end gap-2">
-                                <div className="flex items-center gap-2 bg-muted/50 p-1.5 rounded-md border border-border">
-                                    <Truck className="w-4 h-4 text-blue-500" />
-                                    <span className="font-mono font-bold text-sm tracking-wide">{order.shipping_resi}</span>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyResi(order.shipping_resi!)}>
-                                        <Copy className="w-3 h-3" />
+                                    <Button size="sm" className="font-bold bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg shadow-yellow-500/20" onClick={() => handlePayNow(order.snap_token)}>
+                                        <CreditCard className="w-4 h-4 mr-2" /> BAYAR SEKARANG
+                                    </Button>
+                                </>
+                            )}
+
+                            {/* ACTION: SHIPPED */}
+                            {order.status === 'shipped' && order.shipping_resi && (
+                                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto items-end md:items-center">
+                                    <div className="flex items-center gap-2 bg-background p-1.5 px-3 rounded-md border border-border text-xs font-mono">
+                                        <Truck className="w-3 h-3 text-blue-500" />
+                                        <span className="font-bold">{order.shipping_resi}</span>
+                                        <button onClick={() => copyResi(order.shipping_resi!)} className="ml-2 text-muted-foreground hover:text-foreground">
+                                            <Copy className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                    <Button variant="outline" size="sm" className="text-xs font-bold" onClick={() => trackPackage(order.shipping_courier || 'jne', order.shipping_resi!)}>
+                                        <ExternalLink className="w-3 h-3 mr-2" /> LACAK
                                     </Button>
                                 </div>
-                                <Button size="sm" variant="outline" className="h-8 text-xs w-full" onClick={() => trackPackage(order.shipping_courier || 'jne', order.shipping_resi!)}>
-                                    <ExternalLink className="w-3 h-3 mr-2" /> LACAK PAKET
-                                </Button>
-                            </div>
-                        )}
+                            )}
 
-                        {/* AKSI: PAID (Menunggu Resi) */}
-                        {order.status === 'paid' && (
-                            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 px-3 py-1">
-                                MENUNGGU PENGIRIMAN
-                            </Badge>
-                        )}
-
+                             {/* ACTION: PAID */}
+                             {order.status === 'paid' && (
+                                <span className="text-xs font-medium text-green-600 flex items-center gap-1 bg-green-100 px-3 py-1.5 rounded-full">
+                                    <Package className="w-3 h-3" /> Menunggu Pengiriman
+                                </span>
+                            )}
+                        </div>
                     </div>
-                </div>
-             </CardContent>
-          </Card>
-        ))
-      )}
-    </div>
+                </Card>
+                ))}
+            </div>
+        )}
+      </div>
+    </main>
   );
 }

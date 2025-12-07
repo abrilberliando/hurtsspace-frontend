@@ -6,8 +6,6 @@ import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-// Badge import dihapus karena kita pake custom styling div merah
-// import { Badge } from "@/components/ui/badge"; 
 
 // --- TYPES ---
 interface Variant {
@@ -20,9 +18,9 @@ interface Product {
   id: number;
   name: string;
   slug: string;
-  price: number;
+  // 👇 UPDATE: Allow string biar aman
+  price: number | string;
   is_new_arrival: boolean | number | string; 
-  // 👇 Tambahin ini buat filter Featured
   is_featured?: boolean | number | string;
   created_at?: string;
   images: { image_url: string }[];
@@ -46,7 +44,6 @@ export default function Featured() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // Fetch products (ambil agak banyak biar bisa di-filter)
         const res = await api.get("/products?limit=50"); 
         const fetchedData = res.data?.data || [];
         
@@ -55,13 +52,13 @@ export default function Featured() {
         else if (Array.isArray(res.data?.data)) dataFix = res.data.data;
         else if (Array.isArray(fetchedData)) dataFix = fetchedData;
 
-        // 👇 LOGIC MAGIC: Filter cuma yang "Featured"
+        // Filter cuma yang "Featured"
         const featuredDrops = dataFix.filter(p => {
              const val = p.is_featured;
              return val === 1 || val === "1" || val === true || val === "true";
         });
 
-        // Ambil 8 data Featured teratas
+        // Ambil 15 data Featured teratas
         setProducts(featuredDrops.slice(0, 15));
       } catch (error) {
         console.error("Gagal load featured products", error);
@@ -200,7 +197,7 @@ export default function Featured() {
   );
 }
 
-// --- SUB-COMPONENT: CARD (Tetap sama, badge NEW tetep nongol kalo featured item-nya baru) ---
+// --- SUB-COMPONENT: CARD ---
 function ArrivalCard({
   item,
   isDraggingParent,
@@ -214,14 +211,14 @@ function ArrivalCard({
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Helper: Display Price Safe Format
-  const displayPrice = (val: string | number) => {
-    if (typeof val === 'number') return val;
-    const clean = val.toString().replace(/\D/g, '');
-    return parseInt(clean) || 0;
+  // 🔥 HELPER BARU: Logic Penyelamat Harga
+  const displayPrice = (val: string | number): number => {
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num)) return 0;
+    return Math.floor(num); 
   };
 
-  // Logic New Arrival (Badge tetep berguna buat nandain barang baru di list featured)
+  // Logic New Arrival
   const isNewCalculated = useMemo(() => {
     const val = item.is_new_arrival;
     if (val === 1 || val === "1" || val === true || val === "true") return true;
@@ -267,7 +264,7 @@ function ArrivalCard({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        {/* Badge New tetap muncul kalau featured item-nya emang baru */}
+        {/* Badge New */}
         {isNewCalculated && (
             <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
               New
@@ -282,6 +279,7 @@ function ArrivalCard({
         >
           {images.length > 0 ? (
             images.map((img, idx) => (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 key={idx}
                 src={img.image_url}
@@ -337,6 +335,7 @@ function ArrivalCard({
               {item.category?.name || "Streetwear"}
             </p>
           </div>
+          {/* 👇 UPDATE: Pake displayPrice disini */}
           <p className="text-xs md:text-sm font-bold whitespace-nowrap">
             Rp {displayPrice(item.price).toLocaleString("id-ID")}
           </p>
