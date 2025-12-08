@@ -19,9 +19,6 @@ export default function CartPage() {
     return (
         <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-4">
             <h1 className="text-4xl font-black mb-4">YOUR CART IS EMPTY</h1>
-            <p className="text-muted-foreground mb-8">
-                Belum ada barang, G. Kalap dulu gih di Shop.
-            </p>
             <Button asChild size="lg" className="font-bold">
                 <Link href="/shop">SHOP NOW</Link>
             </Button>

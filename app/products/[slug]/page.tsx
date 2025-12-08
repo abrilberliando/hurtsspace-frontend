@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { useCartAnimation } from "@/lib/cartAnimationContext"; // Animasi Terbang
+import Suggested from "@/components/shared/Suggested";
 
 // --- Tipe Data ---
 interface Variant {
@@ -244,6 +245,7 @@ export default function ProductDetailPage() {
 
         </div>
       </div>
+      <Suggested />
     </main>
   );
 }
