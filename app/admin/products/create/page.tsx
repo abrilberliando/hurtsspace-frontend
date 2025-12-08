@@ -19,7 +19,7 @@ export default function CreateProductPage() {
     setLoading(true);
     try {
         // Tembak API
-        await api.post("/products", formData, {
+        await api.post("/admin/products", formData, {
             headers: { "Content-Type": "multipart/form-data" },
         });
         

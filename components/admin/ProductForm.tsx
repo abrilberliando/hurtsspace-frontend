@@ -270,7 +270,7 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
         <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/10"><div className="space-y-0.5"><Label className="text-base">Kolaborasi?</Label></div><Switch checked={isCollab} onCheckedChange={setIsCollab} /></div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t md:static md:border-0 md:p-0 md:bg-transparent z-50 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] md:shadow-none">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t static md:border-0 md:p-0 md:bg-transparent z-50 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] md:shadow-none">
         <div className="max-w-3xl mx-auto"><Button type="submit" disabled={isLoading} className="w-full font-bold h-12 text-base shadow-lg">{isLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}{initialData ? "SIMPAN PERUBAHAN" : "PUBLISH PRODUK"}</Button></div>
       </div>
     </form>

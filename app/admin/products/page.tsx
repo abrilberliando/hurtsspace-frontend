@@ -77,7 +77,7 @@ export default function AdminProductsPage() {
         const isNowFeatured = optimisProducts.find(p => p.id === id)?.is_featured;
 
         try {
-            await api.put(`/products/${id}/featured`);
+            await api.put(`admin/products/${id}/featured`);
             
             if (isNowFeatured) {
                 toast.success("Produk jadi Featured! 🌟");
@@ -109,7 +109,7 @@ export default function AdminProductsPage() {
         const toastId = toast.loading(`Menghapus produk ID: ${targetProductId}...`);
 
         try {
-            await api.delete(`/products/${targetProductId}`);
+            await api.delete(`admin/products/${targetProductId}`);
             
             setProducts(prev => prev.filter(p => p.id !== targetProductId));
             

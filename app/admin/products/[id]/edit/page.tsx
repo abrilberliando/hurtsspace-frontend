@@ -80,7 +80,7 @@ export default function EditProductPage() {
         // Method Spoofing untuk Laravel (Wajib)
         formData.set("_method", "PUT"); 
 
-        await api.post(`/products/${id}`, formData);
+        await api.post(`admin/products/${id}`, formData);
 
         toast.success("Produk Berhasil Diupdate!");
         router.push("/admin/products");
