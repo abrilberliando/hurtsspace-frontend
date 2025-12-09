@@ -182,6 +182,7 @@ function NewArrivalsContent() {
     }, [categoryId, categories]);
 
     return (
+        <Suspense fallback={<div>Loading...</div>}>
         <main className="min-h-screen bg-background text-foreground pt-10 pb-20">
             <div className="container mx-auto px-4">
 
@@ -261,6 +262,7 @@ function NewArrivalsContent() {
                 )}
             </div>
         </main>
+        </Suspense>
     );
 }
 
@@ -287,6 +289,7 @@ function CustomDropdown({
     }, []);
 
     return (
+        <Suspense fallback={<div>Loading...</div>}>
         <div className={`relative group ${className}`} ref={dropdownRef}>
             <button
                 type="button"
@@ -306,6 +309,7 @@ function CustomDropdown({
                 </ul>
             </div>
         </div>
+        </Suspense>
     );
 }
 
@@ -333,6 +337,7 @@ function ShopCard({ item }: { item: Product }) {
     };
 
     return (
+        <Suspense fallback={<div>Loading...</div>}>
         <div className="w-full max-w-[350px] group relative select-none">
             <div ref={containerRef} className="relative aspect-3/4 bg-muted overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer" onMouseMove={handleMouseMove} onMouseLeave={() => setActiveIndex(0)}>
                 <Link href={`/products/${item.slug}`} className="block w-full h-full relative">
@@ -359,5 +364,6 @@ function ShopCard({ item }: { item: Product }) {
                 </div>
             </div>
         </div>
+        </Suspense>
     );
 }
