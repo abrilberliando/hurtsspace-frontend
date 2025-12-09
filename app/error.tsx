@@ -1,6 +1,6 @@
 'use client'; // Error components must be Client Components
 
-import { Suspense, useEffect } from 'react';
+import { useEffect } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -17,7 +17,6 @@ export default function Error({
   }, [error]);
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-background text-foreground">
       <AlertTriangle className="w-16 h-16 text-red-500 mb-6" />
       <h1 className="text-5xl font-black tracking-tighter mb-3 uppercase text-red-500">
@@ -38,6 +37,5 @@ export default function Error({
         <RefreshCw className="w-4 h-4" /> Coba Lagi
       </Button>
     </div>
-    </Suspense>
   );
 }

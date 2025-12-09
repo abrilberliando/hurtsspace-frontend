@@ -9,6 +9,7 @@ import { CartAnimationProvider } from "@/lib/cartAnimationContext";
 import Footer from "@/components/shared/Footer";
 import BottomNav from "@/components/shared/BottomNav";
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -72,10 +73,14 @@ export default function RootLayout({
           >
             {/* 👇 BUNGKUS DENGAN ANIMATION PROVIDER */}
             <CartAnimationProvider>
-                <Navbar />
+                <Suspense fallback={<div className="h-20 border-b flex items-center justify-center">Loading Nav...</div>}>
+                    <Navbar />
+                </Suspense>
+                <Suspense fallback={<div className="flex justify-center items-center h-screen pt-20">Loading Page...</div>}>
                 <div className="pt-20 pb-16 md:pb-0">
                     {children}
                 </div>
+                </Suspense>
                 <Footer />
                 <BottomNav />
                 <Toaster position="top-center" richColors />

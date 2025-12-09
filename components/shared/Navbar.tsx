@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useCart } from "@/lib/useCart";
 import api from "@/lib/axios";
@@ -161,7 +161,6 @@ export default function Navbar() {
   );
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <>
       {/* --- TOP NAVBAR --- */}
       <nav
@@ -640,6 +639,5 @@ export default function Navbar() {
         </Link>
       </div>
     </>
-    </Suspense>
   );
 }

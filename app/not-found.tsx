@@ -1,11 +1,9 @@
 import Link from 'next/link';
 import { Frown, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Suspense } from 'react';
 
 export default function NotFound() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-background text-foreground">
       <Frown className="w-16 h-16 text-primary mb-6" />
       <h1 className="text-5xl font-black tracking-tighter mb-3 uppercase">
@@ -28,6 +26,5 @@ export default function NotFound() {
         </Button>
       </div>
     </div>
-    </Suspense>
   );
 }
