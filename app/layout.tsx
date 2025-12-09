@@ -73,10 +73,10 @@ export default function RootLayout({
           >
             {/* 👇 BUNGKUS DENGAN ANIMATION PROVIDER */}
             <CartAnimationProvider>
-                <Suspense fallback={<div className="h-20 border-b flex items-center justify-center">Loading Nav...</div>}>
+                <Suspense fallback={<div className="h-20 border-b flex items-center justify-center">...</div>}>
                     <Navbar />
                 </Suspense>
-                <Suspense fallback={<div className="flex justify-center items-center h-screen pt-20">Loading Page...</div>}>
+                <Suspense fallback={<div className="flex justify-center items-center h-screen pt-20">...</div>}>
                 <div className="pt-20 pb-16 md:pb-0">
                     {children}
                 </div>

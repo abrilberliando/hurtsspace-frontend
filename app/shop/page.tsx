@@ -38,16 +38,6 @@ interface DropdownOption {
   label: string;
 }
 
-// --- CONSTANTS ---
-// Move this outside component to avoid dependency issues & re-creation on render
-const sortOptions: DropdownOption[] = [
-  { value: "latest", label: "Latest Arrivals" },
-  { value: "alphabet_asc", label: "Name (A - Z)" },
-  { value: "alphabet_desc", label: "Name (Z - A)" },
-  { value: "price_asc", label: "Price (Low - High)" },
-  { value: "price_desc", label: "Price (High - Low)" },
-];
-
 export default function ShopPage() {
   return (
     <Suspense
@@ -78,6 +68,14 @@ function ShopContent() {
   // State Filter & Pagination
   const [sortBy, setSortBy] = useState("latest");
   const [visibleCount, setVisibleCount] = useState(16);
+
+  const sortOptions: DropdownOption[] = [
+    { value: "latest", label: "Latest Arrivals" },
+    { value: "alphabet_asc", label: "Name (A - Z)" },
+    { value: "alphabet_desc", label: "Name (Z - A)" },
+    { value: "price_asc", label: "Price (Low - High)" },
+    { value: "price_desc", label: "Price (High - Low)" },
+  ];
 
   // 1. Fetch Categories
   useEffect(() => {
@@ -174,7 +172,7 @@ function ShopContent() {
       default:
         return data.sort((a, b) => b.id - a.id);
     }
-  }, [allProducts, sortBy, categoryId, searchQuery]);
+  }, [allProducts, sortBy, categoryId, searchQuery]); // 👈 Jangan lupa masukin searchQuery ke dependency
 
   // Reset pagination on filter change
   useEffect(() => {
@@ -222,7 +220,6 @@ function ShopContent() {
   }, [searchQuery, categoryId, sortBy, categories]);
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <main className="min-h-screen bg-background text-foreground pt-10 pb-20">
       <div className="container mx-auto px-4">
         {/* HEADER */}
@@ -254,8 +251,7 @@ function ShopContent() {
               value={sortBy}
               onChange={(val) => setSortBy(val)}
               placeholder="Sort By"
-              // Fix: sm:w-[240px] -> sm:w-60 (Standard Tailwind)
-              className="w-full sm:w-60"
+              className="w-full sm:w-[240px]"
             />
           </div>
         </div>
@@ -316,7 +312,6 @@ function ShopContent() {
         )}
       </div>
     </main>
-    </Suspense>
   );
 }
 
@@ -354,19 +349,18 @@ function CustomDropdown({
   }, []);
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className={`relative group ${className}`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`
-                  flex items-center justify-between w-full 
-                  bg-background border border-border 
-                  px-4 py-2.5 text-sm font-medium uppercase tracking-wide
-                  transition-all duration-200 ease-in-out
-                  hover:border-foreground focus:outline-none 
-                  ${isOpen ? "ring-1 ring-foreground border-foreground" : ""}
-                  rounded-none cursor-pointer
+                    flex items-center justify-between w-full 
+                    bg-background border border-border 
+                    px-4 py-2.5 text-sm font-medium uppercase tracking-wide
+                    transition-all duration-200 ease-in-out
+                    hover:border-foreground focus:outline-none 
+                    ${isOpen ? "ring-1 ring-foreground border-foreground" : ""}
+                    rounded-none cursor-pointer
                 `}
       >
         <span className="truncate mr-2 text-foreground">{selectedLabel}</span>
@@ -379,15 +373,15 @@ function CustomDropdown({
 
       <div
         className={`
-                  absolute z-[60] left-0 right-0 top-[calc(100%+4px)] 
-                  bg-background border border-border 
-                  shadow-2xl max-h-[300px] overflow-y-auto
-                  transition-all duration-200 origin-top
-                  ${
-                    isOpen
-                      ? "opacity-100 scale-y-100 translate-y-0"
-                      : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none"
-                  }
+                    absolute z-[60] left-0 right-0 top-[calc(100%+4px)] 
+                    bg-background border border-border 
+                    shadow-2xl max-h-[300px] overflow-y-auto
+                    transition-all duration-200 origin-top
+                    ${
+                      isOpen
+                        ? "opacity-100 scale-y-100 translate-y-0"
+                        : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none"
+                    }
                 `}
       >
         <ul className="py-1">
@@ -418,7 +412,6 @@ function CustomDropdown({
         </ul>
       </div>
     </div>
-    </Suspense>
   );
 }
 
@@ -451,7 +444,6 @@ function ShopCard({ item }: { item: Product }) {
   };
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
     <div className="w-full max-w-[350px] group relative select-none">
       {/* IMAGE */}
       <div
@@ -492,8 +484,7 @@ function ShopCard({ item }: { item: Product }) {
 
         {/* Dots */}
         {images.length > 1 && (
-          // Fix: CSS Conflict (Removed initial 'flex', now it's 'hidden md:flex')
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 hidden md:flex gap-1.5 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex">
             {images.map((_, i) => (
               <div
                 key={i}
@@ -536,13 +527,13 @@ function ShopCard({ item }: { item: Product }) {
                 <span
                   key={variant.id}
                   className={`
-                                            text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
-                                            ${
-                                              isAvailable
-                                                ? "border-zinc-700 text-foreground cursor-default"
-                                                : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
-                                            }
-                                        `}
+                                        text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
+                                        ${
+                                          isAvailable
+                                            ? "border-zinc-700 text-foreground cursor-default"
+                                            : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
+                                        }
+                                    `}
                 >
                   {variant.size}
                 </span>
@@ -556,6 +547,5 @@ function ShopCard({ item }: { item: Product }) {
         </div>
       </div>
     </div>
-    </Suspense>
   );
 }

@@ -185,7 +185,7 @@ export default function Featured() {
                   />
                 ))
               ) : (
-                <div className="w-full text-center py-10 text-muted-foreground">
+                <div className="col-span-full text-center py-10 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-zinc-700 w-full">
                   Belum ada barang featured nih, G.
                 </div>
               )}
