@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,7 @@ export default function CreateBannerPage() {
     };
 
     return (
+        <Suspense fallback={<div>Loading form...</div>}>
         <div className="max-w-2xl mx-auto pb-10 px-4">
             <div className="flex items-center gap-4 mb-6">
                 <Button variant="ghost" size="icon" asChild>
@@ -210,5 +211,6 @@ export default function CreateBannerPage() {
                 </Button>
             </form>
         </div>
+        </Suspense>
     );
 }
