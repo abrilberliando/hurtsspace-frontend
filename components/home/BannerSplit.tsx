@@ -28,15 +28,22 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
   useEffect(() => {
     const fetchBanner = async () => {
       try {
-        const res = await api.get("/banner/active");
-        const banners: SplitBannerData[] = res.data.data;
+        // 👇 FIX UTAMA: BYPASS CACHE VERCEL/NEXT.JS
+        // Tambahkan timestamp biar selalu fresh
+        const res = await api.get(`/banner/active?t=${Date.now()}`); 
         
+        // Cek struktur data (handle array root atau nested data.data)
+        const banners: SplitBannerData[] = Array.isArray(res.data) 
+                                           ? res.data 
+                                           : (res.data.data || []);
+        
+        // Cari banner berdasarkan posisi
         const found = banners.find(b => b.position === position);
         
         if (found) {
-            setBanner(found);
+          setBanner(found);
         } else {
-            setIsError(true); 
+          setIsError(true); 
         }
       } catch {
         setIsError(true);
@@ -51,7 +58,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
   // 1. Loading State
   if (loading) {
     return (
-      <div className="h-[60vh] md:h-[90vh] w-full bg-background flex items-center justify-center">
+      <div className="h-[30vh] md:h-[90vh] w-full bg-background flex items-center justify-center">
         <Skeleton className="h-full w-full bg-muted animate-pulse" />
       </div>
     );
@@ -64,8 +71,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
 
   // 3. Success State
   return (
-    // 👇 REVISI: Hapus 'my-10' biar nempel (flush) sama komponen atas/bawah
-    // 👇 Tetap pertahankan h-[30vh] buat mobile (biar gak kepotong) dan h-[90vh] desktop
+    // 👇 REVISI: Hapus 'my-10' dan border, tetap pertahankan height mobile/desktop
     <section className="relative w-full h-[30vh] md:h-[90vh] group overflow-hidden bg-black">
         
         <Link href={banner.link_url} className="absolute inset-0 z-20" />
@@ -84,7 +90,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
             </div>
 
             {/* Kanan */}
-            {/* 👇 REVISI: Hapus 'border-l' biar bener-bener nyatu tanpa garis tengah */}
+            {/* 👇 FIX: Pastikan tidak ada border di tengah */}
             <div className="relative h-full w-full overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
