@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"; // Firebase Auth
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"; 
 import { auth as firebaseAuth } from "@/lib/firebase";
 import api from "@/lib/axios";
 import { useAuth } from "@/lib/useAuth";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, AlertCircle } from "lucide-react"; // 👈 Hapus CheckCircle2 (Unused)
+import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
 import { AxiosError } from "axios";
 
 export default function LoginPage() {
@@ -23,34 +23,26 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   
-  // State Form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  // State khusus kalau email belum diverifikasi
   const [needsVerification, setNeedsVerification] = useState(false);
 
-  // 1. Cek Query Param (Redirect dari Email Link)
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
         toast.success("Email Berhasil Diverifikasi! 🎉", {
             description: "Silakan login sekarang, akun lo udah aktif."
         });
-        // Bersihkan URL biar bersih
         router.replace('/login');
     }
   }, [searchParams, router]);
 
-  // 2. Logic Login Manual
   const handleManualLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setNeedsVerification(false); // Reset state
+    setNeedsVerification(false);
 
     try {
       const res = await api.post("/login", { email, password });
-      
-      // Sukses Login
       login(res.data.user, res.data.access_token);
       toast.success("Welcome Back! 👋");
       router.push("/dashboard");
@@ -59,9 +51,8 @@ export default function LoginPage() {
       const error = err as AxiosError<{ message: string, not_verified?: boolean }>;
       const msg = error.response?.data?.message || "Login gagal, cek email/password.";
       
-      // Cek apakah error karena belum verifikasi (Backend kirim flag 'not_verified')
       if (error.response?.data?.not_verified) {
-          setNeedsVerification(true); // Munculin tombol resend
+          setNeedsVerification(true);
           toast.warning("Verifikasi Email Dulu!", { description: msg });
       } else {
           toast.error("Gagal Masuk", { description: msg });
@@ -71,17 +62,14 @@ export default function LoginPage() {
     }
   };
 
-  // 3. Logic Login Google
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     const provider = new GoogleAuthProvider();
 
     try {
-        // A. Pop-up Firebase
         const result = await signInWithPopup(firebaseAuth, provider);
         const fbUser = result.user;
 
-        // B. Hit Laravel Endpoint
         const res = await api.post('/auth/firebase-login', {
             name: fbUser.displayName,
             email: fbUser.email,
@@ -89,12 +77,11 @@ export default function LoginPage() {
             avatar: fbUser.photoURL
         });
 
-        // C. Simpan Token Laravel
         login(res.data.user, res.data.access_token);
         toast.success(`Wadap, ${fbUser.displayName}!`);
         router.push('/dashboard');
 
-    } catch (err: unknown) { // 👈 Ganti any jadi unknown biar aman
+    } catch (err: unknown) {
         console.error("Google Login Error:", err);
         const error = err as Error;
         toast.error("Gagal Login Google", { description: error.message || "Ada masalah koneksi ke Google." });
@@ -103,20 +90,15 @@ export default function LoginPage() {
     }
   };
 
-  // 4. Logic Resend Email (Kalau User Klik Tombol Kirim Ulang)
   const handleResendEmail = async () => {
     if (!email) return toast.error("Isi email dulu di form ya.");
-    
     const loadingToast = toast.loading("Mengirim ulang email...");
     try {
-        // Kita hit endpoint PUBLIC resendVerification yang udah kita fix
         const res = await api.post('/email/verification-notification', { email });
-        
         toast.dismiss(loadingToast);
         toast.success("Terkirim! 📧", { description: res.data.message });
-        setNeedsVerification(false); // Sembunyiin tombol lagi
-
-    } catch { // 👈 Hapus variable error karena unused
+        setNeedsVerification(false);
+    } catch {
         toast.dismiss(loadingToast);
         toast.error("Gagal Kirim", { description: "Coba lagi nanti atau pastikan email bener." });
     }
@@ -133,7 +115,6 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           
-          {/* TOMBOL GOOGLE */}
           <Button 
             variant="outline" 
             className="w-full h-12 font-bold mb-6 flex items-center justify-center gap-2 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
@@ -167,7 +148,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* ALERT VERIFIKASI (Muncul kalau gagal login karena belum verified) */}
           {needsVerification && (
               <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 p-3 rounded-md mb-4 text-sm flex flex-col gap-2 animate-in fade-in zoom-in duration-300">
                   <div className="flex items-center gap-2">
@@ -199,7 +179,8 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-xs text-primary hover:underline font-medium">
+                {/* 👇 INI LINK YANG LO CARI G! */}
+                <Link href="/forgot-password" className="text-xs text-primary hover:underline font-bold transition-colors">
                    Lupa password?
                 </Link>
               </div>
