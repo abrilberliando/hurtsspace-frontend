@@ -8,13 +8,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // Interface khusus data HeroSection (Sesuai Database)
 interface HeroData {
-  // 👇 background_images (Array of string)
   background_images: string[] | null; 
-  subtitle: string;
-  title: string;
+  subtitle: string | null;
+  title: string | null;
   description: string | null;
-  button_text: string;
-  button_link: string;
+  button_text: string | null;
+  button_link: string | null;
 }
 
 // Default Images kalau dari API kosong
@@ -90,11 +89,11 @@ export default function Hero() {
 
   // Fallback dan filter data
   const content = {
-    title: data?.title || "REDEFINE YOUR STREETWEAR.",
-    subtitle: data?.subtitle || "EST. 2025 • INDONESIA",
-    description: data?.description || "Minimalist cuts. Premium materials. Designed for the urban explorer who values silence in the noise.",
-    button_text: data?.button_text || "SHOP COLLECTION",
-    button_link: data?.button_link || "/shop"
+    title: data?.title,
+    subtitle: data?.subtitle,
+    description: data?.description,
+    button_text: data?.button_text,
+    button_link: data?.button_link
   };
 
   const images = (Array.isArray(data?.background_images) ? data.background_images.filter(url => url) : []).slice(0, 5);
@@ -155,7 +154,7 @@ export default function Hero() {
             </Button>
 
             {/* Tombol Lookbook (Statis) */}
-            <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-black font-bold px-8 py-7 text-lg rounded-none bg-transparent transition-transform hover:scale-105">
+            <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white font-bold px-8 py-7 text-lg rounded-none bg-transparent transition-transform hover:scale-105">
                 <Link href="/lookbook">
                     VIEW LOOKBOOK
                 </Link>

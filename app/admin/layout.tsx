@@ -15,6 +15,7 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
+  ChartBar,
 } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { Button } from "@/components/ui/button";
@@ -29,12 +30,13 @@ import {
 // 1. MENU DEFINITION
 const menus = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { name: "Manage Orders", href: "/admin/orders", icon: ShoppingCart },
+    { name: "Manage Orders", href: "/admin/orders", icon: ShoppingCart },
   { name: "Manage Products", href: "/admin/products", icon: Package },
+  { name: "Manage Categories", href: "/admin/categories", icon: ChartBar },
+  { name: "Manage Hero Utama", href: "/admin/hero", icon: Image },
+  { name: "Manage Banners", href: "/admin/banners", icon: Image },
   { name: "Manage Lookbook", href: "/admin/lookbooks", icon: Camera },
   { name: "Manage Vouchers", href: "/admin/vouchers", icon: TicketPercent },
-  { name: "Manage Banners", href: "/admin/banners", icon: Image },
-  { name: "Manage Hero Utama", href: "/admin/hero", icon: Image },
 ];
 
 // 2. ADMIN NAV COMPONENT (Smart & Collapsible)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Plus, X, Tag, Check, ZoomIn, ZoomOut } from "lucide-react";
+import { Loader2, Plus, X, Tag, Check, ZoomIn, RotateCcw, ImagePlus } from "lucide-react";
 import { AxiosError } from "axios";
 import { Slider } from "@/components/ui/slider";
+import Cropper, { Area } from "react-easy-crop"; // 👈 Library Sakti
 import {
     Select,
     SelectContent,
@@ -19,7 +20,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-
+// --- TYPES ---
 interface Product {
     id: number;
     name: string;
@@ -32,111 +33,131 @@ interface TagItem {
     y: number;
 }
 
-interface CroppedArea {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-}
+// --- UTILS: CANVAS CROPPER ---
+// Fungsi ini buat motong gambar beneran jadi file baru
+const createImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+        const image = new Image();
+        image.addEventListener("load", () => resolve(image));
+        image.addEventListener("error", (error) => reject(error));
+        image.setAttribute("crossOrigin", "anonymous");
+        image.src = url;
+    });
 
-interface Position {
-    x: number;
-    y: number;
-}
+async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
 
+    if (!ctx) throw new Error("No 2d context");
+
+    // Set canvas size sesuai hasil crop
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    // Draw image yang udah dicrop ke canvas
+    ctx.drawImage(
+        image,
+        pixelCrop.x,
+        pixelCrop.y,
+        pixelCrop.width,
+        pixelCrop.height,
+        0,
+        0,
+        pixelCrop.width,
+        pixelCrop.height
+    );
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error("Canvas is empty"));
+        }, "image/jpeg", 0.95); // High quality JPG
+    });
+}
 
 export default function CreateLookbookPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     
+    // Data Form
     const [title, setTitle] = useState("");
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState("");
     const [products, setProducts] = useState<Product[]>([]);
     
-    const [isSetupMode, setIsSetupMode] = useState(false); 
-    const [zoomLevel, setZoomLevel] = useState(1); 
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState<CroppedArea | null>(null); 
+    // State Gambar
+    const [rawImageSrc, setRawImageSrc] = useState<string | null>(null); // Gambar mentah dari upload
+    const [croppedImagePreview, setCroppedImagePreview] = useState<string | null>(null); // Gambar hasil crop (preview)
+    const [finalImageFile, setFinalImageFile] = useState<File | null>(null); // File final buat dikirim ke API
     
-    const [position, setPosition] = useState<Position>({ x: 0, y: 0 }); 
-    const [isDragging, setIsDragging] = useState(false);
-    const [startDrag, setStartDrag] = useState<Position>({ x: 0, y: 0 });
+    // State Cropper
+    const [isCropping, setIsCropping] = useState(false);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
+    // State Tagging
     const [tags, setTags] = useState<TagItem[]>([]);
-    const [isTagging, setIsTagging] = useState(false);
+    const [isTaggingMode, setIsTaggingMode] = useState(false);
     const [tempCoords, setTempCoords] = useState({ x: 0, y: 0 });
     const [selectedProduct, setSelectedProduct] = useState("");
 
-    const imageRef = useRef<HTMLImageElement>(null); 
-
+    // Load Products
     useEffect(() => {
-        api.get("/products").then(res => setProducts(res.data.data.data || res.data.data));
-    }, []);
-    
-    useEffect(() => {
-        const handleMouseUp = () => setIsDragging(false);
-        window.addEventListener('mouseup', handleMouseUp);
-        return () => window.removeEventListener('mouseup', handleMouseUp);
+        api.get("/products").then(res => setProducts(res.data.data.data || res.data.data || []));
     }, []);
 
-
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (imagePreview) URL.revokeObjectURL(imagePreview); 
-
-            setImageFile(file);
-            setImagePreview(URL.createObjectURL(file));
-            setTags([]);
-            
-            setIsSetupMode(true); 
-            setIsTagging(false);
-            setZoomLevel(1); 
-            setPosition({ x: 0, y: 0 });
+    // 1. Handle Upload File
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+                setRawImageSrc(reader.result?.toString() || "");
+                setIsCropping(true); // Langsung masuk mode crop
+                setCroppedImagePreview(null); // Reset preview lama
+                setTags([]); // Reset tags
+            });
+            reader.readAsDataURL(file);
         }
     };
 
-    const getCroppedImage = async () => {
-        setCroppedAreaPixels({ x: position.x, y: position.y, width: 100, height: 100 }); 
-        
-        setIsSetupMode(false);
-        toast.success("Framing foto selesai! Silahkan mulai tagging.");
+    // 2. Simpan Koordinat Crop
+    const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
+        setCroppedAreaPixels(croppedAreaPixels);
+    }, []);
+
+    // 3. Eksekusi Crop (Potong Gambar)
+    const showCroppedImage = async () => {
+        if (!rawImageSrc || !croppedAreaPixels) return;
+        try {
+            const croppedBlob = await getCroppedImg(rawImageSrc, croppedAreaPixels);
+            const file = new File([croppedBlob], "lookbook_crop.jpg", { type: "image/jpeg" });
+            
+            setFinalImageFile(file);
+            setCroppedImagePreview(URL.createObjectURL(croppedBlob));
+            
+            setIsCropping(false); // Keluar mode crop
+            toast.success("Foto berhasil di-set! Sekarang saatnya tagging.");
+        } catch (e) {
+            console.error(e);
+            toast.error("Gagal crop gambar.");
+        }
     };
 
-
+    // 4. Handle Klik Gambar untuk Tagging
     const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!imageFile || isTagging || isSetupMode) return;
+        if (!croppedImagePreview || isCropping || isTaggingMode) return;
         
         const rect = e.currentTarget.getBoundingClientRect();
+        // Hitung persentase posisi (Responsif)
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
 
         setTempCoords({ x, y });
-        setIsTagging(true);
-    };
-    
-    const handleDragStart = (e: React.MouseEvent) => {
-        if (!isSetupMode || e.button !== 0) return;
-        e.preventDefault();
-        setIsDragging(true);
-        setStartDrag({ x: e.clientX, y: e.clientY });
+        setIsTaggingMode(true); // Munculin popover pilih produk
     };
 
-    const handleDragging = (e: React.MouseEvent) => {
-        if (!isDragging || !isSetupMode) return;
-        e.preventDefault();
-        
-        const dx = e.clientX - startDrag.x;
-        const dy = e.clientY - startDrag.y;
-        
-        setPosition(prev => ({ 
-            x: prev.x + dx, 
-            y: prev.y + dy 
-        }));
-        
-        setStartDrag({ x: e.clientX, y: e.clientY });
-    };
-
+    // 5. Simpan Tag
     const confirmTag = () => {
         if (!selectedProduct) return toast.error("Pilih produknya dulu bos!");
         
@@ -147,19 +168,18 @@ export default function CreateLookbookPage() {
             y: tempCoords.y 
         }]);
         
-        setIsTagging(false);
+        setIsTaggingMode(false);
         setSelectedProduct("");
     };
 
+    // 6. Submit ke API
     const handleSubmit = async () => {
-        if (isSetupMode) return toast.error("Selesaikan pengaturan foto terlebih dahulu.");
-
-        if (!title || !imageFile || tags.length === 0) return toast.error("Lengkapi data & tag minimal 1 produk!");
+        if (!finalImageFile || tags.length === 0) return toast.error("Upload foto & tag minimal 1 produk!");
         
         setLoading(true);
         const formData = new FormData();
         formData.append("title", title);
-        formData.append("image", imageFile); 
+        formData.append("image", finalImageFile); 
         
         const itemsData = tags.map(t => ({ product_id: t.product_id, x: t.x, y: t.y }));
         formData.append("items", JSON.stringify(itemsData));
@@ -172,180 +192,168 @@ export default function CreateLookbookPage() {
             router.push("/admin/lookbooks");
         } catch (error) {
             const err = error as AxiosError;
-            toast.error("Gagal create lookbook. Cek console.");
-            console.error(err.response?.data);
+            console.error(err);
+            toast.error("Gagal create lookbook.");
         } finally {
             setLoading(false);
         }
     };
 
-    // --- RENDER IMAGE CANVAS ---
-    const renderImageCanvas = () => {
-        if (!imagePreview) {
-            return (
-                <div className="text-muted-foreground flex flex-col items-center gap-2">
-                    <Tag className="w-10 h-10 opacity-20" />
-                    <p>Upload image to start tagging</p>
-                </div>
-            );
-        }
-        
-        const isInteractive = !isSetupMode && !isTagging;
-        
-        return (
-            <div 
-                className={`relative w-full h-full group select-none overflow-hidden ${isInteractive ? 'cursor-crosshair' : 'cursor-default'}`} 
-                onClick={handleImageClick}
-                onMouseDown={handleDragStart} 
-                onMouseMove={handleDragging}
-            >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
-                    ref={imageRef}
-                    src={imagePreview} 
-                    className="w-full h-auto object-contain max-h-[80vh]" 
-                    style={{ 
-                        transform: `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
-                        transformOrigin: 'center center',
-                        cursor: isDragging ? 'grabbing' : (isSetupMode ? 'grab' : 'default'),
-                        transition: isSetupMode ? 'transform 0.0s linear' : 'none',
-                    }}
-                    alt="Preview" 
-                />
-
-                {/* --- RENDER SETUP MODE (Cropper Helper UI) --- */}
-                {isSetupMode && (
-                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-4 pointer-events-none">
-                         {/* Control panel disebelah kanan (pointer-events-auto) */}
-                        <div className="absolute top-4 right-4 w-full max-w-sm p-4 bg-background border rounded-lg shadow-2xl pointer-events-auto">
-                            <h3 className="font-bold text-lg mb-4 text-center">Zoom & Framing</h3>
-                            
-                            {/* Zoom Control */}
-                            <div className="flex items-center gap-4 mb-6">
-                                <ZoomOut className="w-5 h-5 text-muted-foreground" />
-                                <Slider 
-                                    defaultValue={[1]} 
-                                    min={1} 
-                                    max={3} 
-                                    step={0.1}
-                                    value={[zoomLevel]}
-                                    onValueChange={(val: number[]) => setZoomLevel(val[0])} 
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
+            
+            {/* --- KOLOM KIRI: CANVAS UTAMA --- */}
+            <div className="lg:col-span-2">
+                <Card className="bg-card border-border overflow-hidden shadow-lg">
+                    <CardContent className="p-0 bg-zinc-950 relative flex items-center justify-center min-h-[500px]">
+                        
+                        {/* CASE 1: BELUM UPLOAD */}
+                        {!rawImageSrc && (
+                            <div className="flex flex-col items-center justify-center text-muted-foreground gap-4 p-10">
+                                <div className="p-4 bg-muted rounded-full">
+                                    <ImagePlus className="w-8 h-8 opacity-50" />
+                                </div>
+                                <p className="text-sm">Upload foto buat mulai Lookbook</p>
+                                <Input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    className="hidden" 
+                                    id="upload-trigger"
+                                    onChange={handleFileChange}
                                 />
-                                <ZoomIn className="w-5 h-5 text-muted-foreground" />
-                            </div>
-
-                            <Button 
-                                size="lg" 
-                                className="w-full font-bold" 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    getCroppedImage();
-                                }}
-                            >
-                                <Check className="w-4 h-4 mr-2" /> Confirm Framing
-                            </Button>
-                        </div>
-                         {/* Indikator Panning */}
-                        <p className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black/70 px-3 py-1 rounded">
-                            Drag foto untuk mengatur posisi
-                        </p>
-                    </div>
-                )}
-                
-                {/* Render Tags */}
-                {tags.map((tag) => (
-                    <div 
-                        key={tag.id}
-                        className="absolute w-8 h-8 bg-white/90 backdrop-blur rounded-full border-2 border-zinc-900 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center text-sm font-bold text-zinc-900 shadow-xl z-10"
-                        style={{ left: `${tag.x}%`, top: `${tag.y}%` }}
-                    >
-                        <Tag className="w-3 h-3" />
-                        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-zinc-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap hidden group-hover:block z-20">
-                            {products.find(p => p.id.toString() === tag.product_id)?.name}
-                        </div>
-                    </div>
-                ))}
-
-                {/* UI TAGGING MENU */}
-                {isTagging && (
-                    <div 
-                        className="absolute z-50 transform -translate-x-1/2 mt-4"
-                        style={{ left: `${tempCoords.x}%`, top: `${tempCoords.y}%` }}
-                        onClick={(e) => e.stopPropagation()} 
-                    >
-                        <div className="w-64 bg-background border border-border shadow-2xl rounded-lg p-4 animate-in zoom-in-95 duration-200">
-                            <div className="flex justify-between items-center mb-3">
-                                <h4 className="font-bold text-sm">Select Product</h4>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsTagging(false)}>
-                                    <X className="w-3 h-3" />
+                                <Button asChild variant="outline">
+                                    <label htmlFor="upload-trigger" className="cursor-pointer">Pilih Foto</label>
                                 </Button>
                             </div>
-                            
-                            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                                <SelectTrigger className="w-full mb-3">
-                                    <SelectValue placeholder="-- Choose Item --" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {/* FIX: Ganti value="" menjadi value unik yang tidak kosong */}
-                                    <SelectItem value="placeholder-disabled" disabled>-- Choose Item --</SelectItem> 
-                                    {products.map(p => (
-                                        <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                        )}
 
-                            <Button size="sm" className="w-full font-bold" onClick={confirmTag}>
-                                <Plus className="w-3 h-3 mr-2" /> ADD TAG
-                            </Button>
-                        </div>
+                        {/* CASE 2: MODE CROPPING (3:4) */}
+                        {rawImageSrc && isCropping && (
+                            <div className="absolute inset-0 w-full h-full bg-black z-20 flex flex-col">
+                                {/* AREA CROP (FLEX GROW) */}
+                                <div className="relative flex-1 w-full bg-black/50 overflow-hidden">
+                                    <Cropper
+                                        image={rawImageSrc}
+                                        crop={crop}
+                                        zoom={zoom}
+                                        aspect={3 / 4} // 👈 KUNCI: RASIO POTRAIT 3:4
+                                        onCropChange={setCrop}
+                                        onCropComplete={onCropComplete}
+                                        onZoomChange={setZoom}
+                                        objectFit="contain" // Biar gambar muat di layar
+                                    />
+                                </div>
+
+                                {/* CONTROLS BAR (DI BAWAH, GAK OVERLAY) */}
+                                <div className="w-full bg-zinc-900 border-t border-white/10 p-4 flex flex-col gap-4 shrink-0 z-30 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+                                    <div className="flex items-center gap-4 px-2">
+                                        <ZoomIn className="w-4 h-4 text-white shrink-0" />
+                                        <Slider 
+                                            defaultValue={[1]} min={1} max={3} step={0.1} 
+                                            value={[zoom]} onValueChange={(val) => setZoom(val[0])} 
+                                            className="cursor-pointer flex-1"
+                                        />
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <Button variant="secondary" className="flex-1 font-semibold" onClick={() => setIsCropping(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button className="flex-1 font-bold" onClick={showCroppedImage}>
+                                            <Check className="w-4 h-4 mr-2" /> Done Crop
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CASE 3: MODE TAGGING (Hasil Crop) */}
+                        {croppedImagePreview && !isCropping && (
+                            <div 
+                                className="relative w-full h-full cursor-crosshair group"
+                                onClick={handleImageClick}
+                            >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img 
+                                    src={croppedImagePreview} 
+                                    className="w-full h-auto object-contain mx-auto shadow-2xl" 
+                                    alt="Lookbook" 
+                                />
+
+                                {/* Render Tags yang udah dibuat */}
+                                {tags.map((tag) => (
+                                    <div 
+                                        key={tag.id}
+                                        className="absolute w-8 h-8 bg-white text-black rounded-full flex items-center justify-center shadow-lg border-2 border-white transform -translate-x-1/2 -translate-y-1/2 z-10 hover:scale-110 transition-transform cursor-pointer"
+                                        style={{ left: `${tag.x}%`, top: `${tag.y}%` }}
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Biar gak ngetrigger add tag baru
+                                            setTags(tags.filter(t => t.id !== tag.id)); // Hapus tag kalau diklik
+                                        }}
+                                    >
+                                        <Plus className="w-4 h-4 rotate-45" /> {/* Icon X */}
+                                        <div className="absolute bottom-full mb-2 bg-black text-white text-[10px] px-2 py-1 rounded whitespace-nowrap hidden group-hover:block">
+                                            {products.find(p => p.id.toString() === tag.product_id)?.name}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Popover Pilih Produk (Muncul pas klik) */}
+                                {isTaggingMode && (
+                                    <div 
+                                        className="absolute z-50 transform -translate-x-1/2 mt-2 w-64 bg-background border border-border shadow-2xl rounded-lg p-3 animate-in zoom-in-95"
+                                        style={{ left: `${tempCoords.x}%`, top: `${tempCoords.y}%` }}
+                                        onClick={(e) => e.stopPropagation()} 
+                                    >
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-xs font-bold uppercase text-muted-foreground">Tag Product</span>
+                                            <button onClick={() => setIsTaggingMode(false)}><X className="w-4 h-4 text-muted-foreground hover:text-foreground" /></button>
+                                        </div>
+                                        <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                                            <SelectTrigger className="h-8 text-xs mb-2">
+                                                <SelectValue placeholder="Pilih Produk..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {products.map(p => (
+                                                    <SelectItem key={p.id} value={p.id.toString()} className="text-xs">{p.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <Button size="sm" className="w-full h-7 text-xs font-bold" onClick={confirmTag}>Add Tag</Button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         
-                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-4 h-4 bg-primary rounded-full border-2 border-white animate-ping" />
-                    </div>
-                )}
-            </div>
-        );
-    }
-    
-    // --- MAIN RENDER ---
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* KIRI: CANVAS IMAGE TAGGING (FIXED ASPECT RATIO) */}
-            <div className="lg:col-span-2">
-                <Card className="bg-card border-border overflow-hidden shadow-sm">
-                    {/* Container Aspect Ratio 4:3 */}
-                    <div className="relative w-full pb-[75%] bg-zinc-950"> 
-                       <CardContent className="p-0 absolute inset-0 flex items-center justify-center">
-                            {renderImageCanvas()}
-                       </CardContent>
-                    </div>
+                    </CardContent>
                 </Card>
-                <p className="text-xs text-muted-foreground mt-3 text-center">
-                    Click anywhere on the product in the image to add a shopping tag.
-                </p>
+                <div className="flex justify-between items-center mt-2 px-2">
+                    <p className="text-xs text-muted-foreground">
+                        * Klik pada area foto untuk menandai produk.
+                    </p>
+                    {croppedImagePreview && (
+                        <Button variant="ghost" size="sm" onClick={() => setIsCropping(true)} className="text-xs h-7 text-muted-foreground hover:text-foreground">
+                            <RotateCcw className="w-3 h-3 mr-1" /> Re-Crop Image
+                        </Button>
+                    )}
+                </div>
             </div>
 
-            {/* KANAN: FORM INPUT */}
+            {/* --- KOLOM KANAN: FORM DATA --- */}
             <div className="space-y-6">
                 <Card className="bg-card border-border">
                     <CardContent className="p-6 space-y-4">
-                        <h2 className="font-bold text-xl mb-4">Lookbook Info</h2>
+                        <h2 className="font-bold text-xl mb-4">Lookbook Details</h2>
                         
                         <div className="space-y-2">
-                            <Label>Title</Label>
-                            <Input placeholder="Ex: Summer Vibe 2025" value={title} onChange={e => setTitle(e.target.value)} />
+                            <Label>Title / Theme</Label>
+                            <Input placeholder="e.g. Summer Drop Vol. 1" value={title} onChange={e => setTitle(e.target.value)} />
                         </div>
 
-                        <div className="space-y-2">
-                            <Label>Image</Label>
-                            <Input type="file" accept="image/*" onChange={handleImageChange} className="cursor-pointer" />
-                        </div>
-
-                        {/* List Tags */}
+                        {/* List Barang yang udah di-Tag */}
                         <div className="space-y-3 pt-4 border-t border-border">
                             <Label>Tagged Items ({tags.length})</Label>
-                            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                                {tags.length === 0 && <p className="text-xs text-muted-foreground italic">No items tagged yet.</p>}
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                {tags.length === 0 && <p className="text-xs text-muted-foreground italic">Belum ada produk yang di-tag.</p>}
                                 
                                 {tags.map(tag => {
                                     const prodName = products.find(p => p.id.toString() === tag.product_id)?.name || "Unknown";
@@ -356,8 +364,7 @@ export default function CreateLookbookPage() {
                                                 <span className="truncate font-medium">{prodName}</span>
                                             </div>
                                             <Button 
-                                                variant="ghost" 
-                                                size="icon" 
+                                                variant="ghost" size="icon" 
                                                 className="h-6 w-6 text-muted-foreground hover:text-red-500"
                                                 onClick={() => setTags(tags.filter(t => t.id !== tag.id))}
                                             >
@@ -369,9 +376,9 @@ export default function CreateLookbookPage() {
                             </div>
                         </div>
 
-                        <Button className="w-full font-bold mt-4" disabled={loading || isSetupMode} onClick={handleSubmit}>
+                        <Button className="w-full font-bold h-11 mt-4" disabled={loading || !finalImageFile} onClick={handleSubmit}>
                             {loading ? <Loader2 className="animate-spin mr-2" /> : <Plus className="mr-2 h-4 w-4" />}
-                            PUBLISH
+                            PUBLISH LOOKBOOK
                         </Button>
 
                     </CardContent>
