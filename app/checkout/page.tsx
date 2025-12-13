@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react"; // 👈 Tambah useMemo
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, notFound } from "next/navigation"; // 👈 Import notFound
 import { useAuth } from "@/lib/useAuth";
 import { useCart } from "@/lib/useCart";
 import api from "@/lib/axios";
@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { TicketPercent, X } from "lucide-react";
+import { TicketPercent, X, Loader2 } from "lucide-react"; // 👈 Tambah Loader2
 import AddressForm, { AddressData } from "@/components/shared/AddressForm";
 
 interface MidtransWindow extends Window {
@@ -25,15 +25,12 @@ interface CourierRate {
 }
 interface Voucher {
     code: string;
-    discount_amount: number; // Persentase (e.g., 10) atau Jumlah Tetap (e.g., 50000)
+    discount_amount: number;
     discount_type: 'percent' | 'fixed';
     max_discount_amount?: number; 
 }
 
-// ✨ FUNGSI UTILITY BARU: FORMATTER
 const formatRupiah = (amount: number) => {
-    // Karena fungsi ini akan dipanggil di client, kita pastikan pake locale yang benar.
-    // Kita tetap akan menggunakan state untuk menunda render pertamanya.
     return amount.toLocaleString("id-ID");
 };
 
@@ -48,23 +45,53 @@ export default function CheckoutPage() {
   const [loadingRates, setLoadingRates] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  // STATE VOUCHER 🎟️
+  // STATE VOUCHER
   const [voucherCode, setVoucherCode] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
   const [loadingVoucher, setLoadingVoucher] = useState(false);
 
-  // ✨ STATE BARU UNTUK MENCEGAH HYDRATION ERROR
-  const [isClient, setIsClient] = useState(false);
+  // ✨ SECURITY STATE
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // ✨ SET isClient JADI TRUE SETELAH KOMPONEN MOUNT (DI SISI CLIENT)
-    setIsClient(true); 
+    // 1. Kasih waktu bentar buat useAuth load dari localStorage
+    const timer = setTimeout(() => {
+        setIsChecking(false);
+    }, 800);
 
-    if (!user) router.push("/login");
-    if (cart.items.length === 0) router.push("/cart");
-  }, [user, cart.items, router]);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Logic Redirect Cart Kosong (Hanya jalan kalau user udah lolos cek)
+  useEffect(() => {
+    if (!isChecking && user && cart.items.length === 0) {
+         router.push("/cart");
+    }
+  }, [isChecking, user, cart.items, router]);
+
+  // --- LOGIC SECURITY GATE ---
   
-  // ... (handleAddressSubmit, handleApplyVoucher, handlePay logic lainnya tetap sama)
+  // 1. Tampilkan Loading Screen dulu (biar gak bocor konten)
+  if (isChecking) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center pt-20">
+            <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+        </div>
+      );
+  }
+
+  // 2. Kalau GAK ADA USER -> 404 NOT FOUND (Sesuai Request)
+  if (!user) {
+      return notFound();
+  }
+
+  // 3. Kalau Cart Kosong -> Return null (karena useEffect di atas bakal redirect)
+  if (cart.items.length === 0) {
+      return null; 
+  }
+
+  // --- CONTENT CHECKOUT (Hanya render kalau lolos gate di atas) ---
+
   const handleAddressSubmit = async (data: AddressData) => {
     setCheckoutData(data);
     setLoadingRates(true);
@@ -167,7 +194,7 @@ export default function CheckoutPage() {
 
         const res = await api.post("/checkout", payload); 
 
-        // 2. BERSIHIN KERANJANG DISINI G!
+        // BERSIHIN KERANJANG DISINI G!
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cartStore = cart as any;
 
@@ -177,7 +204,7 @@ export default function CheckoutPage() {
             cartStore.clearCart(); 
         }
 
-        // 3. Munculin Midtrans Snap
+        // Munculin Midtrans Snap
         const snap = (window as unknown as MidtransWindow).snap;
 
         if (snap) {
@@ -204,7 +231,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // 👇 PERHITUNGAN
   const defaultAddress = user ? {
       name: user.name,
       phone: user.phone || "",
@@ -215,22 +241,6 @@ export default function CheckoutPage() {
 
   const discountValue = calculateDiscount();
   const grandTotal = Math.max(0, (cart.totalPrice() + (selectedRate?.price || 0)) - discountValue);
-
-  // ✨ Render Placeholder di Server, Render Angka di Client
-  const DisplayRupiah = ({ value }: { value: number }) => {
-    if (!isClient) return <span>-</span>; // Tampilkan "-" saat SSR
-    return <span>Rp {formatRupiah(value)}</span>;
-  };
-  
-  const DisplayRupiahPositive = ({ value }: { value: number }) => {
-    if (!isClient) return <span>-</span>;
-    return <span>- Rp {formatRupiah(value)}</span>;
-  };
-  
-  const DisplayRupiahShipping = ({ value }: { value: number }) => {
-    if (!isClient) return <span>-</span>;
-    return <span>{selectedRate ? `Rp ${formatRupiah(value)}` : "-"}</span>;
-  };
 
   return (
     <main className="min-h-screen bg-background text-foreground pt-10 pb-20">
@@ -268,8 +278,7 @@ export default function CheckoutPage() {
                                             <p className="font-bold uppercase text-sm">{rate.courier_name} - {rate.courier_service_name}</p>
                                             <p className="text-xs text-muted-foreground">Estimasi: {rate.duration}</p>
                                         </div>
-                                        {/* FIX LOKALISASI DI ONGKIR */}
-                                        <p className="font-bold text-sm">Rp {isClient ? formatRupiah(rate.price) : '-'}</p>
+                                        <p className="font-bold text-sm">Rp {formatRupiah(rate.price)}</p>
                                     </div>
                                 ))}
                             </div>
@@ -288,8 +297,7 @@ export default function CheckoutPage() {
                             {cart.items.map((item) => (
                                 <div key={item.id} className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">{item.name} x{item.quantity}</span>
-                                    {/* FIX LOKALISASI DI ITEM PRICE */}
-                                    <span>Rp {isClient ? formatRupiah(item.price * item.quantity) : '-'}</span> 
+                                    <span>Rp {formatRupiah(item.price * item.quantity)}</span>
                                 </div>
                             ))}
                         </div>
@@ -322,8 +330,7 @@ export default function CheckoutPage() {
                         {appliedVoucher && (
                             <div className="bg-green-500/10 text-green-500 text-xs p-2 rounded mb-4 flex justify-between">
                                 <span>Code <b>{appliedVoucher.code}</b> applied!</span>
-                                {/* FIX LOKALISASI DI DISKON ATAS */}
-                                <span>{isClient ? DisplayRupiahPositive({ value: discountValue }) : '-'}</span> 
+                                <span>- Rp {formatRupiah(discountValue)}</span>
                             </div>
                         )}
 
@@ -332,19 +339,16 @@ export default function CheckoutPage() {
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Subtotal</span>
-                                {/* FIX LOKALISASI DI SUBTOTALL!!! (INI SUMBER ERROR LO) */}
-                                <DisplayRupiah value={cart.totalPrice()} /> 
+                                <span>Rp {formatRupiah(cart.totalPrice())}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Shipping</span>
-                                {/* FIX LOKALISASI DI SHIPPING */}
-                                <DisplayRupiahShipping value={selectedRate?.price || 0} />
+                                <span>{selectedRate ? `Rp ${formatRupiah(selectedRate.price)}` : "-"}</span>
                             </div>
                             {appliedVoucher && (
                                 <div className="flex justify-between text-green-500 font-bold">
                                     <span>Discount</span>
-                                    {/* FIX LOKALISASI DI DISKON BAWAH */}
-                                    <DisplayRupiahPositive value={discountValue} />
+                                    <span>- Rp {formatRupiah(discountValue)}</span>
                                 </div>
                             )}
                         </div>
@@ -353,8 +357,7 @@ export default function CheckoutPage() {
 
                         <div className="flex justify-between text-lg font-black mb-6">
                             <span>TOTAL</span>
-                            {/* FIX LOKALISASI DI GRAND TOTAL */}
-                            <DisplayRupiah value={grandTotal} /> 
+                            <span>Rp {formatRupiah(Math.max(grandTotal, 0))}</span>
                         </div>
 
                         <Button 

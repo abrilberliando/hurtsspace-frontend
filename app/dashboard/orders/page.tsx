@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+// import { useRouter } from "next/navigation"; // 👈 Gak butuh router lagi buat nge-kick
 import api from "@/lib/axios";
+import { AxiosError } from "axios";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, CreditCard, RefreshCw, XCircle, Truck, Copy, ExternalLink, Calendar, Receipt } from "lucide-react";
+import { Package, CreditCard, RefreshCw, XCircle, Truck, Copy, ExternalLink, Calendar, Receipt, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -29,7 +31,6 @@ interface MidtransWindow extends Window {
 interface Order {
   id: number;
   invoice_number: string;
-  // 👇 UPDATE: Allow string biar aman
   total_price: number | string;
   status: string;
   shipping_resi: string | null;
@@ -46,13 +47,25 @@ interface Order {
 export default function OrderHistoryPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  // const router = useRouter(); // 👈 Hapus aja
 
   const fetchOrders = async () => {
     try {
       const res = await api.get("/orders");
       setOrders(res.data.data);
-    } catch { 
-      toast.error("Gagal mengambil riwayat pesanan.");
+    } catch (error) {
+      // 🔥 LOGIC BARU: Handling Santuy
+      if (error instanceof AxiosError && error.response?.status === 401) {
+        // Kalau 401 (Belum login), kita set orders kosong aja
+        setOrders([]);
+        // Kasih toast friendly sesuai request
+        toast("Cart kosong nih, yuk belanja my G", { 
+             duration: 4000,
+        });
+      } else {
+        // Error beneran (Server down, dll) baru kasih error merah
+        toast.error("Gagal mengambil riwayat pesanan.");
+      }
     } finally {
       setLoading(false);
     }
@@ -60,9 +73,9 @@ export default function OrderHistoryPage() {
 
   useEffect(() => {
     fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 🔥 HELPER BARU: Logic Penyelamat Harga
   const displayPrice = (val: string | number): number => {
     const num = typeof val === 'string' ? parseFloat(val) : val;
     if (isNaN(num)) return 0;
@@ -206,7 +219,6 @@ export default function OrderHistoryPage() {
                         
                         <div className="flex flex-col">
                             <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Total Tagihan</span>
-                            {/* 👇 UPDATE: Pake displayPrice disini */}
                             <span className="text-xl font-black">
                                 Rp {displayPrice(order.total_price).toLocaleString("id-ID")}
                             </span>
