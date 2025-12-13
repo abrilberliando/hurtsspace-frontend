@@ -28,7 +28,13 @@ interface Product {
     price: number | string;
     category?: { name: string };
     images: { image_url: string }[];
-    is_featured: boolean | number; 
+    // Kita paksa jadi boolean di state frontend
+    is_featured: boolean; 
+}
+
+// 👇 TYPE BARU: Buat handle data mentah dari API yang is_featured-nya masih random (number/string/boolean)
+interface RawProduct extends Omit<Product, "is_featured"> {
+    is_featured: boolean | number | string;
 }
 
 export default function AdminProductsPage() {
@@ -41,9 +47,20 @@ export default function AdminProductsPage() {
 
     const fetchProducts = useCallback(async () => {
         try {
+            // Hit API produk
             const res = await api.get(`/products?t=${Date.now()}`);
+            // Ambil data array (handle paginasi atau wrapper)
             const dataProduk = res.data.data.data || res.data.data || []; 
-            setProducts(dataProduk);
+            
+            // 👇 FIX UTAMA: Pake tipe 'RawProduct' alih-alih 'any'
+            // Ini bikin ESLint seneng dan kode lo lebih type-safe
+            const parsedProducts: Product[] = dataProduk.map((p: RawProduct) => ({
+                ...p,
+                // Logic ini handle string "1", number 1, dan boolean true sebagai TRUE. Sisanya FALSE.
+                is_featured: (p.is_featured === 1 || p.is_featured === "1" || p.is_featured === true),
+            }));
+
+            setProducts(parsedProducts);
         } catch {
             toast.error("Gagal load produk.");
             setProducts([]); 
@@ -66,17 +83,21 @@ export default function AdminProductsPage() {
     const handleSetFeatured = async (id: number) => {
         const originalProducts = [...products];
 
+        // 1. Optimistic Update (Langsung ubah tampilan)
         const optimisProducts = products.map((item) => {
             if (item.id === id) {
+                // Toggle status featured (inversi nilai boolean)
                 return { ...item, is_featured: !item.is_featured };
             }
             return item;
         });
         setProducts(optimisProducts);
 
+        // Cek status baru hasil toggle
         const isNowFeatured = optimisProducts.find(p => p.id === id)?.is_featured;
 
         try {
+            // 2. Hit Backend
             await api.put(`admin/products/${id}/featured`);
             
             if (isNowFeatured) {
@@ -84,15 +105,18 @@ export default function AdminProductsPage() {
             } else {
                 toast.success("Featured dihapus.");
             }
+            // Optional: fetchProducts() lagi kalau mau sync total
         } catch (error) { 
             const err = error as AxiosError<{ message: string }>;
 
+            // 3. Handle Error (Slot Penuh - 422)
             if (err.response && err.response.status === 422) {
                 const errorMessage = err.response.data.message || "Gagal karena slot penuh.";
                 toast.error(errorMessage);
             } else {
                 toast.error("Gagal update status.");
             }
+            // 4. Rollback State kalau gagal
             setProducts(originalProducts);
         }
     };
@@ -111,6 +135,7 @@ export default function AdminProductsPage() {
         try {
             await api.delete(`admin/products/${targetProductId}`);
             
+            // Hapus dari state
             setProducts(prev => prev.filter(p => p.id !== targetProductId));
             
             toast.success("Produk berhasil dihapus.");
@@ -189,7 +214,8 @@ export default function AdminProductsPage() {
                                             {formatPrice(item.price)}
                                         </p>
                                         
-                                        {!!item.is_featured && (
+                                        {/* TAMPILKAN BADGE FEATURED */}
+                                        {item.is_featured && (
                                             <span className="w-fit text-[8px] md:text-[10px] font-black text-yellow-500 border border-yellow-500/30 px-1.5 md:px-2 py-0.5 rounded uppercase tracking-wider">
                                                 Featured
                                             </span>
@@ -233,16 +259,16 @@ export default function AdminProductsPage() {
                 )}
             </div>
 
-            {/* 👇 KOMPONEN ALERT DIALOG KONFIRMASI (FINAL MOBILE FIX) */}
+            {/* 👇 KOMPONEN ALERT DIALOG KONFIRMASI */}
             <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <AlertDialogContent className="w-[90%] max-w-sm rounded-xl"> {/* 👈 FIX: Lebar responsif di mobile */}
+                <AlertDialogContent className="w-[90%] max-w-sm rounded-xl">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Hapus {targetProductName}?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Tindakan ini akan menghapus produk <strong>{targetProductName}</strong> secara permanen dari database. Apakah kamu yakin ingin melanjutkan?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-2"> {/* 👈 FIX: Tombol ditumpuk di mobile */}
+                    <AlertDialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-2">
                         <AlertDialogCancel 
                             onClick={() => setIsDialogOpen(false)} 
                             disabled={isDeleting}
@@ -253,7 +279,7 @@ export default function AdminProductsPage() {
                         <AlertDialogAction 
                             onClick={executeDelete} 
                             disabled={isDeleting}
-                            className="bg-destructive hover:bg-destructive/90  w-full sm:w-auto" 
+                            className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto" 
                         >
                             {isDeleting ? (
                                 <>
