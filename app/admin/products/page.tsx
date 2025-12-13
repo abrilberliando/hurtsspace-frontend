@@ -173,7 +173,7 @@ export default function AdminProductsPage() {
                         <div 
                             key={item.id} 
                             className={`bg-card border rounded-xl overflow-hidden group hover:shadow-xl transition-all duration-300 flex flex-col
-                                ${item.is_featured ? 'border-yellow-500/50 shadow-yellow-500/10' : 'border-border'}
+                                ${item.is_featured ? 'border-border' : 'border-yellow-500/50 shadow-yellow-500/10'}
                             `}
                         >
                             {/* Image Container */}
@@ -190,11 +190,11 @@ export default function AdminProductsPage() {
                                     onClick={() => handleSetFeatured(item.id)}
                                     className={`absolute top-2 right-2 p-1.5 md:p-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-lg z-10
                                         ${item.is_featured 
-                                            ? 'bg-yellow-400 text-black scale-110 ring-2 md:ring-4 ring-yellow-400/30' 
-                                            : 'bg-black/50 text-white/50 hover:bg-white hover:text-yellow-500 hover:scale-110'}
+                                            ? 'bg-black/50 text-white/50 hover:bg-white hover:text-yellow-500 hover:scale-110' 
+                                            : 'bg-yellow-400 text-black scale-110 ring-2 md:ring-4 ring-yellow-400/30'}
                                     `}
                                 >
-                                    <Star className={`w-3.5 h-3.5 md:w-4 md:h-4 ${item.is_featured ? 'fill-current' : ''}`} />
+                                    <Star className={`w-3.5 h-3.5 md:w-4 md:h-4 ${item.is_featured ? '' : 'fill-current'}`} />
                                 </button>
 
                                 {/* Badge Kategori */}
