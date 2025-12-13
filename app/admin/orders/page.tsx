@@ -33,7 +33,8 @@ import {
   Search,
   ArrowUpDown,
   Phone,
-  CalendarDays
+  CalendarDays,
+  Receipt
 } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
@@ -55,6 +56,7 @@ interface Order {
   shipping_courier: string | null;
   shipping_service: string | null;
   shipping_address: string;
+  shipping_cost: number | string; // 👇 Wajib ada buat breakdown harga
   created_at: string;
   user: { name: string; email: string; phone?: string }; 
   items: OrderItem[];
@@ -64,11 +66,9 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // State Filter & Sort
   const [searchQuery, setSearchQuery] = useState(""); 
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
-  // State Dialog & Input
   const [resiInput, setResiInput] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isResiDialogOpen, setIsResiDialogOpen] = useState(false);
@@ -89,13 +89,11 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  // Helper Format Harga
   const formatPrice = (price: number | string) => {
     const num = Math.floor(Number(price));
     return num.toLocaleString("id-ID");
   };
 
-  // 👇 Helper Format Tanggal (Indonesia)
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
         day: "numeric",
@@ -106,7 +104,6 @@ export default function AdminOrdersPage() {
     });
   };
 
-  // Helper Ringkasan Item
   const getItemsSummary = (items: OrderItem[]) => {
       if (items.length === 0) return "-";
       const firstItem = `${items[0].product.name} (${items[0].variant.size})`;
@@ -152,59 +149,116 @@ export default function AdminOrdersPage() {
     }
   };
 
+ // 👇 UPDATE: PRINT LABEL LEBIH GEDE & DETAIL (RESIZE UP)
   const handlePrintLabel = (order: Order) => {
-    const printWindow = window.open('', '', 'width=800,height=600');
+    // URL Logo (Simpan file 'logo.png' di folder 'public' project Next.js lo)
+    const logoUrl = window.location.origin + "/logo.png"; 
+
+    const printWindow = window.open('', '', 'width=900,height=700');
     if (printWindow) {
         printWindow.document.write(`
             <html>
                 <head>
                     <title>Shipping Label - ${order.invoice_number}</title>
                     <style>
-                        body { font-family: monospace; padding: 20px; max-width: 600px; margin: 0 auto; border: 2px dashed #000; }
-                        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-                        .courier { font-size: 24px; font-weight: bold; text-transform: uppercase; }
-                        .section { margin-bottom: 20px; }
-                        .label { font-weight: bold; font-size: 12px; color: #555; text-transform: uppercase; }
-                        .content { font-size: 16px; margin-top: 4px; }
-                        .address { font-size: 18px; line-height: 1.4; font-weight: bold; }
-                        .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                        .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                        .footer { margin-top: 30px; text-align: center; font-size: 12px; }
+                        /* Reset & Base */
+                        body { font-family: 'Arial', sans-serif; padding: 25px; max-width: 800px; margin: 0 auto; border: 3px solid #000; box-sizing: border-box; }
+                        
+                        /* Header */
+                        .header { text-align: center; border-bottom: 3px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+                        .logo-img { max-height: 90px; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto; }
+                        .fallback-logo { font-size: 20px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; }
+                        .courier-badge { font-size: 20px; font-weight: 900; text-transform: uppercase; background: #000; color: #fff; padding: 8px 20px; display: inline-block; margin-top: 10px; border-radius: 4px; }
+                        .inv-number { font-size: 16px; margin-top: 8px; font-family: 'Courier New', monospace; font-weight: bold; }
+
+                        /* Layout Sections */
+                        .section { border: 2px solid #000; padding: 15px; margin-bottom: 15px; background: #fff; }
+                        .section-header { background: #000; color: #fff; font-weight: bold; font-size: 14px; text-transform: uppercase; padding: 4px 8px; display: inline-block; margin-bottom: 10px; }
+                        
+                        /* Data Penerima (Big & Clear) */
+                        .recipient-row { margin-bottom: 6px; font-size: 16px; line-height: 1.4; }
+                        .recipient-label { width: 90px; display: inline-block; font-weight: bold; vertical-align: top; color: #444; }
+                        .recipient-val { display: inline-block; width: calc(100% - 100px); font-weight: 600; }
+                        .recipient-name { font-size: 22px; font-weight: 900; text-transform: uppercase; }
+                        .recipient-phone { font-size: 18px; font-weight: 800; letter-spacing: 1px; }
+                        .address-val { font-size: 25px; line-height: 1.4; font-weight: 700; display: block; }
+
+                        /* Pengirim */
+                        .sender-info { font-size: 14px; line-height: 1.4; }
+
+                        /* Table */
+                        .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+                        .items-table th, .items-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+                        .items-table th { background: #eee; font-weight: 800; text-transform: uppercase; font-size: 12px; }
+                        
+                        .footer { margin-top: 20px; text-align: center; font-size: 12px; font-weight: bold; border-top: 1px dashed #000; padding-top: 15px; font-style: italic; }
+
+                        @media print {
+                            body { -webkit-print-color-adjust: exact; }
+                        }
                     </style>
                 </head>
                 <body>
                     <div class="header">
-                        <h2>HURTSSPACE</h2>
-                        <div class="courier">${order.shipping_courier || 'KURIR'} - ${order.shipping_service || 'REG'}</div>
-                        <p>INV: ${order.invoice_number}</p>
+                        <!-- Ganti Logo PNG -->
+                        <img src="${logoUrl}" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" />
+                        <div class="fallback-logo" style="display:none">HURTSSPACE</div>
+                        
+                        <div class="courier-badge">${order.shipping_courier || 'KURIR'} - ${order.shipping_service || 'REG'}</div>
+                        <div class="inv-number">INV: ${order.invoice_number}</div>
                     </div>
+
+                    <!-- Layout Penerima -->
                     <div class="section">
-                        <div class="label">PENERIMA:</div>
-                        <div class="content"><strong>${order.user.name}</strong></div>
-                        <div class="content address">${order.shipping_address}</div>
-                        <div class="content">Telp: ${order.user.phone || '-'}</div>
+                        <div class="section-header">PENERIMA (RECIPIENT)</div>
+                        <div class="recipient-row" style="margin-top: 5px;">
+                            <span class="recipient-val address-val">${order.shipping_address}</span>
+                        </div>
                     </div>
-                    <div class="section">
-                        <div class="label">PENGIRIM:</div>
-                        <div class="content">HURTSSPACE OFFICIAL STORE<br>Surabaya, Indonesia<br>0812-3456-7890</div>
+
+                    <!-- Layout Pengirim -->
+                    <div class="section" style="border-style: dashed;">
+                        <div class="section-header" style="background: #444;">PENGIRIM (SENDER)</div>
+                        <div class="sender-info">
+                            <strong>HURTSSPACE OFFICIAL STORE</strong><br>
+                            0812-3456-7890<br>
+                            Surabaya, Jawa Timur
+                        </div>
                     </div>
-                    <div class="section">
-                        <div class="label">DETAIL BARANG:</div>
+
+                    <!-- Items -->
+                    <div style="margin-top: 20px;">
                         <table class="items-table">
-                            <thead><tr><th>Produk</th><th>Size</th><th>Qty</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th>Produk</th>
+                                    <th width="15%">Size</th>
+                                    <th width="10%">Qty</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 ${order.items.map(item => `
                                     <tr>
                                         <td>${item.product.name}</td>
-                                        <td>${item.variant.size}</td>
-                                        <td>${item.quantity}</td>
+                                        <td style="text-align:center; font-weight:bold;">${item.variant.size}</td>
+                                        <td style="text-align:center;">${item.quantity}</td>
                                     </tr>
                                 `).join('')}
+                                <tr>
+                                    <td colspan="2" style="text-align:right; font-weight:bold;">Ongkos Kirim</td>
+                                    <td style="text-align:center;">${formatPrice(order.shipping_cost || 0)}</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
-                    <div class="footer">Simpan label ini sebagai bukti pengiriman.</div>
-                    <script>window.onload = function() { window.print(); }</script>
+
+                    <div class="footer">
+                         THANKS G!
+                    </div>
+
+                    <script>
+                        window.onload = function() { window.print(); }
+                    </script>
                 </body>
             </html>
         `);
@@ -287,7 +341,6 @@ export default function AdminOrdersPage() {
                             filteredOrders.map((order) => (
                                 <tr key={order.id} className="hover:bg-muted/50 transition">
                                     <td className="px-6 py-4 align-top">
-                                        {/* 👇 DATE ADDED BELOW INVOICE */}
                                         <div className="flex flex-col gap-1">
                                             <span className="font-mono font-bold text-base">{order.invoice_number}</span>
                                             <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -318,7 +371,7 @@ export default function AdminOrdersPage() {
                                     <td className="px-6 py-4 text-right align-top">
                                         <div className="flex justify-end gap-2">
                                             <Button size="sm" variant="secondary" onClick={() => { setSelectedOrder(order); setIsDetailDialogOpen(true); }}>
-                                                <Eye className="w-4 h-4" />
+                                                <Eye className="w-4 h-4 mr-1" /> Detail
                                             </Button>
                                             {order.status === 'paid' && (
                                                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => { setSelectedOrder(order); setResiInput(""); setIsResiDialogOpen(true); }}>
@@ -342,11 +395,9 @@ export default function AdminOrdersPage() {
             ) : (
                 filteredOrders.map((order) => (
                     <div key={order.id} className="bg-card border border-border rounded-lg p-4 shadow-sm space-y-3">
-                        {/* Header: Invoice & Status */}
                         <div className="flex justify-between items-start">
                             <div className="flex flex-col gap-0.5">
                                 <p className="font-mono font-bold text-lg leading-none">{order.invoice_number}</p>
-                                {/* 👇 DATE ADDED BELOW INVOICE (MOBILE) */}
                                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                                     <CalendarDays className="w-3 h-3" />
                                     {formatDate(order.created_at)}
@@ -359,7 +410,6 @@ export default function AdminOrdersPage() {
                         
                         <Separator />
 
-                        {/* User & Items Info */}
                         <div className="text-sm space-y-2">
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-2 font-medium">
@@ -372,14 +422,12 @@ export default function AdminOrdersPage() {
                                 </div>
                             </div>
                             
-                            {/* Items Summary Compact */}
                             <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded border border-border/50 truncate">
                                 <Package className="w-3 h-3 inline mr-1 mb-0.5" />
                                 {getItemsSummary(order.items)}
                             </div>
                         </div>
 
-                        {/* Footer: Price & Actions */}
                         <div className="flex items-center justify-between pt-1">
                             <div className="font-bold text-green-600 text-base">
                                 {formatPrice(order.total_price)}
@@ -436,20 +484,36 @@ export default function AdminOrdersPage() {
                 
                 {selectedOrder && (
                     <div className="space-y-6">
+                        {/* 👇 UPDATED: DETAIL HARGA LENGKAP */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                             <div className="space-y-1">
                                 <Label className="text-xs text-muted-foreground uppercase tracking-wider">Penerima</Label>
                                 <div className="flex items-center gap-2 font-bold text-base"><User className="w-4 h-4" /> {selectedOrder.user.name}</div>
-                                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                    <Phone className="w-3 h-3" /> {selectedOrder.user.phone || "-"}
-                                </div>
-                                <div className="text-sm text-muted-foreground break-all">{selectedOrder.user.email}</div>
+                                <div className="text-sm">{selectedOrder.user.email}</div>
+                                <div className="text-sm font-medium text-muted-foreground">{selectedOrder.user.phone}</div>
                             </div>
-                            <div className="space-y-1">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Ekspedisi & Total</Label>
-                                <div className="flex items-center gap-2 font-bold uppercase"><Truck className="w-4 h-4" /> {selectedOrder.shipping_courier || '-'} - {selectedOrder.shipping_service || '-'}</div>
-                                <div className="text-lg font-bold text-green-600">
-                                    {formatPrice(selectedOrder.total_price)}
+                            <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Rincian Biaya</Label>
+                                <div className="space-y-1 bg-muted/30 p-3 rounded border border-border/50 text-sm">
+                                     {/* Hitung Subtotal Item */}
+                                     <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Subtotal Item:</span>
+                                        <span>{formatPrice(Number(selectedOrder.total_price) - Number(selectedOrder.shipping_cost || 0))}</span>
+                                     </div>
+                                     <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Ongkir ({selectedOrder.shipping_courier || 'Kurir'}):</span>
+                                        <span>{formatPrice(selectedOrder.shipping_cost || 0)}</span>
+                                     </div>
+                                     <div className="border-t border-border/50 my-1"></div>
+                                     <div className="flex justify-between font-bold text-lg">
+                                        <span>Total:</span>
+                                        <span>{formatPrice(selectedOrder.total_price)}</span>
+                                     </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Badge className={`${getStatusColor(selectedOrder.status)} border-none text-white uppercase text-xs w-fit`}>
+                                        {selectedOrder.status}
+                                    </Badge>
                                 </div>
                             </div>
                         </div>
@@ -466,14 +530,14 @@ export default function AdminOrdersPage() {
 
                         <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground uppercase tracking-wider">Daftar Barang</Label>
-                            <div className="border border-border rounded-md divide-y divide-border">
+                            <div className="border border-border rounded-md divide-y divide-border max-h-48 overflow-y-auto">
                                 {selectedOrder.items.map((item, idx) => (
                                     <div key={idx} className="p-3 flex justify-between items-center text-sm">
                                         <div className="flex flex-col">
                                             <span className="font-medium">{item.product.name}</span>
                                             <span className="text-xs text-muted-foreground">Size: {item.variant.size}</span>
                                         </div>
-                                        <div className="font-bold bg-muted px-2 py-1 rounded text-xs">x{item.quantity}</div>
+                                        <div className="font-bold">x{item.quantity}</div>
                                     </div>
                                 ))}
                             </div>
