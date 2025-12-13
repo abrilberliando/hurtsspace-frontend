@@ -269,6 +269,13 @@ export default function Navbar() {
                     >
                       Lookbook
                     </Link>
+                    <Link
+                      href="/wishlist"
+                      className="hover:text-primary transition flex items-center gap-3"
+                      onClick={() => setIsSheetOpen(false)}
+                    >
+                      Wishlist
+                    </Link>
                   </div>
                 </div>
               </SheetContent>

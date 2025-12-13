@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, notFound } from "next/navigation"; // 👈 Import notFound
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -11,26 +11,26 @@ import {
   Camera,
   TicketPercent,
   Image,
-  ChevronLeft,
-  ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
   ChartBar,
+  Menu,
+  Loader2, // 👈 Pake Loader
 } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
-  SheetHeader, // 👈 Import ini
-  SheetTitle, // 👈 Import ini
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 
 // 1. MENU DEFINITION
 const menus = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "Manage Orders", href: "/admin/orders", icon: ShoppingCart },
+  { name: "Manage Orders", href: "/admin/orders", icon: ShoppingCart },
   { name: "Manage Products", href: "/admin/products", icon: Package },
   { name: "Manage Categories", href: "/admin/categories", icon: ChartBar },
   { name: "Manage Hero Utama", href: "/admin/hero", icon: Image },
@@ -159,22 +159,36 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { user } = useAuth();
-  const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-
-  // State Collapsible Sidebar (Desktop)
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
+  // 👇 LOGIC SECURITY & LOADING
   useEffect(() => {
-    if (user && user.role !== "admin") {
-      router.push("/");
-    }
-  }, [user, router]);
+    const timer = setTimeout(() => {
+        setIsChecking(false);
+    }, 800); 
 
-  if (!user || user.role !== "admin") return null;
+    return () => clearTimeout(timer);
+  }, []);
 
+  // 1. Tampilkan Loading Screen kalau masih ngecek
+  if (isChecking) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+            <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+        </div>
+      );
+  }
+
+  // 2. Security Check: Kalau bukan admin atau gak login -> 404
+  if (!user || user.role !== "admin") {
+      notFound(); // Lempar ke halaman 404
+      return null;
+  }
+
+  // 3. Render Dashboard kalau Lulus
   return (
-    // 👇 Layout Utama: Pakai semantic color
     <div className="min-h-screen bg-background text-foreground flex flex-col lg:flex-row relative">
       {/* 👇 FLOATING MOBILE TOGGLE (Sticky on Left Edge) */}
       <div className="lg:hidden">
@@ -205,7 +219,6 @@ export default function AdminLayout({
       </div>
 
       {/* DESKTOP SIDEBAR (Collapsible & Sticky) */}
-      {/* 👇 Mepet Kiri (Border Right, Full Height) */}
       <aside
         className={`
             hidden lg:block shrink-0 transition-all duration-300 ease-in-out

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react"; // ✅ FIX: useRef sudah diimport
+import { useEffect, useState, useRef } from "react";
 import api from "@/lib/axios";
 import { useAuth } from "@/lib/useAuth";
-import { useRouter } from "next/navigation";
+import { notFound } from "next/navigation"; // 👈 Cukup notFound, useRouter HAPUS AJA
 import { Skeleton } from "@/components/ui/skeleton";
 import { HeartOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,10 @@ interface Product {
   category?: { name: string };
 }
 
-// ✅ FIX: Interface buat handle data mentah dari API yang strukturnya kadang beda
 interface RawWishlistItem {
   id: number;
-  product?: Product; // Kadang dibungkus object product
-  name?: string;     // Kadang langsung properti product
+  product?: Product;
+  name?: string;
   slug?: string;
   price?: number | string;
   images?: { image_url: string }[];
@@ -39,30 +38,30 @@ interface RawWishlistItem {
 
 export default function WishlistPage() {
   const { user } = useAuth();
-  const router = useRouter();
+  // const router = useRouter(); 👈 INI BIANG KEROKNYA, HAPUS AJA G!
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) router.push("/login");
+    // 🔥 STEALTH MODE: 404 kalau ga login
+    if (!loading && !user) {
+        notFound(); 
+        return;
+    }
 
     const fetchWishlist = async () => {
       try {
         const res = await api.get("/wishlist");
         
-        // Casting ke array of RawWishlistItem biar ga kena 'any' error
         const rawData: RawWishlistItem[] = res.data.data || [];
 
         const mappedProducts = rawData.map((item) => {
-            // Logic normalisasi data
             if (item.product) {
                 return {
                     ...item.product,
                     variants: item.product.variants || [] 
                 };
             }
-            // Kalau formatnya udah flat (langsung product)
-            // Kita paksa casting as Product karena kita tau strukturnya mirip
             return {
                 id: item.id,
                 name: item.name || "Unknown Product",
@@ -82,9 +81,17 @@ export default function WishlistPage() {
     };
 
     if (user) fetchWishlist();
-    else if (!user && !loading) router.push("/login");
     
-  }, [user, router, loading]);
+    // Safety check kalau user null
+    if (!user) {
+        const timer = setTimeout(() => setLoading(false), 1000); 
+        return () => clearTimeout(timer);
+    }
+    
+  }, [user, loading]); // 👈 Array dependency sekarang stabil cuma 2 biji
+
+  // Prevent Flash Content
+  if (!loading && !user) return null;
 
   return (
     <main className="min-h-screen bg-background text-foreground pt-10 pb-20">
@@ -128,7 +135,7 @@ export default function WishlistPage() {
   );
 }
 
-// --- CARD COMPONENT ---
+// --- CARD COMPONENT (Gak ada perubahan, aman) ---
 function WishlistCard({ item }: { item: Product }) {
   const images = item.images || [];
   const variants = item.variants || []; 
@@ -157,7 +164,6 @@ function WishlistCard({ item }: { item: Product }) {
 
   return (
     <div className="w-full max-w-[350px] group relative select-none">
-      {/* IMAGE CONTAINER */}
       <div
         ref={containerRef}
         className="relative aspect-[3/4] bg-muted overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer"
@@ -190,8 +196,6 @@ function WishlistCard({ item }: { item: Product }) {
           )}
         </Link>
 
-        {/* Dots Indicator */}
-        {/* ✅ FIX: Hapus 'flex' di awal, ganti jadi 'hidden md:flex' biar ga conflict sama 'hidden' */}
         {images.length > 1 && (
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 hidden md:flex gap-1.5 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
             {images.map((_, i) => (
@@ -206,7 +210,6 @@ function WishlistCard({ item }: { item: Product }) {
         )}
       </div>
 
-      {/* INFO & SIZES */}
       <div className="space-y-1 px-1">
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-4">
           <div className="flex-1 min-w-0">
@@ -227,7 +230,6 @@ function WishlistCard({ item }: { item: Product }) {
           </p>
         </div>
 
-        {/* AVAILABLE SIZES */}
         <div className="flex flex-wrap gap-1 pt-1">
           {variants.length > 0 ? (
             variants.map((variant) => {
