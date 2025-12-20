@@ -339,11 +339,11 @@ function ShopCard({ item }: { item: Product }) {
     return (
         <Suspense fallback={<div>Loading...</div>}>
         <div className="w-full max-w-[350px] group relative select-none">
-            <div ref={containerRef} className="relative aspect-3/4 bg-muted overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer" onMouseMove={handleMouseMove} onMouseLeave={() => setActiveIndex(0)}>
+            <div ref={containerRef} className="relative aspect-3/4 bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer" onMouseMove={handleMouseMove} onMouseLeave={() => setActiveIndex(0)}>
                 <Link href={`/products/${item.slug}`} className="block w-full h-full relative">
                     {images.length > 0 ? images.map((img, idx) => (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img key={idx} src={img.image_url} alt={`${item.name}-${idx}`} className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-300 ease-in-out ${idx === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`} draggable={false} />
+                        <img key={idx} src={img.image_url} alt={`${item.name}-${idx}`} className={`absolute inset-0 w-full h-full object-contain object-center transition-opacity duration-300 ease-in-out ${idx === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"}`} draggable={false} />
                     )) : <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700 font-bold text-lg md:text-2xl">HURTS</div>}
                 </Link>
                 <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">New</div>
