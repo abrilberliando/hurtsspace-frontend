@@ -7,6 +7,7 @@ import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Check } from "lucide-react";
+import Image from "next/image";
 
 const NEW_ARRIVAL_LIMIT_DAYS = 90;
 
@@ -438,15 +439,19 @@ function ShopCard({ item }: { item: Product }) {
           >
             {images.length > 0 ? (
               images.map((img, idx) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   key={idx}
                   src={img.image_url}
                   alt={`${item.name}-${idx}`}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className={`absolute inset-0 w-full h-full object-contain object-center transition-opacity duration-300 ease-in-out ${
                     idx === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"
                   }`}
                   draggable={false}
+                  priority={idx === 0} 
+                  loading={idx === 0 ? "eager" : "lazy"}
+                  quality={75}
                 />
               ))
             ) : (

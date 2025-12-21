@@ -6,6 +6,7 @@ import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
 // --- TYPES ---
 interface Variant {
@@ -277,11 +278,13 @@ function ProductCard({
         >
           {images.length > 0 ? (
             images.map((img, idx) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+        
+              <Image
                 key={idx}
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className={`
                                     absolute inset-0 w-full h-full object-cover object-center 
                                     transition-opacity duration-300 ease-in-out
@@ -292,6 +295,9 @@ function ProductCard({
                                     }
                                 `}
                 draggable={false}
+                priority={idx === 0} 
+                loading={idx === 0 ? "eager" : "lazy"}
+                quality={75}
               />
             ))
           ) : (

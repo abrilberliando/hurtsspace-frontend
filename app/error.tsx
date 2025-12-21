@@ -23,11 +23,11 @@ export default function Error({
         500: Server Down
       </h1>
       <p className="text-lg text-muted-foreground mb-4 max-w-md">
-        Waduh, ada masalah teknis yang tidak terduga, G. Coba ulangi lagi ya.
+        Terjadi Kesalahan Internal Server
       </p>
-      <p className="text-xs text-red-400 mb-8">
+      {/* <p className="text-xs text-red-400 mb-8">
         Error detail: {error.message}
-      </p>
+      </p> */}
 
       <Button 
         onClick={() => reset()} // Mencoba me-render ulang segment

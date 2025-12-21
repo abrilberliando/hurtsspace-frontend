@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import Image from "next/image";
 
 interface MidtransWindow extends Window {
   snap: {
@@ -193,8 +194,7 @@ export default function OrderHistoryPage() {
                                 {order.items.map((item, idx) => (
                                     <div key={idx} className="flex gap-4 items-start">
                                         <div className="w-16 h-16 bg-muted rounded-md overflow-hidden border border-border shrink-0">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img 
+                                            <Image 
                                                 src={item.product?.images?.[0]?.image_url || "https://ui-avatars.com/api/?name=Product&background=random"} 
                                                 className="w-full h-full object-cover" 
                                                 alt="Product"
