@@ -108,7 +108,6 @@ export default function Hero() {
               priority={index === 0} // Gambar pertama diload duluan biar LCP kenceng
               sizes="100vw" // Kasih tau browser ini gambar bakal full width
               quality={50} // Optimasi kualitas
-          
             />
             
             {/* Overlay Hitam (Ditaruh di atas Image tapi di dalam div yang sama) */}
