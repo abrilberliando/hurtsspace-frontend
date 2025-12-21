@@ -4,14 +4,14 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'http',
-        hostname: 'localhost', // Kalau backend di localhost
-        port: '8000',          // Port backend (sesuaikan)
+        hostname: 'localhost',
+        port: '8000',         
       },
       {
         protocol: 'https',
-        hostname: '**.example.com', // Kalau backend udah online
+        hostname: 'app.hurtsspace.com', 
       },
-      // Kalau pake placeholder sementara:
+
       {
         protocol: 'https',
         hostname: 'via.placeholder.com',

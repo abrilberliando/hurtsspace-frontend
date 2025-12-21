@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, Power } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
 interface Banner {
   id: number;
@@ -71,12 +72,22 @@ export default function AdminBannersPage() {
                     {/* Preview Gambar Split */}
                     <div className="h-32 md:w-64 w-full flex bg-muted">
                         <div className="w-1/2 h-full relative">
-                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={banner.image_left} className="w-full h-full object-cover" alt="Left" />
+                            <Image 
+                                src={banner.image_left} 
+                                alt={`Left - ${banner.title}`}
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 768px) 50vw, 160px" 
+                            />
                         </div>
                         <div className="w-1/2 h-full relative border-l border-white/10">
-                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={banner.image_right} className="w-full h-full object-cover" alt="Right" />
+                            <Image 
+                                src={banner.image_right} 
+                                alt={`Right - ${banner.title}`}
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 768px) 50vw, 160px"
+                            />
                         </div>
                     </div>
                     

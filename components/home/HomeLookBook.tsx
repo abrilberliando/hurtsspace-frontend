@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 // Interface Data Lengkap (Hotspot + Produk)
 interface Product {
@@ -73,9 +74,13 @@ export default function HomeLookbook() {
               
               {/* Foto Utama */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
+              <Image
                  src={lookbook.image_url} 
-                 alt={lookbook.title} 
+                 alt={"Lookbook"} 
+                 fill
+                 draggable={false}
+                 quality={75}
+                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                  className="object-cover w-full h-full transition-transform duration-1000" 
               />
               

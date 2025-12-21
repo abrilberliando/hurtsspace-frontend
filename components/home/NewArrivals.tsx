@@ -6,6 +6,7 @@ import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
 // --- TYPES ---
 interface Variant {
@@ -279,21 +280,23 @@ function ArrivalCard({
         >
           {images.length > 0 ? (
             images.map((img, idx) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 key={idx}
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
+                fill // Wajib pakai fill kalau parent punya fixed aspect-ratio
+                sizes="(max-width: 768px) 220px, 280px" // Optimization: Mobile 220px, Desktop 280px
                 className={`
-                                    absolute inset-0 w-full h-full object-contain object-center 
-                                    transition-opacity duration-300 ease-in-out
-                                    ${
-                                      idx === activeIndex
-                                        ? "opacity-100 z-10"
-                                        : "opacity-0 z-0"
-                                    }
-                                `}
+                  object-contain object-center 
+                  transition-opacity duration-300 ease-in-out
+                  ${
+                    idx === activeIndex
+                      ? "opacity-100 z-10"
+                      : "opacity-0 z-0"
+                  }
+                `}
                 draggable={false}
+                priority={false} // Lazy load aja karena ini list panjang
               />
             ))
           ) : (

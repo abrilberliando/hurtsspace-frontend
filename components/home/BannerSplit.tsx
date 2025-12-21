@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import api from "@/lib/axios";
 import { Skeleton } from "@/components/ui/skeleton";
+import Image from "next/image";
 
 export interface SplitBannerData {
   id: number;
@@ -80,10 +81,12 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
         <div className="grid grid-cols-2 h-full w-full gap-0">
             {/* Kiri */}
             <div className="relative h-full w-full overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
+                <Image
                     src={banner.image_left} 
                     alt="Banner Left"
+                    fill
+                    quality={100}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-1000 ease-out"
                 />
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-500" />
@@ -92,10 +95,12 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
             {/* Kanan */}
             {/* 👇 FIX: Pastikan tidak ada border di tengah */}
             <div className="relative h-full w-full overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img 
+                <Image 
                     src={banner.image_right} 
                     alt="Banner Right"
+                    fill
+                    quality={100}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-1000 ease-out"
                 />
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-500" />

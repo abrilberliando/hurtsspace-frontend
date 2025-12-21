@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/axios";
 import { Skeleton } from "@/components/ui/skeleton";
+import Image from "next/image";
 
 // Interface data (Sama)
 interface HeroData {
@@ -97,13 +98,20 @@ export default function Hero() {
             className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${
               index === currentSlideIndex ? "opacity-100" : "opacity-0"
             }`}
-            style={{
-              backgroundImage: `url('${image}')`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
           >
-            <div className="absolute inset-0 bg-black/50 md:bg-black/60" />
+            {/* Component Image Next.js */}
+            <Image
+              src={image}
+              alt={`Hero Background ${index + 1}`}
+              fill // Wajib pakai fill buat gantiin background-image
+              className="object-cover" // Biar gambarnya cover area kayak CSS background-size: cover
+              priority={index === 0} // Gambar pertama diload duluan biar LCP kenceng
+              sizes="100vw" // Kasih tau browser ini gambar bakal full width
+              quality={100} // Optimasi kualitas
+            />
+            
+            {/* Overlay Hitam (Ditaruh di atas Image tapi di dalam div yang sama) */}
+            <div className="absolute inset-0 bg-black/50 md:bg-black/60 z-[1]" />
           </div>
         ))}
       </div>

@@ -6,6 +6,7 @@ import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 interface Variant {
   id: number;
@@ -138,10 +139,12 @@ function ShopCard({ item }: { item: Product }) {
           {images.length > 0 ? (
             images.map((img, idx) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 key={idx}
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className={`
                                     absolute inset-0 w-full h-full object-contain object-center
                                     transition-opacity duration-300 ease-in-out
@@ -152,6 +155,9 @@ function ShopCard({ item }: { item: Product }) {
                                     }
                                 `}
                 draggable={false}
+                priority={idx === 0} 
+                loading={idx === 0 ? "eager" : "lazy"}
+                quality={75}
               />
             ))
           ) : (
