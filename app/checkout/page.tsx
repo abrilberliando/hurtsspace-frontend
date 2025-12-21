@@ -64,10 +64,18 @@ export default function CheckoutPage() {
 
   // Logic Redirect Cart Kosong (Hanya jalan kalau user udah lolos cek)
   useEffect(() => {
-    if (!isChecking && user && cart.items.length === 0) {
-         router.push("/cart");
+    // Hanya jalankan kalau checking selesai
+    if (!isChecking) {
+        if (!user) {
+             // Redirect kalau belum login
+             router.push("/login");
+        } else if (cart.items.length === 0) {
+             // Redirect kalau cart kosong
+             router.push("/cart");
+        }
     }
   }, [isChecking, user, cart.items, router]);
+
 
   // --- LOGIC SECURITY GATE ---
   
@@ -80,12 +88,7 @@ export default function CheckoutPage() {
       );
   }
 
-  // 2. Kalau GAK ADA USER -> 404 NOT FOUND (Sesuai Request)
-  if (!user) {
-      return notFound();
-  }
-
-  // 3. Kalau Cart Kosong -> Return null (karena useEffect di atas bakal redirect)
+  // 2. Kalau Cart Kosong -> Return null (karena useEffect di atas bakal redirect)
   if (cart.items.length === 0) {
       return null; 
   }

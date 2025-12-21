@@ -118,7 +118,7 @@ export default function Hero() {
         </p>
 
         {/* Judul Besar: Font size mobile dikecilin signifikan (text-3xl) biar muat sebaris/dua baris */}
-        <h1 className="text-3xl md:text-8xl font-black tracking-tighter mb-3 md:mb-6 leading-none md:leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 uppercase drop-shadow-2xl px-2">
+        <h1 className="text-3xl md:text-8xl font-black text-white tracking-tighter mb-3 md:mb-6 leading-none md:leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 uppercase drop-shadow-2xl px-2">
           {content.title}
         </h1>
 
