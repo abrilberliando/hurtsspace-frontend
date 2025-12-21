@@ -85,8 +85,9 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
                     src={banner.image_left} 
                     alt="Banner Left"
                     fill
-                    quality={100}
+                    quality={50}
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  
                     className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-1000 ease-out"
                 />
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-500" />

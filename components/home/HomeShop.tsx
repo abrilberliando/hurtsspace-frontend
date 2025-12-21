@@ -138,7 +138,7 @@ function ShopCard({ item }: { item: Product }) {
         >
           {images.length > 0 ? (
             images.map((img, idx) => (
-              // eslint-disable-next-line @next/next/no-img-element
+             
               <Image
                 key={idx}
                 src={img.image_url}
@@ -157,7 +157,7 @@ function ShopCard({ item }: { item: Product }) {
                 draggable={false}
                 priority={idx === 0} 
                 loading={idx === 0 ? "eager" : "lazy"}
-                quality={75}
+                quality={50}
               />
             ))
           ) : (

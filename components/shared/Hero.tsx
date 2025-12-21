@@ -107,7 +107,8 @@ export default function Hero() {
               className="object-cover" // Biar gambarnya cover area kayak CSS background-size: cover
               priority={index === 0} // Gambar pertama diload duluan biar LCP kenceng
               sizes="100vw" // Kasih tau browser ini gambar bakal full width
-              quality={100} // Optimasi kualitas
+              quality={50} // Optimasi kualitas
+          
             />
             
             {/* Overlay Hitam (Ditaruh di atas Image tapi di dalam div yang sama) */}

@@ -297,6 +297,7 @@ function ArrivalCard({
                 `}
                 draggable={false}
                 priority={false} // Lazy load aja karena ini list panjang
+                quality={50}
               />
             ))
           ) : (
