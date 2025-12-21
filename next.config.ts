@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     images: {
+        // 👇 INI OBAT PENAWARNYA G! 
+        // Kita matiin dulu optimasi server Vercel biar gambar lo muncul lagi (bypass kuota)
+        unoptimized: true,
+
         remotePatterns: [
             {
                 protocol: 'http',
@@ -15,6 +19,14 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'via.placeholder.com',
             },
+            {
+                protocol: 'https',
+                hostname: 'images.unsplash.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'picsum.photos',
+            },
             // Tambahan domain yang sering kepake (Avatar & Placeholder)
             {
                 protocol: 'https',
@@ -25,12 +37,13 @@ const nextConfig = {
                 hostname: 'placehold.co',
             }
         ],
-        // 👇 INI JURUS RAHASIANYA G! 
-        // Memaksa Next.js convert gambar jadi AVIF (Paling kecil) -> WebP -> Asli
-        formats: ['image/avif', 'image/webp'],
         
-        // Cache gambar di server Next.js selama 60 detik biar gak spam request ke Laravel
+        // formats & minimumCacheTTL gw komen dulu ya, 
+        // soalnya percuma ada setting ini kalo unoptimized: true (gak bakal dipake sama Next.js)
+        /*
+        formats: ['image/avif', 'image/webp'],
         minimumCacheTTL: 60,
+        */
     },
 };
 
