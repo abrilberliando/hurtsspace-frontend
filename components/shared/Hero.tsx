@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import api from "@/lib/axios";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Interface khusus data HeroSection (Sesuai Database)
+// Interface data (Sama)
 interface HeroData {
-  background_images: string[] | null; 
+  background_images: string[] | null;
   subtitle: string | null;
   title: string | null;
   description: string | null;
@@ -16,27 +16,22 @@ interface HeroData {
   button_link: string | null;
 }
 
-// Default Images kalau dari API kosong
 const DEFAULT_IMAGES = [
-    "https://images.unsplash.com/photo-1523396870179-16a196759575?q=80&w=1920&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?q=80&w=1920&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1550302568-d65e917d23d9?q=80&w=1920&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1542475734-b2586e3f05c4?q=80&w=1920&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1528699264426-5b4860b72a6a?q=80&w=1920&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1523396870179-16a196759575?q=80&w=1920&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?q=80&w=1920&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1550302568-d65e917d23d9?q=80&w=1920&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1542475734-b2586e3f05c4?q=80&w=1920&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1528699264426-5b4860b72a6a?q=80&w=1920&auto=format&fit=crop",
 ];
-
 
 export default function Hero() {
   const [data, setData] = useState<HeroData | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // State: Index gambar yang sedang ditampilkan
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0); 
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   useEffect(() => {
     const fetchHeroData = async () => {
       try {
-        // Nembak ke endpoint khusus Hero
         const res = await api.get("/hero-section");
         setData(res.data.data);
       } catch (error) {
@@ -45,124 +40,125 @@ export default function Hero() {
         setLoading(false);
       }
     };
-
     fetchHeroData();
   }, []);
-  
-  // 👇 LOGIC BARU: Auto-Slide tiap 5 Detik (SUDAH LOOPING)
+
   useEffect(() => {
-      // Pastikan data udah ada dan ada gambar buat di-slide
-      if (!data) return;
-      
-      // Filter out URL yang kosong, dan fallback ke DEFAULT_IMAGES
-      const images = (Array.isArray(data.background_images) ? data.background_images.filter(url => url) : []).slice(0, 5);
-      const activeImages = images.length > 0 ? images : DEFAULT_IMAGES;
+    if (!data) return;
+    const images = (Array.isArray(data.background_images) ? data.background_images.filter(url => url) : []).slice(0, 5);
+    const activeImages = images.length > 0 ? images : DEFAULT_IMAGES;
+    if (activeImages.length <= 1) return;
 
-      // Cuma jalanin kalau ada lebih dari 1 gambar
-      if (activeImages.length <= 1) return;
-
-      const slideInterval = setInterval(() => {
-          setCurrentSlideIndex(prevIndex => 
-              // Hitung index selanjutnya, kembali ke 0 kalau udah mentok (INI LOGIC LOOPING-nya)
-              (prevIndex + 1) % activeImages.length
-          );
-      }, 5000); // 👈 UBAH: 5000ms = 5 Detik
-
-      // Cleanup saat component unmount atau data berubah
-      return () => clearInterval(slideInterval);
-  }, [data]); // Effect jalan ulang kalau data berubah
-
+    const slideInterval = setInterval(() => {
+      setCurrentSlideIndex(prevIndex => (prevIndex + 1) % activeImages.length);
+    }, 5000);
+    return () => clearInterval(slideInterval);
+  }, [data]);
 
   if (loading) {
+    // Skeleton disesuaikan agar tidak terlalu tinggi di HP
     return (
-        <div className="relative w-full h-[85vh] bg-black flex items-center justify-center">
-            <Skeleton className="absolute inset-0 w-full h-full bg-zinc-900 animate-pulse" />
-            <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-2xl px-4">
-                <Skeleton className="h-4 w-32 bg-zinc-800" />
-                <Skeleton className="h-16 w-full bg-zinc-800" />
-                <Skeleton className="h-4 w-2/3 bg-zinc-800" />
-                <Skeleton className="h-12 w-48 bg-zinc-800 mt-4" />
-            </div>
+      <div className="relative w-full h-[70vh] md:h-[90vh] bg-black flex items-center justify-center">
+        <Skeleton className="absolute inset-0 w-full h-full bg-zinc-900 animate-pulse" />
+        <div className="relative z-10 flex flex-col items-center gap-3 w-full max-w-2xl px-4">
+          <Skeleton className="h-3 w-24 md:w-32 bg-zinc-800" />
+          <Skeleton className="h-10 md:h-16 w-3/4 bg-zinc-800" />
+          <Skeleton className="h-3 md:h-4 w-2/3 bg-zinc-800" />
+          <div className="flex gap-2 mt-4">
+             <Skeleton className="h-10 w-28 bg-zinc-800" />
+             <Skeleton className="h-10 w-28 bg-zinc-800" />
+          </div>
         </div>
+      </div>
     );
   }
 
-  // Fallback dan filter data
   const content = {
     title: data?.title,
     subtitle: data?.subtitle,
     description: data?.description,
     button_text: data?.button_text,
-    button_link: data?.button_link
+    button_link: data?.button_link,
   };
 
   const images = (Array.isArray(data?.background_images) ? data.background_images.filter(url => url) : []).slice(0, 5);
-  // Pake gambar yang sudah ada, kalau kosong, pake default 5 gambar
   const activeImages = images.length > 0 ? images : DEFAULT_IMAGES;
-  const currentImage = activeImages[currentSlideIndex];
 
   return (
-    <section className="relative w-full h-[90vh] flex items-center justify-center overflow-hidden bg-black">
+    // UPDATE 1: Tinggi Section
+    // Kita pakai h-[70vh] di mobile biar gak terlalu makan layar, tapi tetep berasa "hero".
+    <section className="relative w-full h-[35vh] md:h-[90vh] flex items-center justify-center overflow-hidden bg-black transition-all duration-300">
       
-      {/* 1. Background Image SLIDER Dinamis */}
+      {/* Background Image (Sama) */}
       <div className="absolute inset-0 z-0">
-          {activeImages.map((image, index) => (
-            <div 
-                key={index}
-                // STYLE: Transisi opacity buat efek slide/fade
-                className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${
-                    index === currentSlideIndex ? 'opacity-100' : 'opacity-0'
-                }`}
-                style={{
-                    backgroundImage: `url('${image}')`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                }}
-            >
-                {/* Overlay Hitam Pekat */}
-                <div className="absolute inset-0 bg-black/60" />
-            </div>
-          ))}
+        {activeImages.map((image, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${
+              index === currentSlideIndex ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              backgroundImage: `url('${image}')`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
+            <div className="absolute inset-0 bg-black/50 md:bg-black/60" />
+          </div>
+        ))}
       </div>
 
-      {/* 2. Content Tengah (Text & Button - Tetap di atas) */}
-      <div className="relative z-10 text-center px-4 max-w-4xl mx-auto mt-16 text-white">
+      {/* 2. Content Tengah - KUNCI PERUBAHAN DISINI */}
+      {/* Kita gunakan padding (px) yang lebih kecil di mobile biar kontennya muat */}
+      <div className="relative z-10 text-center px-2 md:px-4 max-w-6xl mx-auto flex flex-col items-center justify-center h-full">
         
-        {/* Subtitle */}
-        <p className="text-zinc-300 tracking-[0.3em] text-sm md:text-base mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 uppercase">
-            {content.subtitle}
+        {/* Subtitle: Font size dikecilin di mobile (text-[10px]) */}
+        <p className="text-zinc-300 tracking-[0.2em] md:tracking-[0.3em] text-[10px] md:text-base mb-2 md:mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 uppercase">
+          {content.subtitle}
         </p>
-        
-        {/* Judul Besar */}
-        <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-6 leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 uppercase drop-shadow-2xl">
-            {content.title}
+
+        {/* Judul Besar: Font size mobile dikecilin signifikan (text-3xl) biar muat sebaris/dua baris */}
+        <h1 className="text-3xl md:text-8xl font-black text-white tracking-tighter mb-3 md:mb-6 leading-none md:leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 uppercase drop-shadow-2xl px-2">
+          {content.title}
         </h1>
-        
-        {/* Deskripsi */}
+
+        {/* Deskripsi: PENTING! Tidak di-hide lagi di mobile. */}
+        {/* Ukuran font sangat kecil (text-[11px]) dan max-width dibatasi biar jadi miniatur */}
         {content.description && (
-            <p className="text-zinc-300 text-lg mb-8 max-w-lg mx-auto leading-relaxed hidden md:block animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-100">
-                {content.description}
-            </p>
+          <p className="text-zinc-200 text-[11px] md:text-lg mb-5 md:mb-8 max-w-[280px] md:max-w-lg mx-auto leading-tight md:leading-relaxed animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-100 bg-black/10 p-1 md:p-0 rounded md:bg-transparent">
+            {content.description}
+          </p>
         )}
 
-        {/* Button Shop Now */}
-        <div className="flex flex-col md:flex-row gap-4 justify-center items-center animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200">
-            <Button asChild size="lg" className="bg-white text-black hover:bg-zinc-200 font-black px-10 py-7 text-xl rounded-none transition-transform hover:scale-105 tracking-wider">
-                <Link href={content.button_link || "/shop"}>
-                    {content.button_text}
-                </Link>
-            </Button>
+        {/* Button Container: PENTING! */}
+        {/* Tetap flex-row (jejer samping) di SEMUA ukuran layar. */}
+        {/* Gap dikecilin di mobile (gap-2) */}
+        <div className="flex flex-row gap-2 md:gap-4 justify-center items-center w-auto animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200">
+          
+          {/* Tombol Shop Now */}
+          <Button
+            asChild
+            size="lg"
+            // Padding dan font size dikecilin SANGAT agresif di mobile biar muat jejer 2
+            // px-4 py-3 text-xs (mobile) vs px-10 py-7 text-xl (desktop)
+            className="bg-white text-black hover:bg-zinc-200 font-black px-4 py-3 md:px-10 md:py-7 text-xs md:text-xl rounded-none transition-transform hover:scale-105 tracking-wider h-auto"
+          >
+            <Link href={content.button_link || "/shop"}>
+              {content.button_text}
+            </Link>
+          </Button>
 
-            {/* Tombol Lookbook (Statis) */}
-            <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white font-bold px-8 py-7 text-lg rounded-none bg-transparent transition-transform hover:scale-105">
-                <Link href="/lookbook">
-                    VIEW LOOKBOOK
-                </Link>
-            </Button>
+          {/* Tombol Lookbook */}
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            // Padding dan font size sama kecilnya
+            className="hidden md:block border-white text-white hover:bg-white font-bold px-4 py-3 md:px-8 md:py-7 text-xs md:text-lg rounded-none bg-transparent transition-transform hover:scale-105 h-auto whitespace-nowrap"
+          >
+            <Link href="/lookbook">VIEW LOOKBOOK</Link>
+          </Button>
         </div>
-        
-        {/* BARU: Dot Indicator Slider - DIHAPUS SESUAI PERMINTAAN */}
-
       </div>
     </section>
   );

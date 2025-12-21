@@ -10,7 +10,7 @@ export default function NotFound() {
         404: Page Not Found
       </h1>
       <p className="text-lg text-muted-foreground mb-8 max-w-md">
-        Waduh, G! Halaman yang lo cari kayaknya udah pindah atau hilang dari peredaran.
+        Nice Try G! Back to Home or Just go Shopping!.
       </p>
       
       <div className="flex flex-col sm:flex-row gap-4">

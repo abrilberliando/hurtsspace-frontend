@@ -27,7 +27,7 @@ interface ProductDetail {
   weight: number;
   images: { image_url: string }[];
   variants: Variant[];
-  is_collab: boolean;
+  is_collab: number | string;
 }
 
 export default function ProductDetailPage() {
@@ -147,11 +147,11 @@ export default function ProductDetailPage() {
             <div className="relative aspect-square bg-muted rounded-lg overflow-hidden border border-border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={mainImage} alt={product.name} className="object-cover w-full h-full transition-all duration-500" />
-              {product.is_collab && (
-                 <Badge className="absolute top-4 left-4 bg-red-600 text-white border-none rounded-none text-xs px-3 py-1">
-                    LIMITED COLLAB
-                 </Badge>
-              )}
+              {product.is_collab == 1 && (
+    <Badge className="absolute top-4 left-4 bg-red-600 text-white border-none rounded-none text-xs px-3 py-1">
+        LIMITED COLLAB
+    </Badge>
+)}
             </div>
             {/* Thumbnails */}
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">

@@ -127,7 +127,7 @@ function ShopCard({ item }: { item: Product }) {
       {/* IMAGE CONTAINER */}
       <div
         ref={containerRef}
-        className="relative aspect-[3/4] bg-muted overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer"
+        className="relative aspect-[3/4] bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
@@ -143,7 +143,7 @@ function ShopCard({ item }: { item: Product }) {
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
                 className={`
-                                    absolute inset-0 w-full h-full object-cover object-center 
+                                    absolute inset-0 w-full h-full object-contain object-center
                                     transition-opacity duration-300 ease-in-out
                                     ${
                                       idx === activeIndex
