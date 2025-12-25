@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, notFound } from "next/navigation"; // 👈 Import notFound
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 import { useCart } from "@/lib/useCart";
 import api from "@/lib/axios";
@@ -11,8 +11,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { TicketPercent, X, Loader2 } from "lucide-react"; // 👈 Tambah Loader2
+import { TicketPercent, X, Loader2 } from "lucide-react";
 import AddressForm, { AddressData } from "@/components/shared/AddressForm";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"; 
 
 interface MidtransWindow extends Window {
   snap: { pay: (token: string, options: object) => void; };
@@ -24,7 +31,9 @@ interface CourierRate {
   duration: string;
 }
 interface Voucher {
+    id: number;
     code: string;
+    description?: string; 
     discount_amount: number;
     discount_type: 'percent' | 'fixed';
     max_discount_amount?: number; 
@@ -46,7 +55,7 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false);
 
   // STATE VOUCHER
-  const [voucherCode, setVoucherCode] = useState("");
+  const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]); 
   const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
   const [loadingVoucher, setLoadingVoucher] = useState(false);
 
@@ -54,32 +63,39 @@ export default function CheckoutPage() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // 1. Kasih waktu bentar buat useAuth load dari localStorage
     const timer = setTimeout(() => {
         setIsChecking(false);
     }, 800);
-
     return () => clearTimeout(timer);
   }, []);
 
-  // Logic Redirect Cart Kosong (Hanya jalan kalau user udah lolos cek)
+  // Logic Redirect
   useEffect(() => {
-    // Hanya jalankan kalau checking selesai
     if (!isChecking) {
         if (!user) {
-             // Redirect kalau belum login
              router.push("/login");
         } else if (cart.items.length === 0) {
-             // Redirect kalau cart kosong
              router.push("/cart");
         }
     }
   }, [isChecking, user, cart.items, router]);
 
+  // 👇 FETCH AVAILABLE VOUCHERS SAAT MOUNT
+  useEffect(() => {
+      const fetchVouchers = async () => {
+          try {
+              const res = await api.get("/vouchers"); 
+              setAvailableVouchers(res.data.data || []);
+          } catch (error) {
+              console.log("No vouchers available or API error", error);
+          }
+      };
+      if (user) fetchVouchers();
+  }, [user]);
+
 
   // --- LOGIC SECURITY GATE ---
   
-  // 1. Tampilkan Loading Screen dulu (biar gak bocor konten)
   if (isChecking) {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center pt-20">
@@ -88,12 +104,11 @@ export default function CheckoutPage() {
       );
   }
 
-  // 2. Kalau Cart Kosong -> Return null (karena useEffect di atas bakal redirect)
-  if (cart.items.length === 0) {
+  if (!user || cart.items.length === 0) {
       return null; 
   }
 
-  // --- CONTENT CHECKOUT (Hanya render kalau lolos gate di atas) ---
+  // --- CONTENT CHECKOUT ---
 
   const handleAddressSubmit = async (data: AddressData) => {
     setCheckoutData(data);
@@ -108,8 +123,21 @@ export default function CheckoutPage() {
                 destination_area_id: data.areaId,
                 weight: totalWeight
             });
-            setRates(res.data.pricing || []);
-            toast.success("Ongkir berhasil dihitung!");
+            
+            const pricing = res.data.pricing || [];
+            setRates(pricing);
+
+            // 👇 AUTO SELECT CHEAPEST SHIPPING
+            if (pricing.length > 0) {
+                const cheapest = pricing.reduce((prev: CourierRate, curr: CourierRate) => 
+                    prev.price < curr.price ? prev : curr
+                );
+                setSelectedRate(cheapest);
+                toast.success(`Ongkir termurah (${cheapest.courier_name}) otomatis dipilih!`);
+            } else {
+                toast.error("Tidak ada kurir tersedia untuk rute ini.");
+            }
+
         } catch {
             toast.error("Gagal cek ongkir.");
         }
@@ -127,8 +155,10 @@ export default function CheckoutPage() {
             const res = await api.put("/user", payload);
             if (user) {
                 const updatedUser = { ...user, ...res.data.user };
-                const token = localStorage.getItem("token") || "";
-                login(updatedUser, token); 
+                // Update user di state tanpa perlu token baru (karena token masih valid)
+                // Kita ambil token dari header axios yang udah diset otomatis
+                const currentToken = api.defaults.headers.common['Authorization']?.toString().replace('Bearer ', '') || "";
+                login(updatedUser, currentToken); 
             }
         } catch (error) {
             console.error("Auto-save failed", error);
@@ -139,16 +169,17 @@ export default function CheckoutPage() {
     setLoadingRates(false);
   };
 
-  const handleApplyVoucher = async () => {
-    if (!voucherCode) return;
+  // 👇 HANDLE SELECT VOUCHER
+  const handleSelectVoucher = async (code: string) => {
+    if (!code) return;
     setLoadingVoucher(true);
     try {
-        const res = await api.post("/vouchers/check", { code: voucherCode });
+        const res = await api.post("/vouchers/check", { code });
         setAppliedVoucher(res.data.data); 
         toast.success("Voucher berhasil dipasang!", { description: "Potongan harga masuk G." });
     } catch (error) {
         const err = error as AxiosError<{ message: string }>;
-        toast.error(err.response?.data?.message || "Kode voucher salah/habis.");
+        toast.error(err.response?.data?.message || "Kode voucher tidak valid.");
         setAppliedVoucher(null);
     } finally {
         setLoadingVoucher(false);
@@ -198,8 +229,8 @@ export default function CheckoutPage() {
         const res = await api.post("/checkout", payload); 
 
         // BERSIHIN KERANJANG DISINI G!
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cartStore = cart as any;
+        // 👇 FIX: Ganti 'as any' jadi tipe spesifik biar ESLint seneng
+        const cartStore = cart as unknown as { removeAll?: () => void; clearCart?: () => void };
 
         if (cartStore.removeAll) {
             cartStore.removeAll(); 
@@ -212,9 +243,7 @@ export default function CheckoutPage() {
 
         if (snap) {
             snap.pay(res.data.snap_token, {
-                onSuccess: () => {
-                    window.location.href = "/thank-you"; 
-                },
+                onSuccess: () => { window.location.href = "/thank-you"; },
                 onPending: () => {
                     toast.info("Pesanan dibuat, silakan bayar nanti.");
                     window.location.href = "/dashboard/orders"; 
@@ -307,33 +336,46 @@ export default function CheckoutPage() {
                         
                         <Separator className="my-4" />
                         
-                        {/* INPUT VOUCHER */}
-                        <div className="flex gap-2 mb-4">
+                        {/* SELECT VOUCHER */}
+                        <div className="flex gap-2 mb-4 items-center">
                             <div className="relative flex-1">
-                                <TicketPercent className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input 
-                                    placeholder="Promo Code" 
-                                    className="pl-9" 
-                                    value={voucherCode}
-                                    onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                                    disabled={!!appliedVoucher}
-                                />
+                                {appliedVoucher ? (
+                                     <div className="flex items-center justify-between border border-green-500/50 bg-green-500/10 text-green-600 rounded-md px-3 py-2">
+                                        <span className="font-bold text-sm flex items-center gap-2">
+                                            <TicketPercent className="w-4 h-4" /> {appliedVoucher.code}
+                                        </span>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-6 w-6 text-green-600 hover:text-red-500 hover:bg-transparent"
+                                            onClick={() => setAppliedVoucher(null)}
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </Button>
+                                     </div>
+                                ) : (
+                                    <Select onValueChange={handleSelectVoucher} disabled={loadingVoucher || availableVouchers.length === 0}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder={availableVouchers.length > 0 ? "Pilih Promo / Voucher" : "Tidak ada voucher tersedia"} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableVouchers.map((v) => (
+                                                <SelectItem key={v.id} value={v.code}>
+                                                    <span className="font-bold">{v.code}</span>
+                                                    <span className="text-muted-foreground ml-2">
+                                                        - {v.discount_type === 'percent' ? `${v.discount_amount}%` : `Rp ${formatRupiah(v.discount_amount)}`}
+                                                    </span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             </div>
-                            {appliedVoucher ? (
-                                <Button variant="destructive" size="icon" onClick={() => { setAppliedVoucher(null); setVoucherCode(""); }}>
-                                    <X className="w-4 h-4" />
-                                </Button>
-                            ) : (
-                                <Button onClick={handleApplyVoucher} disabled={loadingVoucher || !voucherCode}>
-                                    APPLY
-                                </Button>
-                            )}
                         </div>
 
                         {appliedVoucher && (
-                            <div className="bg-green-500/10 text-green-500 text-xs p-2 rounded mb-4 flex justify-between">
-                                <span>Code <b>{appliedVoucher.code}</b> applied!</span>
-                                <span>- Rp {formatRupiah(discountValue)}</span>
+                            <div className="text-right text-xs text-green-500 mb-4 font-medium">
+                                Potongan: - Rp {formatRupiah(discountValue)}
                             </div>
                         )}
 

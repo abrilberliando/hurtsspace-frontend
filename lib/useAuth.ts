@@ -1,47 +1,52 @@
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
-interface User {
+export interface User {
   id: number;
   name: string;
   email: string;
-  role: "admin" | "member";
+  role: 'admin' | 'member';
   points: number;
   avatar?: string;
   phone?: string;
   address_detail?: string;
   city_id?: string;
-  province_id?: string; // Kita pake buat simpen nama kota
+  province_id?: string;
+  uid?: string; // UID dari Firebase/Google
 }
 
-interface AuthStore {
+interface AuthState {
   user: User | null;
   token: string | null;
   login: (user: User, token: string) => void;
   logout: () => void;
 }
 
-export const useAuth = create<AuthStore>()(
+export const useAuth = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
       token: null,
 
-      login: (userData, authToken) => {
-        // Simpan token ke LocalStorage (biar Axios bisa baca)
-        localStorage.setItem("token", authToken);
-        set({ user: userData, token: authToken });
+      // Login: Simpan user & token ke state (otomatis masuk localStorage via persist)
+      login: (user, token) => {
+        set({ user, token });
       },
 
+      // Logout: Hapus state & redirect ke login
       logout: () => {
-        // Hapus jejak
-        localStorage.removeItem("token");
         set({ user: null, token: null });
-        window.location.href = "/login"; // Tendang ke login
+        
+        // Hapus juga key manual (kalau dulu pernah pake) biar bersih total
+        if (typeof window !== 'undefined') {
+           localStorage.removeItem("token");
+           // Pake window.location biar state aplikasi bersih total (hard refresh)
+           window.location.href = "/login";
+        }
       },
     }),
     {
-      name: "hurtsspace-auth", // Nama key di storage
+      name: 'auth-storage', // Key di LocalStorage (Dicocokin sama axios.ts)
       storage: createJSONStorage(() => localStorage),
     }
   )
