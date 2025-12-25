@@ -155,7 +155,6 @@ export default function CheckoutPage() {
             const res = await api.put("/user", payload);
             if (user) {
                 const updatedUser = { ...user, ...res.data.user };
-                // 👇 UPDATE: Ambil token dari localStorage 'token' (Independent Key)
                 const token = localStorage.getItem("token") || ""; 
                 login(updatedUser, token); 
             }
@@ -242,15 +241,24 @@ export default function CheckoutPage() {
 
         if (snap) {
             snap.pay(res.data.snap_token, {
-                onSuccess: () => { window.location.href = "/thank-you"; },
-                onPending: () => {
-                    toast.info("Pesanan dibuat, silakan bayar nanti.");
-                    window.location.href = "/dashboard/orders"; 
+                // Sukses: Ke Thank You Page
+                onSuccess: () => { 
+                    window.location.href = "/thank-you"; 
                 },
-                onError: () => toast.error("Pembayaran Gagal!"),
+                
+                // Pending: Redirect ke Page Payment Check
+                onPending: () => {
+                    window.location.href = "/payment-check"; 
+                },
+                
+                // Error: Redirect ke Page Payment Check
+                onError: () => {
+                    window.location.href = "/payment-check"; 
+                },
+                
+                // Close: Redirect ke Page Payment Check
                 onClose: () => {
-                    toast.warning("Lanjutin bayar di History ya G!");
-                    window.location.href = "/dashboard/orders";
+                    window.location.href = "/payment-check"; 
                 }
             });
         }
