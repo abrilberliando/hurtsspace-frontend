@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     images: {
-        // 👇 INI OBAT PENAWARNYA G! 
-        // Kita matiin dulu optimasi server Vercel biar gambar lo muncul lagi (bypass kuota)
-        unoptimized: true,
+        // unoptimized: true,
 
         remotePatterns: [
             {
@@ -43,12 +41,10 @@ const nextConfig = {
             }
         ],
         
-        // formats & minimumCacheTTL gw komen dulu ya, 
-        // soalnya percuma ada setting ini kalo unoptimized: true (gak bakal dipake sama Next.js)
-        /*
+       
         formats: ['image/avif', 'image/webp'],
         minimumCacheTTL: 60,
-        */
+       
     },
 };
 
