@@ -9,7 +9,6 @@ import Footer from "@/components/shared/Footer";
 import BottomNav from "@/components/shared/BottomNav";
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import AuthCheck from "@/components/auth/AuthCheck";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -68,7 +67,6 @@ export default function RootLayout({
                 {/* 1. SCRIPT MIDTRANS DINAMIS DI SINI */}
                 <MidtransScriptLoader /> 
 
-                <AuthCheck />
                 
                 <ThemeProvider
                     attribute="class"
