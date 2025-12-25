@@ -12,7 +12,7 @@ export interface User {
   address_detail?: string;
   city_id?: string;
   province_id?: string;
-  uid?: string; // UID dari Firebase/Google
+  uid?: string; 
 }
 
 interface AuthState {
@@ -28,25 +28,26 @@ export const useAuth = create<AuthState>()(
       user: null,
       token: null,
 
-      // Login: Simpan user & token ke state (otomatis masuk localStorage via persist)
       login: (user, token) => {
+        // 👇 UPDATE: Simpan token mentah ke key 'token' biar gampang diakses
+        if (typeof window !== 'undefined') {
+            localStorage.setItem("token", token);
+        }
         set({ user, token });
       },
 
-      // Logout: Hapus state & redirect ke login
       logout: () => {
         set({ user: null, token: null });
         
-        // Hapus juga key manual (kalau dulu pernah pake) biar bersih total
+        // 👇 UPDATE: Hapus key 'token' saat logout
         if (typeof window !== 'undefined') {
            localStorage.removeItem("token");
-           // Pake window.location biar state aplikasi bersih total (hard refresh)
            window.location.href = "/login";
         }
       },
     }),
     {
-      name: 'auth-storage', // Key di LocalStorage (Dicocokin sama axios.ts)
+      name: 'auth-storage', 
       storage: createJSONStorage(() => localStorage),
     }
   )

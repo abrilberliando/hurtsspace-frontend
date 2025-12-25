@@ -155,10 +155,9 @@ export default function CheckoutPage() {
             const res = await api.put("/user", payload);
             if (user) {
                 const updatedUser = { ...user, ...res.data.user };
-                // Update user di state tanpa perlu token baru (karena token masih valid)
-                // Kita ambil token dari header axios yang udah diset otomatis
-                const currentToken = api.defaults.headers.common['Authorization']?.toString().replace('Bearer ', '') || "";
-                login(updatedUser, currentToken); 
+                // 👇 UPDATE: Ambil token dari localStorage 'token' (Independent Key)
+                const token = localStorage.getItem("token") || ""; 
+                login(updatedUser, token); 
             }
         } catch (error) {
             console.error("Auto-save failed", error);
