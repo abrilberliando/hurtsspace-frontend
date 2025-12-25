@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, memo, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -19,15 +19,20 @@ interface Product {
   id: number;
   name: string;
   slug: string;
-  // UPDATE: Allow string biar aman
   price: number | string;
-  is_new_arrival: boolean | number | string; 
-  // is_featured DIHAPUS karena kita mau yang random
+  is_new_arrival: boolean | number | string;
   created_at?: string;
   images: { image_url: string }[];
   variants: Variant[];
   category?: { name: string };
 }
+
+// --- GLOBAL HELPER (Memory Saver) ---
+const displayPrice = (val: string | number): number => {
+  const num = typeof val === "string" ? parseFloat(val) : val;
+  if (isNaN(num)) return 0;
+  return Math.floor(num);
+};
 
 // --- MAIN COMPONENT ---
 export default function Suggested() {
@@ -45,18 +50,14 @@ export default function Suggested() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // 🔥 LOGIC BARU: Ambil 15 produk random (atau produk non-featured)
-        // ASUMSI: Endpoint bisa handle sort=random
-        const res = await api.get("/products?limit=15&sort=random"); 
-        
+        const res = await api.get("/products?limit=15&sort=random");
         const fetchedData = res.data?.data || [];
-        
+
         let dataFix: Product[] = [];
         if (Array.isArray(res.data)) dataFix = res.data;
         else if (Array.isArray(res.data?.data)) dataFix = res.data.data;
         else if (Array.isArray(fetchedData)) dataFix = fetchedData;
 
-        // Tidak ada filter is_featured, langsung set data
         setProducts(dataFix.slice(0, 15));
       } catch (error) {
         console.error("Gagal load suggested products", error);
@@ -67,9 +68,8 @@ export default function Suggested() {
     fetchProducts();
   }, []);
 
-
-  // Logic Tombol Panah
-  const scrollButton = (direction: "left" | "right") => {
+  // Logic Tombol Panah (Memoized)
+  const scrollButton = useCallback((direction: "left" | "right") => {
     if (scrollRef.current) {
       const { current } = scrollRef;
       const scrollAmount = 350;
@@ -78,28 +78,28 @@ export default function Suggested() {
         behavior: "smooth",
       });
     }
-  };
+  }, []);
 
-  // --- LOGIC DRAG TO SCROLL (MOUSE) ---
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // --- LOGIC DRAG TO SCROLL (Optimized) ---
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!scrollRef.current) return;
     setIsDown(true);
     setIsDragging(false);
     setStartX(e.pageX - scrollRef.current.offsetLeft);
     setScrollLeft(scrollRef.current.scrollLeft);
-  };
+  }, []);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     setIsDown(false);
     setIsDragging(false);
-  };
+  }, []);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDown(false);
-    setTimeout(() => setIsDragging(false), 0);
-  };
+    setTimeout(() => setIsDragging(false), 50);
+  }, []);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDown || !scrollRef.current) return;
     e.preventDefault();
     const x = e.pageX - scrollRef.current.offsetLeft;
@@ -109,7 +109,7 @@ export default function Suggested() {
     if (Math.abs(walk) > 5) {
       setIsDragging(true);
     }
-  };
+  }, [isDown, startX, scrollLeft]);
 
   return (
     <section className="pt-20 border-border bg-background">
@@ -176,7 +176,7 @@ export default function Suggested() {
             >
               {Array.isArray(products) && products.length > 0 ? (
                 products.map((item) => (
-                  <ProductCard
+                  <ProductCardMemo
                     key={item.id}
                     item={item}
                     isDraggingParent={isDragging}
@@ -195,8 +195,7 @@ export default function Suggested() {
   );
 }
 
-// --- SUB-COMPONENT: CARD ---
-// Gue ganti nama dari ArrivalCard jadi ProductCard biar lebih general
+// --- SUB-COMPONENT: CARD (ULTRA OPTIMIZED) ---
 function ProductCard({
   item,
   isDraggingParent,
@@ -209,65 +208,73 @@ function ProductCard({
 
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Ref Caching: Simpen ukuran element biar gak hitung ulang terus
+  const boundsRef = useRef<DOMRect | null>(null);
 
-  // HELPER: Logic Penyelamat Harga
-  const displayPrice = (val: string | number): number => {
-    const num = typeof val === 'string' ? parseFloat(val) : val;
-    if (isNaN(num)) return 0;
-    return Math.floor(num); 
-  };
-
-  // Logic New Arrival (TETAP SAMA)
+  // Logic New Arrival (Memoized)
   const isNewCalculated = useMemo(() => {
     const val = item.is_new_arrival;
     if (val === 1 || val === "1" || val === true || val === "true") return true;
-    if (val === 0 || val === "0" || val === false || val === "false") return false;
-    
+    if (val === 0 || val === "0" || val === false || val === "false")
+      return false;
+
     if (item.created_at) {
-        const createdDate = new Date(item.created_at);
-        const now = new Date();
-        const diffTime = Math.abs(now.getTime() - createdDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-        return diffDays <= 30; 
+      const createdDate = new Date(item.created_at);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - createdDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 30;
     }
     return false;
   }, [item.is_new_arrival, item.created_at]);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDraggingParent) return;
-    if (!containerRef.current || images.length <= 1) return;
+  // 1. Hitung ukuran CUMA pas mouse masuk
+  const handleMouseEnter = useCallback(() => {
+    if (containerRef.current) {
+      boundsRef.current = containerRef.current.getBoundingClientRect();
+    }
+  }, []);
 
-    const { left, width } = containerRef.current.getBoundingClientRect();
+  // 2. Logic hover ringan
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDraggingParent || images.length <= 1 || !boundsRef.current) return;
+
+    const { left, width } = boundsRef.current;
+    if (width === 0) return;
+
     const x = e.clientX - left;
-
     const percentage = x / width;
     const index = Math.floor(percentage * images.length);
     const safeIndex = Math.min(Math.max(index, 0), images.length - 1);
-    setActiveIndex(safeIndex);
-  };
+    
+    setActiveIndex((prev) => (prev !== safeIndex ? safeIndex : prev));
+  }, [isDraggingParent, images.length]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     setActiveIndex(0);
-  };
+    boundsRef.current = null; // Cleanup
+  }, []);
 
   const handleLinkClick = (e: React.MouseEvent) => {
     if (isDraggingParent) e.preventDefault();
   };
 
   return (
-    <div className="w-[220px] md:w-[280px] flex-none snap-start group relative select-none">
+    <div className="w-[220px] md:w-[280px] flex-none snap-start group relative select-none will-change-transform">
       {/* 1. IMAGE CONTAINER */}
       <div
         ref={containerRef}
-        className="relative aspect-3/4 bg-muted overflow-hidden rounded-md mb-3 md:mb-4 border border-border cursor-pointer"
+        className="relative aspect-3/4 bg-muted overflow-hidden rounded-md mb-3 md:mb-4 border border-border cursor-pointer transform-gpu"
+        onMouseEnter={handleMouseEnter} // Trigger calc here
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
         {/* Badge New */}
         {isNewCalculated && (
-            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
-              New
-            </div>
+          <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
+            New
+          </div>
         )}
 
         <Link
@@ -278,7 +285,6 @@ function ProductCard({
         >
           {images.length > 0 ? (
             images.map((img, idx) => (
-        
               <Image
                 key={idx}
                 src={img.image_url}
@@ -286,18 +292,18 @@ function ProductCard({
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className={`
-                                    absolute inset-0 w-full h-full object-cover object-center 
-                                    transition-opacity duration-300 ease-in-out
-                                    ${
-                                      idx === activeIndex
-                                        ? "opacity-100 z-10"
-                                        : "opacity-0 z-0"
-                                    }
-                                `}
+                                      absolute inset-0 w-full h-full object-cover object-center 
+                                      transition-opacity duration-300 ease-in-out
+                                      ${
+                                        idx === activeIndex
+                                          ? "opacity-100 z-10"
+                                          : "opacity-0 z-0"
+                                      }
+                                  `}
                 draggable={false}
-                priority={idx === 0} 
-                loading={idx === 0 ? "eager" : "lazy"}
-                quality={75}
+                priority={false}
+                loading="lazy"
+                quality={60}
               />
             ))
           ) : (
@@ -347,27 +353,27 @@ function ProductCard({
 
         <div className="flex flex-wrap gap-1 pt-1">
           {variants.length > 0 ? (
-              variants.map((variant) => {
-                const isAvailable = variant.stock > 0;
-                return (
-                  <span
-                    key={variant.id}
-                    className={`
-                      text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
-                      ${
-                        isAvailable
-                          ? "border-zinc-700 text-foreground cursor-default"
-                          : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
-                      }
-                    `}
-                  >
-                    {variant.size}
-                  </span>
-                );
-              })
+            variants.map((variant) => {
+              const isAvailable = variant.stock > 0;
+              return (
+                <span
+                  key={variant.id}
+                  className={`
+                        text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
+                        ${
+                          isAvailable
+                            ? "border-zinc-700 text-foreground cursor-default"
+                            : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
+                        }
+                      `}
+                >
+                  {variant.size}
+                </span>
+              );
+            })
           ) : (
             <span className="text-[9px] md:text-[10px] text-muted-foreground italic">
-                No size info
+              No size info
             </span>
           )}
         </div>
@@ -375,3 +381,5 @@ function ProductCard({
     </div>
   );
 }
+
+const ProductCardMemo = memo(ProductCard);

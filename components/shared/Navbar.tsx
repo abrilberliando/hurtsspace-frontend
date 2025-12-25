@@ -27,55 +27,66 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useCart } from "@/lib/useCart";
 import api from "@/lib/axios";
 
-// Interface Kategori
+// --- TYPES ---
 interface Category {
   id: number | string;
   name: string;
   slug?: string;
 }
 
-// Interface Product untuk Live Search
 interface Product {
   id: number;
   name: string;
   slug: string;
-  // 👇 UPDATE: Allow string biar aman dari bug harga
   price: number | string;
   images: { image_url: string }[];
   category?: { name: string };
 }
 
+// --- HELPER FUNCTION (Move Outside Component) ---
+// Hemat memori karena function ini dibuat sekali seumur hidup app jalan
+const displayPrice = (val: string | number): number => {
+  const num = typeof val === "string" ? parseFloat(val) : val;
+  if (isNaN(num)) return 0;
+  return Math.floor(num);
+};
+
 export default function Navbar() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { user, logout } = useAuth();
   const cart = useCart();
 
+  // State
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
-
-  // State buat Live Search
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // 1. Handle Scroll
+  // 1. OPTIMIZED SCROLL HANDLER
+  // Mencegah re-render brutal saat user scrolling
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0);
+      const scrolled = window.scrollY > 0;
+      // Cuma update state kalau nilainya BERBEDA dengan state sekarang
+      // (React state setter sebenernya udah batching, tapi logic ini lebih explicit safe)
+      setIsScrolled((prev) => (prev !== scrolled ? scrolled : prev));
     };
-    window.addEventListener("scroll", handleScroll);
+
+    // Passive listener improve scroll performance di mobile
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // 2. Fetch Categories
+  // 2. Fetch Categories (Once on mount)
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -89,40 +100,23 @@ export default function Navbar() {
     fetchCategories();
   }, []);
 
-  // 3. Sync Input dengan URL Param & Reset saat tutup
-  useEffect(() => {
-    if (isSearchOpen) {
-      const queryFromUrl = searchParams.get("search") || "";
-      setSearchQuery(queryFromUrl);
-      if (queryFromUrl) {
-        performLiveSearch(queryFromUrl);
-      } else {
-        setSearchResults([]);
-      }
-    }
-  }, [isSearchOpen, searchParams]);
-
-  // 🔥 HELPER BARU: Logic Penyelamat Harga
-  const displayPrice = (val: string | number): number => {
-    const num = typeof val === 'string' ? parseFloat(val) : val;
-    if (isNaN(num)) return 0;
-    return Math.floor(num); 
-  };
-
-  // 4. Logic Live Search
-  const performLiveSearch = async (query: string) => {
+  // 3. LIVE SEARCH LOGIC (Memoized)
+  // Dibungkus useCallback biar function reference-nya stabil
+  const performLiveSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
       return;
     }
     setIsSearching(true);
     try {
+      // Limit kecil aja buat preview, biar enteng fetch-nya
       const res = await api.get(
-        `/products?search=${encodeURIComponent(query)}&limit=20`
+        `/products?search=${encodeURIComponent(query)}&limit=10`
       );
       const items = Array.isArray(res.data) ? res.data : res.data.data || [];
       const realItems = Array.isArray(items) ? items : items.data || [];
 
+      // Filtering Client Side (Optional kalau backend udah filter)
       const strictFiltered = realItems.filter((item: Product) =>
         item.name.toLowerCase().includes(query.toLowerCase())
       );
@@ -133,19 +127,32 @@ export default function Navbar() {
     } finally {
       setIsSearching(false);
     }
-  };
+  }, []);
 
+  // 4. DEBOUNCE EFFECT
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (searchQuery) {
-        performLiveSearch(searchQuery);
-      } else {
+    // URL Sync logic
+    if (isSearchOpen) {
+      const queryFromUrl = searchParams.get("search") || "";
+      // Cuma set kalau beda biar gak loop
+      setSearchQuery((prev) => (prev !== queryFromUrl ? queryFromUrl : prev)); 
+    }
+  }, [isSearchOpen, searchParams]);
+
+  // Debounce terpisah buat ngetik
+  useEffect(() => {
+    // Gak usah search kalau query kosong/pendek banget
+    if (!searchQuery) {
         setSearchResults([]);
-      }
+        return;
+    }
+
+    const delayDebounceFn = setTimeout(() => {
+      performLiveSearch(searchQuery);
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, performLiveSearch]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,10 +162,11 @@ export default function Navbar() {
     }
   };
 
-  const cartCount = cart.items.reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
+  // 5. MEMOIZED CART COUNT
+  // Hitung cuma kalau cart.items berubah
+  const cartCount = useMemo(() => {
+    return cart.items.reduce((total, item) => total + item.quantity, 0);
+  }, [cart.items]);
 
   return (
     <>
@@ -198,13 +206,15 @@ export default function Navbar() {
 
                   {/* Menu Links */}
                   <div className="flex flex-col gap-5 text-sm font-bold text-foreground tracking-widest uppercase">
-                    {/* 👇 SEARCH ITEM (PINDAH KESINI) */}
+                    {/* 👇 SEARCH ITEM */}
                     <button
                       className="hover:text-primary transition flex items-center gap-3 text-left w-full group"
                       onClick={() => {
                         setIsSheetOpen(false);
-                        // Kasih jeda dikit biar menu tutup dulu baru search buka
-                        setTimeout(() => setIsSearchOpen(true), 200);
+                        // Defer search opening to allow sheet close animation smooth
+                        requestAnimationFrame(() => {
+                            setTimeout(() => setIsSearchOpen(true), 200);
+                        });
                       }}
                     >
                       <Search className="w-4 h-4 group-hover:text-primary transition" />
@@ -335,10 +345,8 @@ export default function Navbar() {
             <ModeToggle />
 
             {/* SEARCH ICON & OFF-CANVAS SHEET */}
-            {/* 👇 Control via isSearchOpen state, Trigger Button cuma muncul di Desktop (hidden lg:flex) */}
             <Sheet open={isSearchOpen} onOpenChange={setIsSearchOpen}>
               <SheetTrigger asChild>
-                {/* Hidden on Mobile/Tablet (< lg), Visible on Desktop (lg) */}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -347,13 +355,11 @@ export default function Navbar() {
                   <Search className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              {/* Top Sheet dengan Live Results */}
               <SheetContent
                 side="top"
                 className="h-auto min-h-[40vh] max-h-[80vh] overflow-y-auto flex flex-col items-center bg-background/95 backdrop-blur-xl border-b border-border pt-16 pb-10"
               >
                 <div className="container mx-auto max-w-2xl w-full">
-                  {/* Input Form */}
                   <form
                     onSubmit={handleSearchSubmit}
                     className="relative w-full"
@@ -367,13 +373,11 @@ export default function Navbar() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
-                    {/* Spinner Loading */}
                     {isSearching && (
                       <Loader2 className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground animate-spin" />
                     )}
                   </form>
 
-                  {/* ITEMS YANG DITERIMA DARI HASIL SEARCH (Live Results) */}
                   <div className="mt-8 w-full space-y-2">
                     {searchResults.length > 0 ? (
                       <div className="animate-in fade-in slide-in-from-top-4 duration-300">
@@ -387,19 +391,17 @@ export default function Navbar() {
                             onClick={() => setIsSearchOpen(false)}
                             className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
                           >
-                            {/* Image Thumbnail */}
                             <div className="w-12 h-16 bg-muted rounded overflow-hidden relative shrink-0">
                               {item.images[0] && (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                   src={item.images[0].image_url}
                                   alt={item.name}
+                                  loading="lazy" // Tambahin ini biar gak blocking
                                   className="object-cover w-full h-full"
                                 />
                               )}
                             </div>
-
-                            {/* Text Info */}
                             <div className="flex-1 min-w-0">
                               <h4 className="font-bold truncate text-foreground group-hover:text-primary transition">
                                 {item.name}
@@ -408,9 +410,6 @@ export default function Navbar() {
                                 {item.category?.name || "Product"}
                               </p>
                             </div>
-
-                            {/* Price */}
-                            {/* 👇 UPDATE: Pake displayPrice disini */}
                             <div className="text-sm font-bold whitespace-nowrap">
                               Rp {displayPrice(item.price).toLocaleString("id-ID")}
                             </div>
@@ -436,16 +435,15 @@ export default function Navbar() {
               </SheetContent>
             </Sheet>
 
-            {/* Wrapper Cart & Profile (Desktop Only -> hidden lg:flex) */}
+            {/* Desktop Cart & Profile */}
             <div className="hidden lg:flex items-center gap-4">
-              {/* Cart Icon */}
               <Button
                 variant="ghost"
                 size="icon"
                 className="text-foreground hover:bg-accent relative"
                 asChild
               >
-                <Link href="/cart" id="cart-icon-target">
+                <Link href="/cart">
                   <ShoppingCart className="w-5 h-5" />
                   {cartCount > 0 && (
                     <span
@@ -458,7 +456,6 @@ export default function Navbar() {
                 </Link>
               </Button>
 
-              {/* User Profile / Login */}
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -472,15 +469,12 @@ export default function Navbar() {
                       <AvatarFallback>CN</AvatarFallback>
                     </Avatar>
                   </DropdownMenuTrigger>
-
                   <DropdownMenuContent
                     align="end"
                     className="w-64 p-2 bg-background/95 backdrop-blur-xl border-border shadow-2xl rounded-xl"
                   >
-                    {/* HEADER: User Info & Points */}
                     <DropdownMenuLabel className="font-normal p-3">
                       <div className="flex flex-col space-y-2">
-                        {/* Nama & Email */}
                         <div className="space-y-1">
                           <p className="text-sm font-black leading-none tracking-tight">
                             {user.name}
@@ -489,8 +483,6 @@ export default function Navbar() {
                             {user.email}
                           </p>
                         </div>
-
-                        {/* Badge Points (Premium Look) */}
                         {user.role === "member" && (
                           <div className="flex items-center pt-1">
                             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
@@ -502,12 +494,8 @@ export default function Navbar() {
                         )}
                       </div>
                     </DropdownMenuLabel>
-
                     <DropdownMenuSeparator className="my-1 opacity-50" />
-
-                    {/* MENU ITEMS */}
                     <div className="space-y-1">
-                      {/* Admin Section (Special Style) */}
                       {user.role === "admin" && (
                         <DropdownMenuItem
                           asChild
@@ -522,7 +510,6 @@ export default function Navbar() {
                           </Link>
                         </DropdownMenuItem>
                       )}
-
                       <DropdownMenuItem
                         asChild
                         className="cursor-pointer rounded-lg focus:bg-accent h-9"
@@ -535,7 +522,6 @@ export default function Navbar() {
                           <span>Account Settings</span>
                         </Link>
                       </DropdownMenuItem>
-
                       <DropdownMenuItem
                         asChild
                         className="cursor-pointer rounded-lg focus:bg-accent h-9"
@@ -550,7 +536,6 @@ export default function Navbar() {
                           </div>
                         </Link>
                       </DropdownMenuItem>
-
                       <DropdownMenuItem
                         asChild
                         className="cursor-pointer rounded-lg focus:bg-accent h-9"
@@ -564,10 +549,7 @@ export default function Navbar() {
                         </Link>
                       </DropdownMenuItem>
                     </div>
-
                     <DropdownMenuSeparator className="my-1 opacity-50" />
-
-                    {/* LOGOUT */}
                     <DropdownMenuItem
                       className="text-red-500 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20 cursor-pointer rounded-lg h-9 font-bold mt-1"
                       onClick={logout}
@@ -593,9 +575,8 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* --- BOTTOM NAVIGATION BAR (Mobile/Tablet Only < 1024px) --- */}
+      {/* --- BOTTOM NAVIGATION BAR (Mobile Only) --- */}
       <div className="fixed bottom-0 left-0 z-50 w-full h-[60px] bg-background/90 backdrop-blur-lg border-t border-border flex items-center justify-around lg:hidden pb-[env(safe-area-inset-bottom)]">
-        {/* 1. Home */}
         <Link
           href="/"
           className="flex flex-col items-center justify-center w-full h-full text-muted-foreground hover:text-foreground active:scale-95 transition-all"
@@ -603,8 +584,6 @@ export default function Navbar() {
           <Home className="w-5 h-5" />
           <span className="text-[10px] font-bold mt-1">Home</span>
         </Link>
-
-        {/* 2. Shop */}
         <Link
           href="/shop"
           className="flex flex-col items-center justify-center w-full h-full text-muted-foreground hover:text-foreground active:scale-95 transition-all"
@@ -612,8 +591,6 @@ export default function Navbar() {
           <Grid className="w-5 h-5" />
           <span className="text-[10px] font-bold mt-1">Shop</span>
         </Link>
-
-        {/* 3. Cart */}
         <Link
           href="/cart"
           className="flex flex-col items-center justify-center w-full h-full text-muted-foreground hover:text-foreground active:scale-95 transition-all relative"
@@ -628,8 +605,6 @@ export default function Navbar() {
           </div>
           <span className="text-[10px] font-bold mt-1">Cart</span>
         </Link>
-
-        {/* 4. Profile */}
         <Link
           href={user ? "/dashboard" : "/login"}
           className="flex flex-col items-center justify-center w-full h-full text-muted-foreground hover:text-foreground active:scale-95 transition-all"

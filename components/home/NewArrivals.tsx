@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback, memo } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,8 @@ interface Product {
   id: number;
   name: string;
   slug: string;
-  // 👇 UPDATE: Allow string biar aman
   price: number | string;
-  is_new_arrival: boolean | number | string; 
+  is_new_arrival: boolean | number | string;
   is_featured?: boolean | number | string;
   created_at?: string;
   images: { image_url: string }[];
@@ -45,21 +44,22 @@ export default function Featured() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await api.get("/products?limit=50"); 
+        // Optimization: Kalau backend support filtering, better filter di query params
+        // Contoh: /products?limit=15&featured=true
+        const res = await api.get("/products?limit=50");
         const fetchedData = res.data?.data || [];
-        
+
         let dataFix: Product[] = [];
         if (Array.isArray(res.data)) dataFix = res.data;
         else if (Array.isArray(res.data?.data)) dataFix = res.data.data;
         else if (Array.isArray(fetchedData)) dataFix = fetchedData;
 
         // Filter cuma yang "Featured"
-        const featuredDrops = dataFix.filter(p => {
-             const val = p.is_featured;
-             return val === 1 || val === "1" || val === true || val === "true";
+        const featuredDrops = dataFix.filter((p) => {
+          const val = p.is_featured;
+          return val === 1 || val === "1" || val === true || val === "true";
         });
 
-        // Ambil 15 data Featured teratas
         setProducts(featuredDrops.slice(0, 15));
       } catch (error) {
         console.error("Gagal load featured products", error);
@@ -70,9 +70,8 @@ export default function Featured() {
     fetchProducts();
   }, []);
 
-
-  // Logic Tombol Panah
-  const scrollButton = (direction: "left" | "right") => {
+  // Logic Tombol Panah (Memoized)
+  const scrollButton = useCallback((direction: "left" | "right") => {
     if (scrollRef.current) {
       const { current } = scrollRef;
       const scrollAmount = 350;
@@ -81,38 +80,39 @@ export default function Featured() {
         behavior: "smooth",
       });
     }
-  };
+  }, []);
 
-  // --- LOGIC DRAG TO SCROLL (MOUSE) ---
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // --- LOGIC DRAG TO SCROLL (Optimized handlers) ---
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!scrollRef.current) return;
     setIsDown(true);
     setIsDragging(false);
     setStartX(e.pageX - scrollRef.current.offsetLeft);
     setScrollLeft(scrollRef.current.scrollLeft);
-  };
+  }, []);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     setIsDown(false);
     setIsDragging(false);
-  };
+  }, []);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDown(false);
-    setTimeout(() => setIsDragging(false), 0);
-  };
+    // Timeout kecil biar click event di child gak langsung trigger kalau abis drag
+    setTimeout(() => setIsDragging(false), 50);
+  }, []);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDown || !scrollRef.current) return;
     e.preventDefault();
     const x = e.pageX - scrollRef.current.offsetLeft;
-    const walk = (x - startX) * 2;
+    const walk = (x - startX) * 2; // Scroll speed multiplier
     scrollRef.current.scrollLeft = scrollLeft - walk;
 
     if (Math.abs(walk) > 5) {
       setIsDragging(true);
     }
-  };
+  }, [isDown, scrollLeft, startX]);
 
   return (
     <section className="py-10 border-b border-border bg-background">
@@ -132,6 +132,7 @@ export default function Featured() {
               size="icon"
               onClick={() => scrollButton("left")}
               className="rounded-full border-zinc-700 hover:bg-zinc-800 hover:text-white w-12 h-12"
+              aria-label="Scroll Left"
             >
               <ChevronLeft className="w-6 h-6" />
             </Button>
@@ -140,6 +141,7 @@ export default function Featured() {
               size="icon"
               onClick={() => scrollButton("right")}
               className="rounded-full border-zinc-700 hover:bg-zinc-800 hover:text-white w-12 h-12"
+              aria-label="Scroll Right"
             >
               <ChevronRight className="w-6 h-6" />
             </Button>
@@ -169,17 +171,18 @@ export default function Featured() {
               onMouseUp={handleMouseUp}
               onMouseMove={handleMouseMove}
               className={`
-                        flex gap-4 md:gap-6 overflow-x-auto pb-8 
-                        /* Hide Scrollbar */
-                        [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]
-                        /* Cursor Style */
-                        ${isDown ? "cursor-grabbing" : "cursor-grab"}
-                      `}
+                flex gap-4 md:gap-6 overflow-x-auto pb-8 
+                /* Hide Scrollbar */
+                [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]
+                /* Cursor Style */
+                ${isDown ? "cursor-grabbing" : "cursor-grab"}
+              `}
               style={{ scrollBehavior: isDown ? "auto" : "smooth" }}
             >
               {Array.isArray(products) && products.length > 0 ? (
                 products.map((item) => (
-                  <ArrivalCard
+                  // Memoized Component dipanggil disini
+                  <ArrivalCardMemo
                     key={item.id}
                     item={item}
                     isDraggingParent={isDragging}
@@ -198,7 +201,14 @@ export default function Featured() {
   );
 }
 
-// --- SUB-COMPONENT: CARD ---
+// --- SUB-COMPONENT: CARD (OPTIMIZED) ---
+// Kita pisah logic displayPrice keluar biar gak dibikin ulang tiap render
+const displayPrice = (val: string | number): number => {
+  const num = typeof val === "string" ? parseFloat(val) : val;
+  if (isNaN(num)) return 0;
+  return Math.floor(num);
+};
+
 function ArrivalCard({
   item,
   isDraggingParent,
@@ -211,65 +221,76 @@ function ArrivalCard({
 
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Ref untuk nyimpen ukuran bounding box, biar gak hitung ulang terus
+  const boundsRef = useRef<DOMRect | null>(null);
 
-  // 🔥 HELPER BARU: Logic Penyelamat Harga
-  const displayPrice = (val: string | number): number => {
-    const num = typeof val === 'string' ? parseFloat(val) : val;
-    if (isNaN(num)) return 0;
-    return Math.floor(num); 
-  };
-
-  // Logic New Arrival
+  // Logic New Arrival (Memoized)
   const isNewCalculated = useMemo(() => {
     const val = item.is_new_arrival;
     if (val === 1 || val === "1" || val === true || val === "true") return true;
-    if (val === 0 || val === "0" || val === false || val === "false") return false;
-    
+    if (val === 0 || val === "0" || val === false || val === "false")
+      return false;
+
     if (item.created_at) {
-        const createdDate = new Date(item.created_at);
-        const now = new Date();
-        const diffTime = Math.abs(now.getTime() - createdDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-        return diffDays <= 30; 
+      const createdDate = new Date(item.created_at);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - createdDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 30;
     }
     return false;
   }, [item.is_new_arrival, item.created_at]);
 
+  // Optimization: Hitung ukuran HANYA saat mouse masuk
+  const handleMouseEnter = () => {
+    if (containerRef.current) {
+      boundsRef.current = containerRef.current.getBoundingClientRect();
+    }
+  };
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDraggingParent) return;
-    if (!containerRef.current || images.length <= 1) return;
+    if (isDraggingParent || images.length <= 1 || !boundsRef.current) return;
 
-    const { left, width } = containerRef.current.getBoundingClientRect();
+    // Pakai nilai dari ref, bukan getBoundingClientRect() langsung (Reflow Saver!)
+    const { left, width } = boundsRef.current;
+    
+    // Fallback safety kalau width 0 (jarang terjadi tapi amanin aja)
+    if (width === 0) return;
+
     const x = e.clientX - left;
-
     const percentage = x / width;
     const index = Math.floor(percentage * images.length);
     const safeIndex = Math.min(Math.max(index, 0), images.length - 1);
-    setActiveIndex(safeIndex);
+    
+    // State update cuma kalau index berubah (React batching handles this usually, but good logic)
+    setActiveIndex((prev) => (prev !== safeIndex ? safeIndex : prev));
   };
 
   const handleMouseLeave = () => {
     setActiveIndex(0);
+    boundsRef.current = null; // Cleanup ref
   };
 
   const handleLinkClick = (e: React.MouseEvent) => {
+    // Prevent navigasi kalau user niatnya cuma nge-drag card
     if (isDraggingParent) e.preventDefault();
   };
 
   return (
-    <div className="w-[220px] md:w-[280px] flex-none snap-start group relative select-none">
+    <div className="w-[150px] md:w-[280px] flex-none snap-start group relative select-none will-change-transform">
       {/* 1. IMAGE CONTAINER */}
       <div
         ref={containerRef}
-        className="relative aspect-3/4 bg-white overflow-hidden rounded-md mb-3 md:mb-4 border border-border cursor-pointer"
+        className="relative aspect-3/4 bg-white overflow-hidden rounded-md mb-3 md:mb-4 border border-border cursor-pointer transform-gpu"
+        onMouseEnter={handleMouseEnter} // Trigger kalkulasi dimensi
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
         {/* Badge New */}
         {isNewCalculated && (
-            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
-              New
-            </div>
+          <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
+            New
+          </div>
         )}
 
         <Link
@@ -284,8 +305,9 @@ function ArrivalCard({
                 key={idx}
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
-                fill // Wajib pakai fill kalau parent punya fixed aspect-ratio
-                sizes="(max-width: 768px) 220px, 280px" // Optimization: Mobile 220px, Desktop 280px
+                fill
+                // Optimization: sizes yang akurat membantu browser download gambar yg tepat
+                sizes="(max-width: 768px) 220px, 280px"
                 className={`
                   object-contain object-center 
                   transition-opacity duration-300 ease-in-out
@@ -296,8 +318,10 @@ function ArrivalCard({
                   }
                 `}
                 draggable={false}
-                priority={false} // Lazy load aja karena ini list panjang
-                quality={50}
+                // Gambar pertama priority false (lazy), sisanya juga lazy
+                // Kita mengandalkan browser cache setelah load pertama
+                loading="lazy"
+                quality={60} // Sedikit naikin quality biar tajem tapi tetep ringan
               />
             ))
           ) : (
@@ -339,7 +363,6 @@ function ArrivalCard({
               {item.category?.name || "Streetwear"}
             </p>
           </div>
-          {/* 👇 UPDATE: Pake displayPrice disini */}
           <p className="text-xs md:text-sm font-bold whitespace-nowrap">
             Rp {displayPrice(item.price).toLocaleString("id-ID")}
           </p>
@@ -347,12 +370,12 @@ function ArrivalCard({
 
         <div className="flex flex-wrap gap-1 pt-1">
           {variants.length > 0 ? (
-             variants.map((variant) => {
-                const isAvailable = variant.stock > 0;
-                return (
-                  <span
-                    key={variant.id}
-                    className={`
+            variants.map((variant) => {
+              const isAvailable = variant.stock > 0;
+              return (
+                <span
+                  key={variant.id}
+                  className={`
                       text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
                       ${
                         isAvailable
@@ -360,14 +383,14 @@ function ArrivalCard({
                           : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
                       }
                     `}
-                  >
-                    {variant.size}
-                  </span>
-                );
-             })
+                >
+                  {variant.size}
+                </span>
+              );
+            })
           ) : (
             <span className="text-[9px] md:text-[10px] text-muted-foreground italic">
-                No size info
+              No size info
             </span>
           )}
         </div>
@@ -375,3 +398,5 @@ function ArrivalCard({
     </div>
   );
 }
+
+const ArrivalCardMemo = memo(ArrivalCard);

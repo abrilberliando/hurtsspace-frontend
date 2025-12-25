@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, useRef, useMemo } from "react";
+import { useEffect, useState, Suspense, useRef, useMemo, memo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/axios";
@@ -39,6 +39,20 @@ interface DropdownOption {
   label: string;
 }
 
+// --- GLOBAL HELPERS (Hemat Memory) ---
+const parsePrice = (value: number | string): number => {
+  if (typeof value === "number") return value;
+  if (!value) return 0;
+  const cleanString = value.toString().replace(/\D/g, "");
+  return parseInt(cleanString) || 0;
+};
+
+const displayPrice = (val: string | number): number => {
+  const num = typeof val === "string" ? parseFloat(val) : val;
+  if (isNaN(num)) return 0;
+  return Math.floor(num);
+};
+
 export default function ShopPage() {
   return (
     <Suspense
@@ -70,13 +84,14 @@ function ShopContent() {
   const [sortBy, setSortBy] = useState("latest");
   const [visibleCount, setVisibleCount] = useState(16);
 
-  const sortOptions: DropdownOption[] = [
+  // Memoize options biar gak dibuat ulang tiap render
+  const sortOptions: DropdownOption[] = useMemo(() => [
     { value: "latest", label: "Latest Arrivals" },
     { value: "alphabet_asc", label: "Name (A - Z)" },
     { value: "alphabet_desc", label: "Name (Z - A)" },
     { value: "price_asc", label: "Price (Low - High)" },
     { value: "price_desc", label: "Price (High - Low)" },
-  ];
+  ], []);
 
   // 1. Fetch Categories
   useEffect(() => {
@@ -106,7 +121,6 @@ function ShopContent() {
         if (searchQuery) {
           params.append("search", searchQuery);
           // 👇 TAMBAH LIMIT GEDE PAS SEARCH
-          // Biar kalau API balikin hasil fuzzy, kita punya banyak stok buat difilter strict
           params.append("limit", "100");
         }
 
@@ -131,19 +145,11 @@ function ShopContent() {
     fetchProducts();
   }, [categoryId, searchQuery]);
 
-  // --- HELPER: Parse Price ---
-  const parsePrice = (value: number | string): number => {
-    if (typeof value === "number") return value;
-    if (!value) return 0;
-    const cleanString = value.toString().replace(/\D/g, "");
-    return parseInt(cleanString) || 0;
-  };
-
-  // 3. LOGIC FILTERING & SORTING (STRICT MODE ON) ⚡
+  // 3. LOGIC FILTERING & SORTING (Optimized)
   const processedProducts = useMemo(() => {
     let data = [...allProducts];
 
-    // A. STRICT SEARCH FILTER (Client-side) 👇
+    // A. STRICT SEARCH FILTER (Client-side)
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
       data = data.filter((item) =>
@@ -151,7 +157,7 @@ function ShopContent() {
       );
     }
 
-    // B. FILTER KATEGORI (Client-side fallback)
+    // B. FILTER KATEGORI (Fallback Client-side)
     if (categoryId && categoryId !== "all") {
       data = data.filter((p) => {
         const productCatId = p.category_id || p.category?.id;
@@ -173,7 +179,7 @@ function ShopContent() {
       default:
         return data.sort((a, b) => b.id - a.id);
     }
-  }, [allProducts, sortBy, categoryId, searchQuery]); // 👈 Jangan lupa masukin searchQuery ke dependency
+  }, [allProducts, sortBy, categoryId, searchQuery]);
 
   // Reset pagination on filter change
   useEffect(() => {
@@ -194,31 +200,24 @@ function ShopContent() {
   };
 
   // Prepare Options for Custom Dropdown
-  const categoryOptions: DropdownOption[] = [
+  const categoryOptions: DropdownOption[] = useMemo(() => [
     { value: "all", label: "Category: All" },
     ...categories.map((c) => ({ value: String(c.id), label: c.name })),
-  ];
+  ], [categories]);
 
   // --- LOGIC DYNAMIC TITLE ---
   const pageTitle = useMemo(() => {
-    // 1. Prioritas Search
     if (searchQuery) return `Search: "${searchQuery}"`;
-
-    // 2. Prioritas Kategori (Kalau bukan 'all')
     if (categoryId && categoryId !== "all") {
       const activeCat = categories.find((c) => String(c.id) === categoryId);
       return activeCat ? activeCat.name : "Shop";
     }
-
-    // 3. Prioritas Sorting
     if (sortBy && sortBy !== "latest") {
       const activeSort = sortOptions.find((s) => s.value === sortBy);
       return activeSort ? activeSort.label : "Shop All";
     }
-
-    // 4. Default
     return "Shop All";
-  }, [searchQuery, categoryId, sortBy, categories]);
+  }, [searchQuery, categoryId, sortBy, categories, sortOptions]);
 
   return (
     <main className="min-h-screen bg-background text-foreground pt-10 pb-20">
@@ -237,7 +236,6 @@ function ShopContent() {
 
           {/* Kanan: Filter & Sort */}
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto z-30">
-            {/* Custom Dropdown Kategori */}
             <CustomDropdown
               options={categoryOptions}
               value={categoryId || "all"}
@@ -246,7 +244,6 @@ function ShopContent() {
               className="w-full sm:w-[220px]"
             />
 
-            {/* Custom Dropdown Sorting */}
             <CustomDropdown
               options={sortOptions}
               value={sortBy}
@@ -260,7 +257,8 @@ function ShopContent() {
         {/* GRID PRODUK */}
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8 justify-items-center">
-            {[...Array(8)].map((_, i) => (
+            {/* Optimized Array.from */}
+            {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="w-full max-w-[350px] space-y-3">
                 <Skeleton className="aspect-[3/4] w-full rounded-lg bg-muted" />
                 <Skeleton className="h-4 w-2/3 bg-muted" />
@@ -272,7 +270,8 @@ function ShopContent() {
           <>
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 gap-y-8 md:gap-8 md:gap-y-12 justify-items-center z-0">
               {visibleProducts.map((item) => (
-                <ShopCard key={item.id} item={item} />
+                // Pake Memoized Component
+                <ShopCardMemo key={item.id} item={item} />
               ))}
             </div>
 
@@ -317,7 +316,8 @@ function ShopContent() {
 }
 
 // --- COMPONENT: CUSTOM DROPDOWN ---
-function CustomDropdown({
+// Dibungkus memo biar gak re-render kalau parent (ShopContent) update state lain
+const CustomDropdown = memo(function CustomDropdown({
   options,
   value,
   onChange,
@@ -355,14 +355,14 @@ function CustomDropdown({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`
-                    flex items-center justify-between w-full 
-                    bg-background border border-border 
-                    px-4 py-2.5 text-sm font-medium uppercase tracking-wide
-                    transition-all duration-200 ease-in-out
-                    hover:border-foreground focus:outline-none 
-                    ${isOpen ? "ring-1 ring-foreground border-foreground" : ""}
-                    rounded-none cursor-pointer
-                `}
+          flex items-center justify-between w-full 
+          bg-background border border-border 
+          px-4 py-2.5 text-sm font-medium uppercase tracking-wide
+          transition-all duration-200 ease-in-out
+          hover:border-foreground focus:outline-none 
+          ${isOpen ? "ring-1 ring-foreground border-foreground" : ""}
+          rounded-none cursor-pointer
+        `}
       >
         <span className="truncate mr-2 text-foreground">{selectedLabel}</span>
         <ChevronDown
@@ -374,16 +374,16 @@ function CustomDropdown({
 
       <div
         className={`
-                    absolute z-[60] left-0 right-0 top-[calc(100%+4px)] 
-                    bg-background border border-border 
-                    shadow-2xl max-h-[300px] overflow-y-auto
-                    transition-all duration-200 origin-top
-                    ${
-                      isOpen
-                        ? "opacity-100 scale-y-100 translate-y-0"
-                        : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none"
-                    }
-                `}
+          absolute z-[60] left-0 right-0 top-[calc(100%+4px)] 
+          bg-background border border-border 
+          shadow-2xl max-h-[300px] overflow-y-auto
+          transition-all duration-200 origin-top
+          ${
+            isOpen
+              ? "opacity-100 scale-y-100 translate-y-0"
+              : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none"
+          }
+        `}
       >
         <ul className="py-1">
           {options.map((opt) => (
@@ -394,15 +394,15 @@ function CustomDropdown({
                 setIsOpen(false);
               }}
               className={`
-                                relative px-4 py-3 text-sm font-medium cursor-pointer uppercase tracking-wide
-                                transition-colors duration-150 border-t border-border/10 first:border-0
-                                hover:bg-foreground hover:text-background
-                                ${
-                                  value === opt.value
-                                    ? "bg-muted/50 text-foreground"
-                                    : "text-muted-foreground"
-                                }
-                            `}
+                relative px-4 py-3 text-sm font-medium cursor-pointer uppercase tracking-wide
+                transition-colors duration-150 border-t border-border/10 first:border-0
+                hover:bg-foreground hover:text-background
+                ${
+                  value === opt.value
+                    ? "bg-muted/50 text-foreground"
+                    : "text-muted-foreground"
+                }
+              `}
             >
               <div className="flex items-center justify-between">
                 <span>{opt.label}</span>
@@ -414,42 +414,52 @@ function CustomDropdown({
       </div>
     </div>
   );
-}
+});
 
-// --- COMPONENT: SHOP CARD ---
+// --- COMPONENT: SHOP CARD (ULTRA OPTIMIZED) ---
 function ShopCard({ item }: { item: Product }) {
   const images = item.images || [];
   const variants = item.variants || [];
 
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Ref buat nyimpen ukuran element (Reflow Saver!)
+  const boundsRef = useRef<DOMRect | null>(null);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current || images.length <= 1) return;
-    const { left, width } = containerRef.current.getBoundingClientRect();
+  // 1. Calculate bounds ONLY on mouse enter
+  const handleMouseEnter = useCallback(() => {
+    if (containerRef.current) {
+      boundsRef.current = containerRef.current.getBoundingClientRect();
+    }
+  }, []);
+
+  // 2. Logic hover ringan tanpa getBoundingClientRect() berulang
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (images.length <= 1 || !boundsRef.current) return;
+
+    const { left, width } = boundsRef.current;
+    if (width === 0) return;
+
     const x = e.clientX - left;
     const percentage = x / width;
     const index = Math.floor(percentage * images.length);
     const safeIndex = Math.min(Math.max(index, 0), images.length - 1);
-    setActiveIndex(safeIndex);
-  };
 
-  const handleMouseLeave = () => {
+    setActiveIndex((prev) => (prev !== safeIndex ? safeIndex : prev));
+  }, [images.length]);
+
+  const handleMouseLeave = useCallback(() => {
     setActiveIndex(0);
-  };
-
-  const displayPrice = (val: string | number) => {
-    const num = typeof val === "string" ? parseFloat(val) : val;
-    if (isNaN(num)) return 0;
-    return Math.floor(num);
-  };
+    boundsRef.current = null; // Cleanup
+  }, []);
 
   return (
-    <div className="w-full max-w-[350px] group relative select-none">
+    <div className="w-full max-w-[350px] group relative select-none will-change-transform">
       {/* IMAGE */}
       <div
         ref={containerRef}
-        className="relative aspect-[3/4] bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer"
+        className="relative aspect-[3/4] bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer transform-gpu"
+        onMouseEnter={handleMouseEnter} // Trigger calc here
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
@@ -459,26 +469,26 @@ function ShopCard({ item }: { item: Product }) {
         >
           {images.length > 0 ? (
             images.map((img, idx) => (
-              // eslint-disable-next-line @next/next/no-img-element
               <Image
                 key={idx}
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
                 fill
+                // Optimization: sizes accurate for grid
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className={`
-                                    absolute inset-0 w-full h-full object-contain object-center 
-                                    transition-opacity duration-300 ease-in-out
-                                    ${
-                                      idx === activeIndex
-                                        ? "opacity-100 z-10"
-                                        : "opacity-0 z-0"
-                                    }
-                                `}
+                  absolute inset-0 w-full h-full object-contain object-center 
+                  transition-opacity duration-300 ease-in-out
+                  ${
+                    idx === activeIndex
+                      ? "opacity-100 z-10"
+                      : "opacity-0 z-0"
+                  }
+                `}
                 draggable={false}
-                priority={idx === 0} 
+                priority={idx === 0}
                 loading={idx === 0 ? "eager" : "lazy"}
-                quality={75}
+                quality={60} // Sedikit diturunin biar enteng
               />
             ))
           ) : (
@@ -519,6 +529,7 @@ function ShopCard({ item }: { item: Product }) {
               {item.category?.name || "Streetwear"}
             </p>
           </div>
+          {/* Pake global helper */}
           <p className="text-xs md:text-sm font-bold whitespace-nowrap">
             Rp {displayPrice(item.price).toLocaleString("id-ID")}
           </p>
@@ -533,13 +544,13 @@ function ShopCard({ item }: { item: Product }) {
                 <span
                   key={variant.id}
                   className={`
-                                        text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
-                                        ${
-                                          isAvailable
-                                            ? "border-zinc-700 text-foreground cursor-default"
-                                            : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
-                                        }
-                                    `}
+                    text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
+                    ${
+                      isAvailable
+                        ? "border-zinc-700 text-foreground cursor-default"
+                        : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
+                    }
+                  `}
                 >
                   {variant.size}
                 </span>
@@ -555,3 +566,4 @@ function ShopCard({ item }: { item: Product }) {
     </div>
   );
 }
+const ShopCardMemo = memo(ShopCard);

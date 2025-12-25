@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, useRef, useMemo } from "react";
+import { useEffect, useState, Suspense, useRef, useMemo, memo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/axios";
@@ -22,10 +22,9 @@ interface Product {
   id: number;
   name: string;
   slug: string;
-  // 👇 Allow string/number buat handling data mentah
   price: number | string;
   is_new_arrival: boolean | number | string;
-  created_at?: string; // 👇 Wajib buat hitung umur barang
+  created_at?: string;
   images: { image_url: string }[];
   variants: Variant[];
   category_id?: number | string;
@@ -43,7 +42,6 @@ interface DropdownOption {
   label: string;
 }
 
-// Interface props buat CustomDropdown
 interface CustomDropdownProps {
   options: DropdownOption[];
   value: string;
@@ -51,6 +49,20 @@ interface CustomDropdownProps {
   placeholder?: string;
   className?: string;
 }
+
+// --- GLOBAL HELPERS (Hemat Memory) ---
+const parsePrice = (value: number | string): number => {
+  if (typeof value === "number") return value;
+  if (!value) return 0;
+  const cleanString = value.toString().replace(/\D/g, "");
+  return parseInt(cleanString) || 0;
+};
+
+const displayPrice = (val: string | number): number => {
+  const num = typeof val === "string" ? parseFloat(val) : val;
+  if (isNaN(num)) return 0;
+  return Math.floor(num);
+};
 
 export default function NewArrivalsPage() {
   return (
@@ -82,11 +94,12 @@ function NewArrivalsContent() {
   const [sortBy, setSortBy] = useState("latest");
   const [visibleCount, setVisibleCount] = useState(16);
 
-  const sortOptions: DropdownOption[] = [
+  // Memoize static options
+  const sortOptions: DropdownOption[] = useMemo(() => [
     { value: "latest", label: "Latest Added" },
     { value: "price_asc", label: "Price (Low - High)" },
     { value: "price_desc", label: "Price (High - Low)" },
-  ];
+  ], []);
 
   // 1. Fetch Categories
   useEffect(() => {
@@ -107,9 +120,9 @@ function NewArrivalsContent() {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const res = await api.get("/products"); // Ambil semua, filter di client
+        // Fetch Limit gede sekalian buat client-side filtering
+        const res = await api.get("/products?limit=100"); 
 
-        // 👇 FIX: Ganti 'any[]' jadi 'Product[]' biar type-safe & ESLint seneng
         let dataFix: Product[] = [];
         if (Array.isArray(res.data)) dataFix = res.data;
         else if (Array.isArray(res.data?.data)) dataFix = res.data.data;
@@ -124,7 +137,7 @@ function NewArrivalsContent() {
             p.is_new_arrival === "1" ||
             p.is_new_arrival === true;
 
-          // 2. Cek Umur (30 Hari)
+          // 2. Cek Umur
           let isFresh = false;
           if (p.created_at) {
             const createdDate = new Date(p.created_at);
@@ -134,16 +147,13 @@ function NewArrivalsContent() {
             isFresh = diffDays <= NEW_ARRIVAL_LIMIT_DAYS;
           }
 
-          return isFlagged || isFresh; // Masuk list kalau salah satu terpenuhi
+          return isFlagged || isFresh;
         });
 
-        // Mapping biar tipe datanya aman
+        // Mapping biar tipe datanya konsisten boolean
         const mappedProducts: Product[] = newDrops.map((p) => ({
           ...p,
-          is_new_arrival:
-            p.is_new_arrival === 1 ||
-            p.is_new_arrival === "1" ||
-            p.is_new_arrival === true,
+          is_new_arrival: true, // Karena udah difilter, pasti true semua context-nya disini
         }));
 
         setProducts(mappedProducts);
@@ -158,14 +168,6 @@ function NewArrivalsContent() {
 
     fetchProducts();
   }, []);
-
-  // --- HELPER ---
-  const parsePrice = (value: number | string): number => {
-    if (typeof value === "number") return value;
-    if (!value) return 0;
-    const cleanString = value.toString().replace(/\D/g, "");
-    return parseInt(cleanString) || 0;
-  };
 
   // 3. LOGIC PROCESSING (Filter Category & Sort)
   const processedProducts = useMemo(() => {
@@ -201,17 +203,17 @@ function NewArrivalsContent() {
   const hasMore = visibleCount < processedProducts.length;
   const handleLoadMore = () => setVisibleCount((prev) => prev + 8);
 
-  const handleCategoryChange = (val: string) => {
+  const handleCategoryChange = useCallback((val: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (val === "all") params.delete("category_id");
     else params.set("category_id", val);
     router.push(`/new-arrivals?${params.toString()}`);
-  };
+  }, [router, searchParams]);
 
-  const categoryOptions: DropdownOption[] = [
+  const categoryOptions: DropdownOption[] = useMemo(() => [
     { value: "all", label: "Category: All" },
     ...categories.map((c) => ({ value: String(c.id), label: c.name })),
-  ];
+  ], [categories]);
 
   // Logic Title
   const pageTitle = useMemo(() => {
@@ -224,91 +226,89 @@ function NewArrivalsContent() {
   }, [categoryId, categories]);
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <main className="min-h-screen bg-background text-foreground pt-10 pb-20">
-        <div className="container mx-auto px-4">
-          {/* HEADER */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
-            <div className="text-center md:text-left w-full md:w-auto">
-              <h1 className="text-2xl font-black tracking-tighter uppercase">
-                {pageTitle}
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                {processedProducts.length} fresh drops available
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto z-30">
-              <CustomDropdown
-                options={categoryOptions}
-                value={categoryId || "all"}
-                onChange={handleCategoryChange}
-                placeholder="Filter Category"
-                className="w-full sm:w-[220px]"
-              />
-
-              <CustomDropdown
-                options={sortOptions}
-                value={sortBy}
-                onChange={(val) => setSortBy(val)}
-                placeholder="Sort By"
-                className="w-full sm:w-60"
-              />
-            </div>
+    <main className="min-h-screen bg-background text-foreground pt-10 pb-20">
+      <div className="container mx-auto px-4">
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+          <div className="text-center md:text-left w-full md:w-auto">
+            <h1 className="text-2xl font-black tracking-tighter uppercase">
+              {pageTitle}
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {processedProducts.length} fresh drops available
+            </p>
           </div>
 
-          {/* GRID */}
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8 justify-items-center">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="w-full max-w-[350px] space-y-3">
-                  <Skeleton className="aspect-3/4 w-full rounded-lg bg-muted" />
-                  <Skeleton className="h-4 w-2/3 bg-muted" />
-                </div>
+          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto z-30">
+            <CustomDropdown
+              options={categoryOptions}
+              value={categoryId || "all"}
+              onChange={handleCategoryChange}
+              placeholder="Filter Category"
+              className="w-full sm:w-[220px]"
+            />
+
+            <CustomDropdown
+              options={sortOptions}
+              value={sortBy}
+              onChange={(val) => setSortBy(val)}
+              placeholder="Sort By"
+              className="w-full sm:w-60"
+            />
+          </div>
+        </div>
+
+        {/* GRID */}
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8 justify-items-center">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="w-full max-w-[350px] space-y-3">
+                <Skeleton className="aspect-3/4 w-full rounded-lg bg-muted" />
+                <Skeleton className="h-4 w-2/3 bg-muted" />
+              </div>
+            ))}
+          </div>
+        ) : visibleProducts.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 gap-y-8 md:gap-8 md:gap-y-12 justify-items-center z-0">
+              {visibleProducts.map((item) => (
+                <ShopCardMemo key={item.id} item={item} />
               ))}
             </div>
-          ) : visibleProducts.length > 0 ? (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 gap-y-8 md:gap-8 md:gap-y-12 justify-items-center z-0">
-                {visibleProducts.map((item) => (
-                  <ShopCard key={item.id} item={item} />
-                ))}
-              </div>
 
-              {hasMore && (
-                <div className="mt-12 text-center">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={handleLoadMore}
-                    className="px-12 h-14 border-foreground text-foreground font-bold hover:bg-foreground hover:text-background transition-all tracking-widest text-sm rounded-none w-full md:w-auto uppercase"
-                  >
-                    Load More
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="py-32 text-center border border-dashed border-zinc-700 rounded-xl">
-              <h2 className="text-xl font-bold mb-2">No new drops yet.</h2>
-              <p className="text-muted-foreground mb-6">
-                Check back later for fresh gear.
-              </p>
-              <Button variant="outline" onClick={() => router.push("/shop")}>
-                Back to Shop
-              </Button>
-            </div>
-          )}
-        </div>
-      </main>
-    </Suspense>
+            {hasMore && (
+              <div className="mt-12 text-center">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleLoadMore}
+                  className="px-12 h-14 border-foreground text-foreground font-bold hover:bg-foreground hover:text-background transition-all tracking-widest text-sm rounded-none w-full md:w-auto uppercase"
+                >
+                  Load More
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="py-32 text-center border border-dashed border-zinc-700 rounded-xl">
+            <h2 className="text-xl font-bold mb-2">No new drops yet.</h2>
+            <p className="text-muted-foreground mb-6">
+              Check back later for fresh gear.
+            </p>
+            <Button variant="outline" onClick={() => router.push("/shop")}>
+              Back to Shop
+            </Button>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
 
 // --- COMPONENTS ---
 
-// 1. Custom Dropdown
-function CustomDropdown({
+// 1. Custom Dropdown (Memoized)
+const CustomDropdown = memo(function CustomDropdown({
   options,
   value,
   onChange,
@@ -333,181 +333,178 @@ function CustomDropdown({
   }, []);
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <div className={`relative group ${className}`} ref={dropdownRef}>
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center justify-between w-full bg-background border border-border px-4 py-2.5 text-sm font-medium uppercase tracking-wide transition-all duration-200 ease-in-out hover:border-foreground focus:outline-none ${
-            isOpen ? "ring-1 ring-foreground border-foreground" : ""
-          } rounded-none cursor-pointer`}
-        >
-          <span className="truncate mr-2 text-foreground">{selectedLabel}</span>
-          <ChevronDown
-            className={`h-4 w-4 text-muted-foreground transition-transform duration-300 ${
-              isOpen ? "rotate-180 text-foreground" : ""
-            }`}
-          />
-        </button>
-        <div
-          className={`absolute z-50 left-0 right-0 top-[calc(100%+4px)] bg-background border border-border shadow-2xl max-h-[300px] overflow-y-auto transition-all duration-200 origin-top ${
-            isOpen
-              ? "opacity-100 scale-y-100 translate-y-0"
-              : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none"
+    <div className={`relative group ${className}`} ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center justify-between w-full bg-background border border-border px-4 py-2.5 text-sm font-medium uppercase tracking-wide transition-all duration-200 ease-in-out hover:border-foreground focus:outline-none ${
+          isOpen ? "ring-1 ring-foreground border-foreground" : ""
+        } rounded-none cursor-pointer`}
+      >
+        <span className="truncate mr-2 text-foreground">{selectedLabel}</span>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform duration-300 ${
+            isOpen ? "rotate-180 text-foreground" : ""
           }`}
-        >
-          <ul className="py-1">
-            {options.map((opt) => (
-              <li
-                key={opt.value}
-                onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-                className={`relative px-4 py-3 text-sm font-medium cursor-pointer uppercase tracking-wide transition-colors duration-150 border-t border-border/10 first:border-0 hover:bg-foreground hover:text-background ${
-                  value === opt.value
-                    ? "bg-muted/50 text-foreground"
-                    : "text-muted-foreground"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span>{opt.label}</span>
-                  {value === opt.value && <Check className="h-3.5 w-3.5" />}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+        />
+      </button>
+      <div
+        className={`absolute z-50 left-0 right-0 top-[calc(100%+4px)] bg-background border border-border shadow-2xl max-h-[300px] overflow-y-auto transition-all duration-200 origin-top ${
+          isOpen
+            ? "opacity-100 scale-y-100 translate-y-0"
+            : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none"
+        }`}
+      >
+        <ul className="py-1">
+          {options.map((opt) => (
+            <li
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`relative px-4 py-3 text-sm font-medium cursor-pointer uppercase tracking-wide transition-colors duration-150 border-t border-border/10 first:border-0 hover:bg-foreground hover:text-background ${
+                value === opt.value
+                  ? "bg-muted/50 text-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span>{opt.label}</span>
+                {value === opt.value && <Check className="h-3.5 w-3.5" />}
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
-    </Suspense>
+    </div>
   );
-}
+});
 
-// 2. Shop Card (Updated Logic Badge NEW)
+// 2. Shop Card (ULTRA OPTIMIZED)
 function ShopCard({ item }: { item: Product }) {
   const images = item.images || [];
   const variants = item.variants || [];
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Ref Caching: Simpen ukuran element biar gak getBoundingClientRect terus
+  const boundsRef = useRef<DOMRect | null>(null);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current || images.length <= 1) return;
-    const { left, width } = containerRef.current.getBoundingClientRect();
+  // 1. Calculate bounds ONLY on mouse enter
+  const handleMouseEnter = useCallback(() => {
+    if (containerRef.current) {
+      boundsRef.current = containerRef.current.getBoundingClientRect();
+    }
+  }, []);
+
+  // 2. Logic hover ringan tanpa calc layout ulang
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (images.length <= 1 || !boundsRef.current) return;
+
+    const { left, width } = boundsRef.current;
+    if (width === 0) return;
+
     const x = e.clientX - left;
     const percentage = x / width;
     const index = Math.floor(percentage * images.length);
-    setActiveIndex(Math.min(Math.max(index, 0), images.length - 1));
-  };
+    const safeIndex = Math.min(Math.max(index, 0), images.length - 1);
 
-  // Helper display price
-  const displayPrice = (val: string | number): number => {
-        const num = typeof val === 'string' ? parseFloat(val) : val;
-        if (isNaN(num)) return 0;
-        return Math.floor(num); 
-    };
+    setActiveIndex((prev) => (prev !== safeIndex ? safeIndex : prev));
+  }, [images.length]);
 
-  // 👇 SMART LOGIC: 30 HARI RULE ATAU DATABASE FLAG
-  const isNewCalculated = useMemo(() => {
-    // 1. Cek Boolean dari DB
-    const val = item.is_new_arrival;
-    if (val === 1 || val === "1" || val === true || val === "true") return true;
-
-    // 2. Fallback: Hitung Umur (30 Hari)
-    if (item.created_at) {
-      const createdDate = new Date(item.created_at);
-      const now = new Date();
-      const diffTime = Math.abs(now.getTime() - createdDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      return diffDays <= NEW_ARRIVAL_LIMIT_DAYS; 
-    }
-    return false;
-  }, [item.is_new_arrival, item.created_at]);
+  const handleMouseLeave = useCallback(() => {
+    setActiveIndex(0);
+    boundsRef.current = null; // Cleanup memory
+  }, []);
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <div className="w-full max-w-[350px] group relative select-none">
-        <div
-          ref={containerRef}
-          className="relative aspect-3/4 bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setActiveIndex(0)}
+    <div className="w-full max-w-[350px] group relative select-none will-change-transform">
+      <div
+        ref={containerRef}
+        className="relative aspect-3/4 bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer transform-gpu"
+        onMouseEnter={handleMouseEnter}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
+        <Link
+          href={`/products/${item.slug}`}
+          className="block w-full h-full relative"
         >
-          <Link
-            href={`/products/${item.slug}`}
-            className="block w-full h-full relative"
-          >
-            {images.length > 0 ? (
-              images.map((img, idx) => (
-                <Image
-                  key={idx}
-                  src={img.image_url}
-                  alt={`${item.name}-${idx}`}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  className={`absolute inset-0 w-full h-full object-contain object-center transition-opacity duration-300 ease-in-out ${
-                    idx === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"
-                  }`}
-                  draggable={false}
-                  priority={idx === 0} 
-                  loading={idx === 0 ? "eager" : "lazy"}
-                  quality={75}
-                />
-              ))
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700 font-bold text-lg md:text-2xl">
-                HURTS
-              </div>
-            )}
-          </Link>
-          {isNewCalculated && (
-            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
-              New
+          {images.length > 0 ? (
+            images.map((img, idx) => (
+              <Image
+                key={idx}
+                src={img.image_url}
+                alt={`${item.name}-${idx}`}
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                className={`absolute inset-0 w-full h-full object-contain object-center transition-opacity duration-300 ease-in-out ${
+                  idx === activeIndex
+                    ? "opacity-100 z-10"
+                    : "opacity-0 z-0"
+                }`}
+                draggable={false}
+                priority={idx === 0}
+                loading={idx === 0 ? "eager" : "lazy"}
+                quality={60}
+              />
+            ))
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700 font-bold text-lg md:text-2xl">
+              HURTS
             </div>
           )}
-        </div>
-        <div className="space-y-1 px-1">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-4">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-bold uppercase text-xs md:text-sm tracking-wide leading-tight truncate">
-                <Link
-                  href={`/products/${item.slug}`}
-                  className="hover:underline underline-offset-4"
-                >
-                  {item.name}
-                </Link>
-              </h3>
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate">
-                {item.category?.name || "Streetwear"}
-              </p>
-            </div>
-            {/* 👇 UPDATE: Pake displayPrice disini */}
-            <p className="text-xs md:text-sm font-bold whitespace-nowrap">
-              Rp {displayPrice(item.price).toLocaleString("id-ID")}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-1 pt-1">
-            {variants.length > 0 ? (
-              variants.map((v) => (
-                <span
-                  key={v.id}
-                  className={`text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium ${
-                    v.stock > 0
-                      ? "border-zinc-700 text-foreground"
-                      : "border-border text-muted-foreground/50 line-through bg-muted/30"
-                  }`}
-                >
-                  {v.size}
-                </span>
-              ))
-            ) : (
-              <span className="text-[9px] text-muted-foreground italic">
-                No size info
-              </span>
-            )}
-          </div>
+        </Link>
+        {/* Badge New selalu muncul di halaman ini */}
+        <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
+          New
         </div>
       </div>
-    </Suspense>
+
+      <div className="space-y-1 px-1">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-4">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold uppercase text-xs md:text-sm tracking-wide leading-tight truncate">
+              <Link
+                href={`/products/${item.slug}`}
+                className="hover:underline underline-offset-4"
+              >
+                {item.name}
+              </Link>
+            </h3>
+            <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate">
+              {item.category?.name || "Streetwear"}
+            </p>
+          </div>
+          <p className="text-xs md:text-sm font-bold whitespace-nowrap">
+            Rp {displayPrice(item.price).toLocaleString("id-ID")}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1 pt-1">
+          {variants.length > 0 ? (
+            variants.map((v) => (
+              <span
+                key={v.id}
+                className={`text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium ${
+                  v.stock > 0
+                    ? "border-zinc-700 text-foreground"
+                    : "border-border text-muted-foreground/50 line-through bg-muted/30"
+                }`}
+              >
+                {v.size}
+              </span>
+            ))
+          ) : (
+            <span className="text-[9px] text-muted-foreground italic">
+              No size info
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
+
+// 🔥 MEMOIZATION: Mencegah re-render massal saat parent update (misal load more)
+const ShopCardMemo = memo(ShopCard);

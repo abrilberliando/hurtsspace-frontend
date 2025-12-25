@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, memo, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 
 interface Variant {
@@ -18,13 +17,19 @@ interface Product {
   id: number;
   name: string;
   slug: string;
-  // 👇 UPDATE: Allow string biar aman
   price: number | string;
   is_new_arrival: boolean;
   images: { image_url: string }[];
   variants: Variant[];
   category?: { name: string };
 }
+
+// --- HELPER FUNCTION (Diluar component biar hemat memori) ---
+const displayPrice = (val: string | number): number => {
+  const num = typeof val === "string" ? parseFloat(val) : val;
+  if (isNaN(num)) return 0;
+  return Math.floor(num);
+};
 
 export default function HomeShop() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,9 +38,11 @@ export default function HomeShop() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        // Optimization: Pastikan limit di API endpoint kerja
         const res = await api.get("/products?limit=8");
         const fetchedData = res.data?.data || [];
-        
+
+        // Safety check array
         const limitedData = Array.isArray(fetchedData)
           ? fetchedData.slice(0, 8)
           : [];
@@ -59,7 +66,8 @@ export default function HomeShop() {
 
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 justify-items-center">
-          {[...Array(8)].map((_, i) => (
+          {/* Array.from lebih efisien drpd spread syntax buat array kosong */}
+          {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="w-full max-w-[350px] space-y-3">
               <Skeleton className="aspect-[3/4] w-full rounded-lg bg-muted" />
               <Skeleton className="h-4 w-2/3 bg-muted" />
@@ -71,7 +79,7 @@ export default function HomeShop() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 gap-y-8 md:gap-8 md:gap-y-12 justify-items-center">
             {products.length > 0 ? (
-              products.map((item) => <ShopCard key={item.id} item={item} />)
+              products.map((item) => <ShopCardMemo key={item.id} item={item} />)
             ) : (
               <div className="col-span-full text-center py-10 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-zinc-700 w-full">
                 <p>No products available at the moment, G.</p>
@@ -84,7 +92,7 @@ export default function HomeShop() {
               asChild
               variant="outline"
               size="lg"
-              className="px-12 h-14 border-foreground text-foreground font-bold transition-all tracking-widest text-sm rounded-none w-full md:w-auto"
+              className="px-12 h-14 border-foreground text-foreground font-bold transition-all tracking-widest text-sm rounded-none w-full md:w-auto hover:bg-foreground hover:text-background"
             >
               <Link href="/shop">VIEW ALL PRODUCTS</Link>
             </Button>
@@ -95,40 +103,53 @@ export default function HomeShop() {
   );
 }
 
+// --- SUB-COMPONENT: SHOP CARD ---
 function ShopCard({ item }: { item: Product }) {
   const images = item.images || [];
   const variants = item.variants || [];
 
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Optimization: Ref buat nyimpen ukuran bounding box
+  const boundsRef = useRef<DOMRect | null>(null);
 
-  // 🔥 HELPER BARU: Logic Penyelamat Harga
-  const displayPrice = (val: string | number): number => {
-    const num = typeof val === 'string' ? parseFloat(val) : val;
-    if (isNaN(num)) return 0;
-    return Math.floor(num); 
-  };
+  // 1. Hitung ukuran CUMA pas mouse masuk (Hemat CPU!)
+  const handleMouseEnter = useCallback(() => {
+    if (containerRef.current) {
+      boundsRef.current = containerRef.current.getBoundingClientRect();
+    }
+  }, []);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current || images.length <= 1) return;
-    const { left, width } = containerRef.current.getBoundingClientRect();
+  // 2. Logic hover ringan tanpa getBoundingClientRect()
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (images.length <= 1 || !boundsRef.current) return;
+
+    // Ambil data dari Ref
+    const { left, width } = boundsRef.current;
+    if (width === 0) return;
+
     const x = e.clientX - left;
     const percentage = x / width;
     const index = Math.floor(percentage * images.length);
     const safeIndex = Math.min(Math.max(index, 0), images.length - 1);
-    setActiveIndex(safeIndex);
-  };
 
-  const handleMouseLeave = () => {
+    // State update
+    setActiveIndex((prev) => (prev !== safeIndex ? safeIndex : prev));
+  }, [images.length]);
+
+  const handleMouseLeave = useCallback(() => {
     setActiveIndex(0);
-  };
+    boundsRef.current = null; // Cleanup
+  }, []);
 
   return (
-    <div className="w-full max-w-[350px] group relative select-none">
+    <div className="w-full max-w-[350px] group relative select-none will-change-transform">
       {/* IMAGE CONTAINER */}
       <div
         ref={containerRef}
-        className="relative aspect-[3/4] bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer"
+        className="relative aspect-[3/4] bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer transform-gpu"
+        onMouseEnter={handleMouseEnter} // Trigger kalkulasi disini
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
@@ -138,25 +159,25 @@ function ShopCard({ item }: { item: Product }) {
         >
           {images.length > 0 ? (
             images.map((img, idx) => (
-             
               <Image
                 key={idx}
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
                 fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                // Optimization: Sizes yang pas buat grid 2-4 kolom
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className={`
-                                    absolute inset-0 w-full h-full object-contain object-center
-                                    transition-opacity duration-300 ease-in-out
-                                    ${
-                                      idx === activeIndex
-                                        ? "opacity-100 z-10"
-                                        : "opacity-0 z-0"
-                                    }
-                                `}
+                  absolute inset-0 w-full h-full object-contain object-center
+                  transition-opacity duration-300 ease-in-out
+                  ${
+                    idx === activeIndex
+                      ? "opacity-100 z-10"
+                      : "opacity-0 z-0"
+                  }
+                `}
                 draggable={false}
-                priority={idx === 0} 
-                loading={idx === 0 ? "eager" : "lazy"}
+                // Lazy load semua image di grid bawah, kecuali bener2 perlu priority
+                loading="lazy" 
                 quality={50}
               />
             ))
@@ -198,7 +219,7 @@ function ShopCard({ item }: { item: Product }) {
               {item.category?.name || "Streetwear"}
             </p>
           </div>
-          {/* 👇 UPDATE: Pake displayPrice disini */}
+          {/* Pake helper displayPrice yg global */}
           <p className="text-xs md:text-sm font-bold whitespace-nowrap">
             Rp {displayPrice(item.price).toLocaleString("id-ID")}
           </p>
@@ -213,13 +234,13 @@ function ShopCard({ item }: { item: Product }) {
                 <span
                   key={variant.id}
                   className={`
-                                    text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
-                                    ${
-                                      isAvailable
-                                        ? "border-zinc-700 text-foreground cursor-default"
-                                        : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
-                                    }
-                                `}
+                    text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
+                    ${
+                      isAvailable
+                        ? "border-zinc-700 text-foreground cursor-default"
+                        : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
+                    }
+                  `}
                 >
                   {variant.size}
                 </span>
@@ -235,3 +256,6 @@ function ShopCard({ item }: { item: Product }) {
     </div>
   );
 }
+
+// 🔥 MEMOIZATION: Mencegah re-render yang tidak perlu
+const ShopCardMemo = memo(ShopCard);
