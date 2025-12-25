@@ -44,7 +44,7 @@ const BackgroundSlider = memo(function BackgroundSlider({
   }, [images.length]);
 
   return (
-    <div className="absolute inset-0 z-0 select-none pointer-events-none">
+    <div className="absolute inset-0 z-0 mt-8 select-none pointer-events-none">
       {images.map((image, index) => (
         <div
           key={index}
