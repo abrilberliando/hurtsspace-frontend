@@ -23,6 +23,11 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'images.unsplash.com',
             },
+            // 2. Avatar Google (Wajib buat Login Google)
+            {
+                protocol: 'https',
+                hostname: 'lh3.googleusercontent.com', 
+            },
             {
                 protocol: 'https',
                 hostname: 'picsum.photos',
