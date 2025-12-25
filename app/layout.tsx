@@ -68,7 +68,7 @@ export default function RootLayout({
                 {/* 1. SCRIPT MIDTRANS DINAMIS DI SINI */}
                 <MidtransScriptLoader /> 
 
-                <AuthCheck />
+                {/* <AuthCheck /> */}
                 
                 <ThemeProvider
                     attribute="class"
