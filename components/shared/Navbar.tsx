@@ -177,7 +177,7 @@ export default function Navbar() {
           className={`w-full transition-all duration-300 border-b ${
             isScrolled
               ? "bg-background/80 backdrop-blur-md border-border py-3 shadow-sm"
-              : "bg-transparent border-transparent py-5"
+              : "bg-background border-transparent py-5"
           }`}
         >
           <div className="container mx-auto px-4 lg:px-16 flex items-center justify-between relative">
