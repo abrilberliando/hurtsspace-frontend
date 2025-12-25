@@ -1,89 +1,107 @@
 "use client";
 
 import Link from "next/link";
-import { Instagram, Twitter, Facebook } from "lucide-react";
+import { Instagram, HelpCircle } from "lucide-react";
 import { memo } from "react";
 
-// Memoize Footer karena dia statis banget
+// --- Custom Icons Fixed ---
+
+const TiktokIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+  </svg>
+);
+
+
+// --- Main Component ---
+
 const Footer = memo(function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-zinc-950 text-zinc-400 border-t border-zinc-800 py-12 md:py-20">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+    <footer className="bg-black text-white pt-20 pb-10 border-t border-zinc-900">
+      {/* Container gw persempit jadi max-w-6xl biar lebih center & compact */}
+      <div className="container mx-auto px-4 max-w-6xl">
+        
+        {/* GRID LAYOUT: Kiri (Brand) & Kanan (Links) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24 mb-20">
           
-          {/* BRAND */}
-          <div className="md:col-span-1">
-            <Link href="/" className="text-2xl font-black text-white tracking-tighter uppercase mb-4 block">
-              HURTSSPACE
+          {/* KOLOM 1: BRAND & SOCIALS (Lebih compact) */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            <Link href="/" className="text-3xl font-black tracking-tighter uppercase">
+              HURTSSPACE.
             </Link>
-            <p className="text-sm leading-relaxed mb-6">
-              Redefining streetwear with minimalist cuts and premium materials. 
-              Designed in Indonesia, built for the world.
-            </p>
-            <div className="flex gap-4">
-              <Link href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition" aria-label="Instagram">
+            
+            {/* Social Media Icons */}
+            <div className="flex items-center gap-5">
+              <Link href="#" aria-label="Instagram" className="hover:text-zinc-400 transition-colors">
                 <Instagram className="w-5 h-5" />
               </Link>
-              <Link href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition" aria-label="Twitter">
-                <Twitter className="w-5 h-5" />
-              </Link>
-              <Link href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition" aria-label="Facebook">
-                <Facebook className="w-5 h-5" />
+              <Link href="#" aria-label="Tiktok" className="hover:text-zinc-400 transition-colors">
+                <TiktokIcon className="w-5 h-5" />
               </Link>
             </div>
           </div>
 
-          {/* LINKS 1 */}
-          <div>
-            <h3 className="text-white font-bold mb-4 uppercase tracking-wider text-sm">Shop</h3>
-            <ul className="space-y-3 text-sm">
-              <li><Link href="/shop" className="hover:text-white transition">All Products</Link></li>
-              <li><Link href="/shop?category_id=1" className="hover:text-white transition">T-Shirts</Link></li>
-              <li><Link href="/shop?category_id=2" className="hover:text-white transition">Outerwear</Link></li>
-              <li><Link href="/lookbook" className="hover:text-white transition">Lookbook</Link></li>
-            </ul>
-          </div>
-
-          {/* LINKS 2 */}
-          <div>
-            <h3 className="text-white font-bold mb-4 uppercase tracking-wider text-sm">Support</h3>
-            <ul className="space-y-3 text-sm">
-              <li><Link href="/order-status" className="hover:text-white transition">Order Status</Link></li>
-              <li><Link href="/shipping" className="hover:text-white transition">Shipping & Returns</Link></li>
-              <li><Link href="/size-guide" className="hover:text-white transition">Size Guide</Link></li>
-              <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
-            </ul>
-          </div>
-
-          {/* NEWSLETTER */}
-          <div>
-            <h3 className="text-white font-bold mb-4 uppercase tracking-wider text-sm">Stay in the Loop</h3>
-            <p className="text-sm mb-4">Subscribe for exclusive drops and early access.</p>
-            <form className="flex gap-2" onSubmit={(e) => e.preventDefault()}>
-                <input 
-                    type="email" 
-                    placeholder="Enter your email" 
-                    className="bg-zinc-900 border border-zinc-800 text-white px-4 py-2 text-sm w-full focus:outline-none focus:border-white transition"
-                    required
-                />
-                <button type="submit" className="bg-white text-black px-4 py-2 text-sm font-bold hover:bg-zinc-200 transition">
-                    JOIN
-                </button>
-            </form>
-          </div>
-
-        </div>
-
-        {/* BOTTOM BAR */}
-        <div className="pt-8 border-t border-zinc-900 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
-            <p>&copy; {currentYear} HURTSSPACE. All rights reserved.</p>
-            <div className="flex gap-6">
-                <Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link>
-                <Link href="/terms" className="hover:text-white transition">Terms of Service</Link>
+          {/* KOLOM 2-4: LINKS GROUP */}
+          <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12">
+            
+            {/* GROUP 1: ACCOUNT & SHOP */}
+            <div>
+              <h3 className="font-bold uppercase mb-6 tracking-wide text-sm">Account & Shop</h3>
+              <ul className="space-y-3 text-zinc-400 text-sm font-medium">
+                <li>
+                  <Link href="/login" className="hover:text-white transition-colors">Login / Create Account</Link>
+                </li>
+                <li>
+                  <Link href="/shop" className="hover:text-white transition-colors">Shop All</Link>
+                </li>
+                <li>
+                  <Link href="/lookbook" className="hover:text-white transition-colors">Lookbook</Link>
+                </li>
+              </ul>
             </div>
+
+            {/* GROUP 2: SUPPORT */}
+            <div>
+              <h3 className="font-bold uppercase mb-6 tracking-wide text-sm">Support</h3>
+              <ul className="space-y-3 text-zinc-400 text-sm font-medium">
+                <li>
+                  <Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link>
+                </li>
+                <li>
+                  <Link href="/faq" className="hover:text-white transition-colors">FAQ</Link>
+                </li>
+                <li>
+                  <Link href="/product-care" className="hover:text-white transition-colors">Product Care</Link>
+                </li>
+                <li>
+                  <Link href="/shipping" className="hover:text-white transition-colors">Shipping & Returns</Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* GROUP 3: LEGAL */}
+            <div>
+              <h3 className="font-bold uppercase mb-6 tracking-wide text-sm">Legal</h3>
+              <ul className="space-y-3 text-zinc-400 text-sm font-medium">
+                <li>
+                  <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                </li>
+              </ul>
+            </div>
+
+          </div>
         </div>
+
+        {/* BOTTOM COPYRIGHT */}
+        <div className="pt-8 border-t border-zinc-900 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-zinc-500 font-medium tracking-wide">
+          <p>&copy; {currentYear} HURTSSPACE. CLOTHING.</p>
+        </div>
+        
       </div>
     </footer>
   );

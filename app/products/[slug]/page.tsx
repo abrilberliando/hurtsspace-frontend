@@ -319,10 +319,6 @@ const ProductInfo = memo(function ProductInfo({
           />
         </Button>
       </div>
-
-      <p className="text-xs text-muted-foreground mt-6 text-center">
-        Free shipping available for orders above Rp 500.000
-      </p>
     </div>
   );
 });

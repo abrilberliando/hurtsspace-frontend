@@ -17,7 +17,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "./ModeToggle";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetTrigger, 
+  SheetTitle 
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,8 +53,7 @@ interface Product {
   category?: { name: string };
 }
 
-// --- HELPER FUNCTION (Move Outside Component) ---
-// Hemat memori karena function ini dibuat sekali seumur hidup app jalan
+// --- HELPER FUNCTION ---
 const displayPrice = (val: string | number): number => {
   const num = typeof val === "string" ? parseFloat(val) : val;
   if (isNaN(num)) return 0;
@@ -72,16 +76,12 @@ export default function Navbar() {
   const [isSearching, setIsSearching] = useState(false);
 
   // 1. OPTIMIZED SCROLL HANDLER
-  // Mencegah re-render brutal saat user scrolling
   useEffect(() => {
     const handleScroll = () => {
       const scrolled = window.scrollY > 0;
-      // Cuma update state kalau nilainya BERBEDA dengan state sekarang
-      // (React state setter sebenernya udah batching, tapi logic ini lebih explicit safe)
       setIsScrolled((prev) => (prev !== scrolled ? scrolled : prev));
     };
 
-    // Passive listener improve scroll performance di mobile
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -101,7 +101,6 @@ export default function Navbar() {
   }, []);
 
   // 3. LIVE SEARCH LOGIC (Memoized)
-  // Dibungkus useCallback biar function reference-nya stabil
   const performLiveSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -109,14 +108,12 @@ export default function Navbar() {
     }
     setIsSearching(true);
     try {
-      // Limit kecil aja buat preview, biar enteng fetch-nya
       const res = await api.get(
         `/products?search=${encodeURIComponent(query)}&limit=10`
       );
       const items = Array.isArray(res.data) ? res.data : res.data.data || [];
       const realItems = Array.isArray(items) ? items : items.data || [];
 
-      // Filtering Client Side (Optional kalau backend udah filter)
       const strictFiltered = realItems.filter((item: Product) =>
         item.name.toLowerCase().includes(query.toLowerCase())
       );
@@ -131,20 +128,16 @@ export default function Navbar() {
 
   // 4. DEBOUNCE EFFECT
   useEffect(() => {
-    // URL Sync logic
     if (isSearchOpen) {
       const queryFromUrl = searchParams.get("search") || "";
-      // Cuma set kalau beda biar gak loop
-      setSearchQuery((prev) => (prev !== queryFromUrl ? queryFromUrl : prev)); 
+      setSearchQuery((prev) => (prev !== queryFromUrl ? queryFromUrl : prev));
     }
   }, [isSearchOpen, searchParams]);
 
-  // Debounce terpisah buat ngetik
   useEffect(() => {
-    // Gak usah search kalau query kosong/pendek banget
     if (!searchQuery) {
-        setSearchResults([]);
-        return;
+      setSearchResults([]);
+      return;
     }
 
     const delayDebounceFn = setTimeout(() => {
@@ -163,7 +156,6 @@ export default function Navbar() {
   };
 
   // 5. MEMOIZED CART COUNT
-  // Hitung cuma kalau cart.items berubah
   const cartCount = useMemo(() => {
     return cart.items.reduce((total, item) => total + item.quantity, 0);
   }, [cart.items]);
@@ -179,8 +171,9 @@ export default function Navbar() {
         }`}
       >
         <div className="container mx-auto px-4 lg:px-16 flex items-center justify-between relative">
-          {/* 1. Mobile/Tablet Menu (Hamburger) */}
-          <div className="lg:hidden">
+          
+          {/* 1. Mobile/Tablet Menu (Left: Hamburger) */}
+          <div className="lg:hidden flex items-center gap-2">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
                 <Button
@@ -194,8 +187,11 @@ export default function Navbar() {
 
               <SheetContent
                 side="left"
-                className="w-[270px] sm:w-[300px] bg-background/98 backdrop-blur-xl border-r border-border rounded-r-3xl overflow-y-auto p-5"
+                className="w-[270px] sm:w-[300px] bg-background/98 backdrop-blur-xl border-r border-border rounded-r-3xl overflow-y-auto p-5 flex flex-col justify-between"
               >
+                {/* --- FIX ERROR: SHEET TITLE (Hidden) --- */}
+                <SheetTitle className="sr-only">Mobile Navigation Menu</SheetTitle>
+
                 <div className="flex flex-col h-full">
                   {/* Logo Kecil */}
                   <div className="mb-8 pt-2">
@@ -205,22 +201,7 @@ export default function Navbar() {
                   </div>
 
                   {/* Menu Links */}
-                  <div className="flex flex-col gap-5 text-sm font-bold text-foreground tracking-widest uppercase">
-                    {/* 👇 SEARCH ITEM */}
-                    <button
-                      className="hover:text-primary transition flex items-center gap-3 text-left w-full group"
-                      onClick={() => {
-                        setIsSheetOpen(false);
-                        // Defer search opening to allow sheet close animation smooth
-                        requestAnimationFrame(() => {
-                            setTimeout(() => setIsSearchOpen(true), 200);
-                        });
-                      }}
-                    >
-                      <Search className="w-4 h-4 group-hover:text-primary transition" />
-                      Search
-                    </button>
-
+                  <div className="flex flex-col gap-5 text-sm font-bold text-foreground tracking-widest uppercase flex-1">
                     <Link
                       href="/new-arrivals"
                       className="hover:text-primary transition flex items-center gap-3"
@@ -287,15 +268,23 @@ export default function Navbar() {
                       Wishlist
                     </Link>
                   </div>
+
+                  {/* MOBILE DARK MODE (Moved to Sheet Bottom) */}
+                  <div className="pt-6 border-t border-border mt-4">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Theme</span>
+                        <ModeToggle />
+                    </div>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
           </div>
 
-          {/* 2. LOGO */}
+          {/* 2. LOGO (Centered on Mobile, Left on Desktop) */}
           <Link
             href="/"
-            className="text-2xl font-black tracking-tighter text-foreground hover:opacity-80 transition z-10"
+            className="text-2xl font-black tracking-tighter text-foreground hover:opacity-80 transition z-10 absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0"
           >
             HURTSSPACE
           </Link>
@@ -341,24 +330,27 @@ export default function Navbar() {
           </div>
 
           {/* 4. Right Icons */}
-          <div className="flex items-center gap-4 z-10">
-            <ModeToggle />
+          <div className="flex items-center gap-2 lg:gap-2 z-10">
+            
+            {/* SEARCH TRIGGER (Visible on Mobile & Desktop now) */}
+            <Button
+                variant="ghost"
+                size="icon"
+                className="text-foreground hover:bg-accent"
+                onClick={() => setIsSearchOpen(true)}
+            >
+                <Search className="w-5 h-5" />
+            </Button>
 
-            {/* SEARCH ICON & OFF-CANVAS SHEET */}
+            {/* SEARCH SHEET CONTENT (Shared) */}
             <Sheet open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-foreground hover:bg-accent hidden lg:flex"
-                >
-                  <Search className="w-5 h-5" />
-                </Button>
-              </SheetTrigger>
               <SheetContent
                 side="top"
                 className="h-auto min-h-[40vh] max-h-[80vh] overflow-y-auto flex flex-col items-center bg-background/95 backdrop-blur-xl border-b border-border pt-16 pb-10"
               >
+                {/* --- FIX ERROR: SHEET TITLE (Hidden) --- */}
+                <SheetTitle className="sr-only">Search Products</SheetTitle>
+
                 <div className="container mx-auto max-w-2xl w-full">
                   <form
                     onSubmit={handleSearchSubmit}
@@ -389,7 +381,7 @@ export default function Navbar() {
                             key={item.id}
                             href={`/products/${item.slug}`}
                             onClick={() => setIsSearchOpen(false)}
-                            className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                            className="flex items-center gap-2 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
                           >
                             <div className="w-12 h-16 bg-muted rounded overflow-hidden relative shrink-0">
                               {item.images[0] && (
@@ -397,7 +389,7 @@ export default function Navbar() {
                                 <img
                                   src={item.images[0].image_url}
                                   alt={item.name}
-                                  loading="lazy" // Tambahin ini biar gak blocking
+                                  loading="lazy"
                                   className="object-cover w-full h-full"
                                 />
                               )}
@@ -436,7 +428,7 @@ export default function Navbar() {
             </Sheet>
 
             {/* Desktop Cart & Profile */}
-            <div className="hidden lg:flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
@@ -455,6 +447,11 @@ export default function Navbar() {
                   )}
                 </Link>
               </Button>
+
+              {/* --- MODE TOGGLE (Dipisah, selalu muncul di Desktop) --- */}
+              <div className="hidden lg:block">
+                  <ModeToggle />
+              </div>
 
               {user ? (
                 <DropdownMenu>
@@ -549,7 +546,11 @@ export default function Navbar() {
                         </Link>
                       </DropdownMenuItem>
                     </div>
+
                     <DropdownMenuSeparator className="my-1 opacity-50" />
+                    
+                    {/* Darkmode removed from here as requested */}
+
                     <DropdownMenuItem
                       className="text-red-500 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20 cursor-pointer rounded-lg h-9 font-bold mt-1"
                       onClick={logout}
@@ -561,14 +562,16 @@ export default function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button
-                  asChild
-                  variant="default"
-                  size="sm"
-                  className="font-bold rounded-full px-6"
-                >
-                  <Link href="/login">LOGIN</Link>
-                </Button>
+                <>
+                  <Button
+                    asChild
+                    variant="default"
+                    size="sm"
+                    className="font-bold rounded-full px-6"
+                  >
+                    <Link href="/login">LOGIN</Link>
+                  </Button>
+                </>
               )}
             </div>
           </div>

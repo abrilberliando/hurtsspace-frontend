@@ -15,7 +15,8 @@ import {
   PanelLeftOpen,
   ChartBar,
   Menu,
-  Loader2, // 👈 Pake Loader
+  Loader2,
+  Video, // 👈 Pake Loader
 } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ const menus = [
   { name: "Manage Banners", href: "/admin/banners", icon: Image },
   { name: "Manage Lookbook", href: "/admin/lookbooks", icon: Camera },
   { name: "Manage Vouchers", href: "/admin/vouchers", icon: TicketPercent },
+  { name: "Manage Video", href: "/admin/video-banners", icon: Video },
 ];
 
 // 2. ADMIN NAV COMPONENT (Smart & Collapsible)
