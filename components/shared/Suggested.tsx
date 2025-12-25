@@ -290,20 +290,20 @@ function ProductCard({
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
                 fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                // Optimization: Sizes yang pas buat grid 2-4 kolom
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className={`
-                                      absolute inset-0 w-full h-full object-cover object-center 
-                                      transition-opacity duration-300 ease-in-out
-                                      ${
-                                        idx === activeIndex
-                                          ? "opacity-100 z-10"
-                                          : "opacity-0 z-0"
-                                      }
-                                  `}
+                  absolute inset-0 w-full h-full object-contain object-center
+                  transition-opacity duration-300 ease-in-out
+                  ${
+                    idx === activeIndex
+                      ? "opacity-100 z-10"
+                      : "opacity-0 z-0"
+                  }
+                `}
                 draggable={false}
-                priority={false}
-                loading="lazy"
-                quality={60}
+                loading="lazy" 
+                quality={50}
               />
             ))
           ) : (
