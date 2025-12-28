@@ -37,6 +37,7 @@ import { useAuth } from "@/lib/useAuth";
 import { useCart } from "@/lib/useCart";
 import api from "@/lib/axios";
 import AnnouncementBar from "./AnnouncementBar";
+import NotificationDropdown from "./NotificationDropdown";
 
 // --- TYPES ---
 interface Category {
@@ -340,6 +341,7 @@ export default function Navbar() {
 
             {/* 4. Right Icons */}
             <div className="flex items-center gap-2 lg:gap-2 z-10">
+              <NotificationDropdown />
               
               {/* SEARCH TRIGGER */}
               <Button
@@ -437,6 +439,7 @@ export default function Navbar() {
 
               {/* Desktop Cart & Profile */}
               <div className="hidden lg:flex items-center gap-2">
+                
                 <Button
                   variant="ghost"
                   size="icon"
