@@ -17,7 +17,8 @@ import {
   Menu,
   Loader2,
   Video,
-  TextWrapIcon, // 👈 Pake Loader
+  TextWrapIcon,
+  Mail, // 👈 Pake Loader
 } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,8 @@ const menus = [
   { name: "Banners", href: "/admin/banners", icon: Image },
   { name: "Lookbook", href: "/admin/lookbooks", icon: Camera },
   { name: "Vouchers", href: "/admin/vouchers", icon: TicketPercent },
-  { name: "Running Text ", href: "/admin/running-text", icon: TextWrapIcon },
+  { name: "Broadcast", href: "/admin/broadcast", icon: Mail },
+  { name: "Running Text", href: "/admin/running-text", icon: TextWrapIcon },
 ];
 
 // 2. ADMIN NAV COMPONENT (Smart & Collapsible)
