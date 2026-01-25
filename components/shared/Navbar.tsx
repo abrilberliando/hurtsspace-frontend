@@ -38,6 +38,7 @@ import { useCart } from "@/lib/useCart";
 import api from "@/lib/axios";
 import AnnouncementBar from "./AnnouncementBar";
 import NotificationDropdown from "./NotificationDropdown";
+import Image from "next/image";
 
 // --- TYPES ---
 interface Category {
@@ -296,7 +297,14 @@ export default function Navbar() {
               href="/"
               className="text-2xl font-black tracking-tighter text-foreground hover:opacity-80 transition z-10 absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0"
             >
-              HURTSSPACE
+              <Image
+                        src="/images/logoNav.webp" 
+                        alt="Logo Brand"
+                        width={80} 
+                        height={80} 
+                        priority 
+                        className="object-contain" 
+                      />
             </Link>
 
             {/* 3. Desktop Menu (CENTERED) */}
