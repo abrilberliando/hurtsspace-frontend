@@ -9,10 +9,10 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <Hero />
+      <BannerSplit position={1} /> 
       <NewArrivals />
         <VideoBanner />
-        <HomeLookbook />
-        <BannerSplit position={1} />  
+        <HomeLookbook /> 
         <HomeShop />
     </main>
   );

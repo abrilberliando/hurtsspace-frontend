@@ -81,6 +81,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
     <section className="relative w-full h-[30vh] md:h-[90vh] group overflow-hidden bg-black">
       <Link
         href={banner.link_url}
+        target="_blank"
         className="absolute inset-0 z-20 focus:outline-none focus:ring-2 focus:ring-white/50"
         aria-label={`Shop ${banner.title}`}
       />
@@ -127,7 +128,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
           </h2>
 
           <div className="flex items-center gap-1 md:gap-2 text-white font-bold tracking-widest text-xs md:text-xl group-hover:translate-x-2 transition-transform duration-300 pb-1">
-            <span>SHOP NOW</span>
+            <span>WATCH NOW</span>
             <ArrowRight className="w-4 h-4 md:w-6 md:h-6" />
           </div>
         </div>
