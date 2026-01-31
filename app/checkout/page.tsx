@@ -9,7 +9,7 @@ import { AxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { TicketPercent, X, Loader2 } from "lucide-react";
 import AddressForm, { AddressData } from "@/components/shared/AddressForm";
@@ -49,6 +49,7 @@ export default function CheckoutPage() {
   const cart = useCart();
 
   const [checkoutData, setCheckoutData] = useState<AddressData | null>(null);
+  const [orderNote, setOrderNote] = useState("");
   const [rates, setRates] = useState<CourierRate[]>([]);
   const [selectedRate, setSelectedRate] = useState<CourierRate | null>(null);
   const [loadingRates, setLoadingRates] = useState(false);
@@ -222,6 +223,7 @@ export default function CheckoutPage() {
             shipping_address: `${checkoutData.name} (${checkoutData.phone}) - ${checkoutData.street}, ${checkoutData.areaName}`,
             voucher_code: appliedVoucher?.code || null,
             discount_amount: calculateDiscount(),
+            note: orderNote,
         };
 
         const res = await api.post("/checkout", payload); 
@@ -291,13 +293,27 @@ export default function CheckoutPage() {
             {/* KIRI */}
             <div className="space-y-6">
                 <div>
-                    <h2 className="font-bold text-xl mb-4">1. Shipping Details</h2>
+                    <h2 className="font-bold text-xl mb-4">Shipping Details</h2>
                     <AddressForm 
                         defaultValues={defaultAddress}
                         onSave={handleAddressSubmit}
                         buttonText={loadingRates ? "MENGHITUNG..." : "KONFIRMASI & CEK ONGKIR"}
                         isLoading={loadingRates}
                     />
+                </div>
+
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <h2 className="font-bold text-xl mb-4 uppercase tracking-tight text-zinc-400">Order Note</h2>
+                    <Textarea 
+                        placeholder="Detail tambahan..."
+                        className="min-h-[100px] border-2 border-border focus:border-foreground transition-all duration-300 resize-none rounded-none"
+                        value={orderNote}
+                        onChange={(e) => setOrderNote(e.target.value)}
+                        maxLength={500}
+                    />
+                    <div className="flex justify-end mt-1">
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{orderNote.length}/500 Char</span>
+                    </div>
                 </div>
 
                 {rates.length > 0 && (

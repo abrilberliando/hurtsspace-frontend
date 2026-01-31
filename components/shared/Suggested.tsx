@@ -265,7 +265,7 @@ function ProductCard({
       {/* 1. IMAGE CONTAINER */}
       <div
         ref={containerRef}
-        className="relative aspect-3/4 bg-muted overflow-hidden rounded-md mb-3 md:mb-4 border border-border cursor-pointer transform-gpu"
+        className="relative aspect-3/4 bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer transform-gpu"
         onMouseEnter={handleMouseEnter} // Trigger calc here
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}

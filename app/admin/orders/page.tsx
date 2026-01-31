@@ -56,7 +56,8 @@ interface Order {
   shipping_courier: string | null;
   shipping_service: string | null;
   shipping_address: string;
-  shipping_cost: number | string; // 👇 Wajib ada buat breakdown harga
+  shipping_cost: number | string;
+  note: string | null;
   created_at: string;
   user: { name: string; email: string; phone?: string }; 
   items: OrderItem[];
@@ -223,6 +224,13 @@ export default function AdminOrdersPage() {
                             <strong>HURTSSPACE OFFICIAL STORE</strong><br>
                             0812-3456-7890<br>
                             Surabaya, Jawa Timur
+                        </div>
+                    </div>
+
+                    <div class="section" style="border-color: #666; background: #fafafa;">
+                        <div class="section-header" style="background: #666;">CATATAN PEMBELI (ORDER NOTE)</div>
+                        <div style="font-size: 14px; font-weight: bold; font-style: italic; color: #000; padding: 5px 0;">
+                            ${order.note ? order.note : '- Tidak ada catatan -'}
                         </div>
                     </div>
 
@@ -524,6 +532,13 @@ export default function AdminOrdersPage() {
                                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
                                 <p className="leading-relaxed">{selectedOrder.shipping_address}</p>
                              </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <Label className="text-xs font-bold text-blue-600 uppercase tracking-wider">Catatan Pembeli</Label>
+                            <div className="text-sm bg-blue-50/50 p-3 rounded-md border border-blue-100 italic text-zinc-700">
+                                {selectedOrder.note || "Tidak ada catatan dari pembeli."}
+                            </div>
                         </div>
 
                         <Separator />
