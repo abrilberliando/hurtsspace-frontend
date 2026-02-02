@@ -103,7 +103,7 @@ export default function AddressForm({ defaultValues, onSave, isLoading, buttonTe
   };
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-card border-border rounded-none">
       <CardContent className="p-6 space-y-4">
         
         {/* 1. Nama Lengkap */}

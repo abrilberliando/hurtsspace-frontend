@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 import { useCart } from "@/lib/useCart";
@@ -11,25 +11,33 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { TicketPercent, X, Loader2 } from "lucide-react";
+import { TicketPercent, X, Loader2, Info } from "lucide-react";
 import AddressForm, { AddressData } from "@/components/shared/AddressForm";
+import Image from "next/image"; // 👈 Tambah import Image
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"; 
+} from "@/components/ui/select";
 
 interface MidtransWindow extends Window {
   snap: { pay: (token: string, options: object) => void; };
 }
+
+interface CartStore {
+  removeAll?: () => void;
+  clearCart?: () => void;
+}
+
 interface CourierRate {
   courier_name: string;
   courier_service_name: string;
   price: number;
   duration: string;
 }
+
 interface Voucher {
     id: number;
     code: string;
@@ -37,6 +45,9 @@ interface Voucher {
     discount_amount: number;
     discount_type: 'percent' | 'fixed';
     max_discount_amount?: number; 
+    target: 'products' | 'shipping';
+    is_all_products: boolean;
+    applicable_products?: { id: number; name: string }[];
 }
 
 const formatRupiah = (amount: number) => {
@@ -55,12 +66,10 @@ export default function CheckoutPage() {
   const [loadingRates, setLoadingRates] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  // STATE VOUCHER
   const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]); 
   const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
   const [loadingVoucher, setLoadingVoucher] = useState(false);
 
-  // ✨ SECURITY STATE
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
@@ -70,7 +79,6 @@ export default function CheckoutPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Logic Redirect
   useEffect(() => {
     if (!isChecking) {
         if (!user) {
@@ -81,35 +89,62 @@ export default function CheckoutPage() {
     }
   }, [isChecking, user, cart.items, router]);
 
-  // 👇 FETCH AVAILABLE VOUCHERS SAAT MOUNT
   useEffect(() => {
       const fetchVouchers = async () => {
           try {
               const res = await api.get("/vouchers"); 
               setAvailableVouchers(res.data.data || []);
           } catch (error) {
-              console.log("No vouchers available or API error", error);
+              console.log("No vouchers available", error);
           }
       };
       if (user) fetchVouchers();
   }, [user]);
 
+  const defaultAddress = useMemo(() => (user ? {
+      name: user.name,
+      phone: user.phone || "",
+      street: user.address_detail || "",
+      areaId: user.city_id || "",
+      areaName: user.province_id || ""
+  } : undefined), [user]);
 
-  // --- LOGIC SECURITY GATE ---
-  
-  if (isChecking) {
-      return (
-        <div className="min-h-screen bg-background flex items-center justify-center pt-20">
-            <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
-        </div>
-      );
-  }
+  const discountValue = useMemo(() => {
+    if (!appliedVoucher) return 0;
+    let eligibleAmount = 0;
 
-  if (!user || cart.items.length === 0) {
-      return null; 
-  }
+    if (appliedVoucher.target === 'shipping') {
+      eligibleAmount = selectedRate?.price || 0;
+    } else {
+      if (appliedVoucher.is_all_products) {
+        eligibleAmount = cart.totalPrice();
+      } else {
+        const allowedIds = appliedVoucher.applicable_products?.map(p => p.id) || [];
+        eligibleAmount = cart.items.reduce((acc, item) => {
+          if (allowedIds.includes(item.productId)) {
+            return acc + (item.price * item.quantity);
+          }
+          return acc;
+        }, 0);
+      }
+    }
 
-  // --- CONTENT CHECKOUT ---
+    if (eligibleAmount === 0) return 0;
+
+    let calculated = 0;
+    if (appliedVoucher.discount_type === 'percent') {
+      calculated = (eligibleAmount * appliedVoucher.discount_amount) / 100;
+      if (appliedVoucher.max_discount_amount && calculated > appliedVoucher.max_discount_amount) {
+        calculated = appliedVoucher.max_discount_amount;
+      }
+    } else {
+      calculated = appliedVoucher.discount_amount;
+    }
+
+    return Math.min(calculated, eligibleAmount);
+  }, [appliedVoucher, cart, selectedRate]);
+
+  const grandTotal = Math.max(0, (cart.totalPrice() + (selectedRate?.price || 0)) - discountValue);
 
   const handleAddressSubmit = async (data: AddressData) => {
     setCheckoutData(data);
@@ -117,103 +152,65 @@ export default function CheckoutPage() {
     setRates([]);
     setSelectedRate(null);
 
-    const fetchOngkir = async () => {
-        try {
-            const totalWeight = cart.totalWeight() || 1000;
-            const res = await api.post("/shipping/cost", {
-                destination_area_id: data.areaId,
-                weight: totalWeight
-            });
-            
-            const pricing = res.data.pricing || [];
-            setRates(pricing);
+    try {
+        const totalWeight = cart.totalWeight() || 1000;
+        const res = await api.post("/shipping/cost", {
+            destination_area_id: data.areaId,
+            weight: totalWeight
+        });
+        
+        const pricing = res.data.pricing || [];
+        setRates(pricing);
 
-            // 👇 AUTO SELECT CHEAPEST SHIPPING
-            if (pricing.length > 0) {
-                const cheapest = pricing.reduce((prev: CourierRate, curr: CourierRate) => 
-                    prev.price < curr.price ? prev : curr
-                );
-                setSelectedRate(cheapest);
-                toast.success(`Ongkir termurah (${cheapest.courier_name}) otomatis dipilih!`);
-            } else {
-                toast.error("Tidak ada kurir tersedia untuk rute ini.");
-            }
-
-        } catch {
-            toast.error("Gagal cek ongkir.");
+        if (pricing.length > 0) {
+            const cheapest = pricing.reduce((prev: CourierRate, curr: CourierRate) => 
+                prev.price < curr.price ? prev : curr
+            );
+            setSelectedRate(cheapest);
+            toast.success(`Ongkir termurah (${cheapest.courier_name}) otomatis dipilih!`);
         }
-    };
-
-    const autoSaveProfile = async () => {
-        try {
-            const payload = {
-                name: user?.name,
-                phone: data.phone,
-                address_detail: data.street,
-                city_id: data.areaId,
-                province_id: data.areaName,
-            };
-            const res = await api.put("/user", payload);
-            if (user) {
-                const updatedUser = { ...user, ...res.data.user };
-                const token = localStorage.getItem("token") || ""; 
-                login(updatedUser, token); 
-            }
-        } catch (error) {
-            console.error("Auto-save failed", error);
+        
+        const payload = {
+            name: user?.name,
+            phone: data.phone,
+            address_detail: data.street,
+            city_id: data.areaId,
+            province_id: data.areaName,
+        };
+        const userRes = await api.put("/user", payload);
+        if (user) {
+            login({ ...user, ...userRes.data.user }, localStorage.getItem("token") || ""); 
         }
-    };
-
-    await Promise.all([fetchOngkir(), autoSaveProfile()]);
-    setLoadingRates(false);
+    } catch {
+        toast.error("Gagal cek ongkir.");
+    } finally {
+        setLoadingRates(false);
+    }
   };
 
-  // 👇 HANDLE SELECT VOUCHER
   const handleSelectVoucher = async (code: string) => {
     if (!code) return;
     setLoadingVoucher(true);
     try {
         const res = await api.post("/vouchers/check", { code });
         setAppliedVoucher(res.data.data); 
-        toast.success("Voucher berhasil dipasang!", { description: "Potongan harga masuk G." });
+        toast.success("Voucher dipasang!");
     } catch (error) {
         const err = error as AxiosError<{ message: string }>;
-        toast.error(err.response?.data?.message || "Kode voucher tidak valid.");
+        toast.error(err.response?.data?.message || "Voucher tidak valid.");
         setAppliedVoucher(null);
     } finally {
         setLoadingVoucher(false);
     }
   };
 
-  const calculateDiscount = () => {
-      if (!appliedVoucher) return 0;
-      const subtotal = cart.totalPrice();
-      let calculatedDiscount = 0;
-
-      if (appliedVoucher.discount_type === 'percent') {
-          calculatedDiscount = (subtotal * appliedVoucher.discount_amount) / 100;
-          
-          if (appliedVoucher.max_discount_amount !== undefined && calculatedDiscount > appliedVoucher.max_discount_amount) {
-              calculatedDiscount = appliedVoucher.max_discount_amount;
-          }
-      } else {
-          calculatedDiscount = appliedVoucher.discount_amount;
-      }
-
-      return Math.min(calculatedDiscount, subtotal);
-  };
-
   const handlePay = async () => {
-    if (!checkoutData || !selectedRate) {
-        return toast.error("Pilih kurir dulu, G!");
-    }
+    if (!checkoutData || !selectedRate) return toast.error("Pilih kurir dulu, G!");
 
     setProcessing(true);
-
     try {
         const payload = {
             items: cart.items.map(item => ({
-                product_id: item.productId,
                 variant_id: item.variantId,
                 quantity: item.quantity
             })),
@@ -222,88 +219,61 @@ export default function CheckoutPage() {
             shipping_service: selectedRate.courier_service_name,
             shipping_address: `${checkoutData.name} (${checkoutData.phone}) - ${checkoutData.street}, ${checkoutData.areaName}`,
             voucher_code: appliedVoucher?.code || null,
-            discount_amount: calculateDiscount(),
             note: orderNote,
         };
 
         const res = await api.post("/checkout", payload); 
 
-        // BERSIHIN KERANJANG DISINI G!
-        // 👇 FIX: Ganti 'as any' jadi tipe spesifik biar ESLint seneng
-        const cartStore = cart as unknown as { removeAll?: () => void; clearCart?: () => void };
+        const cartStore = cart as unknown as CartStore;
 
-        if (cartStore.removeAll) {
-            cartStore.removeAll(); 
-        } else if (cartStore.clearCart) {
-            cartStore.clearCart(); 
-        }
-
-        // Munculin Midtrans Snap
         const snap = (window as unknown as MidtransWindow).snap;
-
         if (snap) {
             snap.pay(res.data.snap_token, {
-                // Sukses: Ke Thank You Page
                 onSuccess: () => { 
+                    if (cartStore.removeAll) cartStore.removeAll(); 
+                    else if (cartStore.clearCart) cartStore.clearCart();
                     window.location.href = "/thank-you"; 
                 },
-                
-                // Pending: Redirect ke Page Payment Check
-                onPending: () => {
-                    window.location.href = "/payment-check"; 
-                },
-                
-                // Error: Redirect ke Page Payment Check
-                onError: () => {
-                    window.location.href = "/payment-check"; 
-                },
-                
-                // Close: Redirect ke Page Payment Check
-                onClose: () => {
-                    window.location.href = "/payment-check"; 
-                }
+                onPending: () => { window.location.href = "/payment-check"; },
+                onError: () => { window.location.href = "/payment-check"; },
+                onClose: () => { window.location.href = "/payment-check"; }
             });
         }
     } catch (error) {
         const err = error as AxiosError<{ message: string }>;
-        toast.error(err.response?.data?.message || "Gagal checkout. Cek koneksi atau data lo.");
+        toast.error(err.response?.data?.message || "Gagal checkout.");
     } finally {
         setProcessing(false);
     }
   };
 
-  const defaultAddress = user ? {
-      name: user.name,
-      phone: user.phone || "",
-      street: user.address_detail || "",
-      areaId: user.city_id || "",
-      areaName: user.province_id || ""
-  } : undefined;
+  if (isChecking) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center pt-20">
+            <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+        </div>
+      );
+  }
 
-  const discountValue = calculateDiscount();
-  const grandTotal = Math.max(0, (cart.totalPrice() + (selectedRate?.price || 0)) - discountValue);
+  if (!user || cart.items.length === 0) return null;
 
   return (
     <main className="min-h-screen bg-background text-foreground pt-10 pb-20">
       <div className="container mx-auto px-4 max-w-4xl">
-        <h1 className="text-3xl font-black mb-8 uppercase">Checkout</h1>
-
+        <h1 className="text-3xl font-black mb-8 uppercase italic underline decoration-primary underline-offset-8">Checkout</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
-            {/* KIRI */}
             <div className="space-y-6">
                 <div>
-                    <h2 className="font-bold text-xl mb-4">Shipping Details</h2>
+                    <h2 className="font-bold text-xl mb-4 uppercase tracking-tighter">1. Shipping Details</h2>
                     <AddressForm 
                         defaultValues={defaultAddress}
                         onSave={handleAddressSubmit}
-                        buttonText={loadingRates ? "MENGHITUNG..." : "KONFIRMASI & CEK ONGKIR"}
+                        buttonText={loadingRates ? "MENGHITUNG..." : "KONFIRMASI ALAMAT"}
                         isLoading={loadingRates}
                     />
                 </div>
-
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                    <h2 className="font-bold text-xl mb-4 uppercase tracking-tight text-zinc-400">Order Note</h2>
+                <div>
+                    <h2 className="font-bold text-xl mb-4 uppercase tracking-tighter text-zinc-400">Order Note</h2>
                     <Textarea 
                         placeholder="Detail tambahan..."
                         className="min-h-[100px] border-2 border-border focus:border-foreground transition-all duration-300 resize-none rounded-none"
@@ -311,27 +281,21 @@ export default function CheckoutPage() {
                         onChange={(e) => setOrderNote(e.target.value)}
                         maxLength={500}
                     />
-                    <div className="flex justify-end mt-1">
-                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{orderNote.length}/500 Char</span>
-                    </div>
                 </div>
-
                 {rates.length > 0 && (
-                    <Card className="bg-card border-border animate-in fade-in">
+                    <Card className="bg-card border-2 border-border rounded-none">
                         <CardContent className="p-6 space-y-4">
-                            <h2 className="font-bold text-xl">2. Select Shipping</h2>
+                            <h2 className="font-bold text-xl uppercase tracking-tighter">2. Select Shipping</h2>
                             <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                                 {rates.map((rate, idx) => (
                                     <div 
                                         key={idx}
                                         onClick={() => setSelectedRate(rate)}
-                                        className={`p-4 border rounded-lg cursor-pointer flex justify-between items-center transition
-                                            ${selectedRate === rate ? 'border-foreground bg-muted ring-1 ring-foreground' : 'border-border hover:border-zinc-500'}
-                                        `}
+                                        className={`p-4 border-2 transition-all cursor-pointer flex justify-between items-center ${selectedRate === rate ? 'border-foreground bg-zinc-100' : 'border-zinc-200'}`}
                                     >
                                         <div>
-                                            <p className="font-bold uppercase text-sm">{rate.courier_name} - {rate.courier_service_name}</p>
-                                            <p className="text-xs text-muted-foreground">Estimasi: {rate.duration}</p>
+                                            <p className="font-black uppercase text-xs">{rate.courier_name} - {rate.courier_service_name}</p>
+                                            <p className="text-[10px] italic">Estimasi: {rate.duration}</p>
                                         </div>
                                         <p className="font-bold text-sm">Rp {formatRupiah(rate.price)}</p>
                                     </div>
@@ -342,69 +306,75 @@ export default function CheckoutPage() {
                 )}
             </div>
 
-            {/* KANAN: RINGKASAN & VOUCHER */}
             <div>
-                <Card className="bg-card border-border sticky top-24">
+                <Card className="bg-card border-2 border-border sticky top-24 rounded-none">
                     <CardContent className="p-6">
-                        <h2 className="font-bold text-xl mb-6">Order Summary</h2>
-                        
-                        <div className="space-y-3 mb-6">
+                        <h2 className="font-bold text-xl mb-6 uppercase tracking-tighter">Order Summary</h2>
+                        <div className="space-y-4 mb-6">
                             {cart.items.map((item) => (
-                                <div key={item.id} className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">{item.name} x{item.quantity}</span>
-                                    <span>Rp {formatRupiah(item.price * item.quantity)}</span>
+                                <div key={item.id} className="flex gap-4 items-center">
+                                    {/* 👇 GAMBAR PRODUK */}
+                                    <div className="relative w-16 h-16 bg-muted overflow-hidden border">
+                                        <Image
+                                            src={item.image || "/placeholder-product.png"} 
+                                            alt={item.name}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                    <div className="flex-1 flex justify-between items-center text-sm">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-xs uppercase">{item.name}</span>
+                                            <span className="text-[10px] text-muted-foreground uppercase">Qty: {item.quantity}</span>
+                                        </div>
+                                        <span className="text-xs font-bold">Rp {formatRupiah(item.price * item.quantity)}</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                         
-                        <Separator className="my-4" />
+                        <Separator className="my-4 h-0.5" />
                         
-                        {/* SELECT VOUCHER */}
-                        <div className="flex gap-2 mb-4 items-center">
-                            <div className="relative flex-1">
-                                {appliedVoucher ? (
-                                     <div className="flex items-center justify-between border border-green-500/50 bg-green-500/10 text-green-600 rounded-md px-3 py-2">
-                                        <span className="font-bold text-sm flex items-center gap-2">
-                                            <TicketPercent className="w-4 h-4" /> {appliedVoucher.code}
-                                        </span>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-6 w-6 text-green-600 hover:text-red-500 hover:bg-transparent"
-                                            onClick={() => setAppliedVoucher(null)}
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
-                                     </div>
-                                ) : (
-                                    <Select onValueChange={handleSelectVoucher} disabled={loadingVoucher || availableVouchers.length === 0}>
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder={availableVouchers.length > 0 ? "Pilih Promo / Voucher" : "Tidak ada voucher tersedia"} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {availableVouchers.map((v) => (
-                                                <SelectItem key={v.id} value={v.code}>
-                                                    <span className="font-bold">{v.code}</span>
-                                                    <span className="text-muted-foreground ml-2">
-                                                        - {v.discount_type === 'percent' ? `${v.discount_amount}%` : `Rp ${formatRupiah(v.discount_amount)}`}
-                                                    </span>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            </div>
+                        <div className="space-y-3 mb-4">
+                            {!appliedVoucher ? (
+                                <Select onValueChange={handleSelectVoucher} disabled={loadingVoucher || availableVouchers.length === 0}>
+                                    <SelectTrigger className="w-full border-2 rounded-none font-bold text-xs h-12 uppercase">
+                                        <SelectValue placeholder={availableVouchers.length > 0 ? "GUNAKAN KODE PROMO" : "BELUM ADA PROMO"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableVouchers.map((v) => (
+                                            <SelectItem key={v.id} value={v.code} className="font-bold text-xs uppercase">
+                                                {v.code} ({v.discount_type === 'percent' ? `${v.discount_amount}%` : `Rp ${formatRupiah(v.discount_amount)}`})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between border-2 border-green-600 bg-green-50 p-3">
+                                        <span className="font-black text-xs text-green-700 uppercase flex items-center gap-2"><TicketPercent className="w-4 h-4"/> {appliedVoucher.code}</span>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => setAppliedVoucher(null)}><X className="w-4 h-4" /></Button>
+                                    </div>
+                                    {/* 👇 INFO MAKSIMAL POTONGAN */}
+                                    {appliedVoucher.max_discount_amount && appliedVoucher.discount_type === 'percent' && (
+                                        <div className="flex items-center gap-2 text-[10px] text-green-700 font-bold uppercase italic">
+                                            <Info className="w-3 h-3" />
+                                            <span>Maksimal Potongan: Rp {formatRupiah(appliedVoucher.max_discount_amount)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {appliedVoucher && (
+                                <div className="bg-zinc-50 p-2 flex items-start gap-2 border border-dashed border-zinc-300 italic">
+                                    <Info className="w-3 h-3 mt-0.5" />
+                                    <p className="text-[9px] uppercase font-bold">Target: {appliedVoucher.target === 'shipping' ? 'Ongkir' : 'Produk'}</p>
+                                </div>
+                            )}
                         </div>
 
-                        {appliedVoucher && (
-                            <div className="text-right text-xs text-green-500 mb-4 font-medium">
-                                Potongan: - Rp {formatRupiah(discountValue)}
-                            </div>
-                        )}
-
-                        <Separator className="my-4" />
+                        <Separator className="my-4 h-0.5" />
                         
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-2 text-xs font-bold uppercase">
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Subtotal</span>
                                 <span>Rp {formatRupiah(cart.totalPrice())}</span>
@@ -413,32 +383,31 @@ export default function CheckoutPage() {
                                 <span className="text-muted-foreground">Shipping</span>
                                 <span>{selectedRate ? `Rp ${formatRupiah(selectedRate.price)}` : "-"}</span>
                             </div>
-                            {appliedVoucher && (
-                                <div className="flex justify-between text-green-500 font-bold">
+                            {discountValue > 0 && (
+                                <div className="flex justify-between text-green-600">
                                     <span>Discount</span>
                                     <span>- Rp {formatRupiah(discountValue)}</span>
                                 </div>
                             )}
                         </div>
 
-                        <Separator className="my-4" />
+                        <Separator className="my-4 h-0.5" />
 
-                        <div className="flex justify-between text-lg font-black mb-6">
-                            <span>TOTAL</span>
-                            <span>Rp {formatRupiah(Math.max(grandTotal, 0))}</span>
+                        <div className="flex justify-between text-xl font-black mb-6 italic uppercase tracking-tighter">
+                            <span>Total</span>
+                            <span>Rp {formatRupiah(grandTotal)}</span>
                         </div>
 
                         <Button 
-                            className="w-full h-14 font-bold text-lg" 
+                            className="w-full h-14 font-black text-lg rounded-none uppercase tracking-widest" 
                             disabled={processing || !selectedRate}
                             onClick={handlePay}
                         >
-                            {processing ? "PROCESSING..." : "PAY NOW"}
+                            {processing ? <Loader2 className="animate-spin" /> : "PAY NOW"}
                         </Button>
                     </CardContent>
                 </Card>
             </div>
-
         </div>
       </div>
     </main>
