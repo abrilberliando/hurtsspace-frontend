@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   Search,
   ShoppingBag,
@@ -66,6 +66,7 @@ const displayPrice = (val: string | number): number => {
 export default function Navbar() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { user, logout } = useAuth();
   const cart = useCart();
 
@@ -162,6 +163,8 @@ export default function Navbar() {
   const cartCount = useMemo(() => {
     return cart.items.reduce((total, item) => total + item.quantity, 0);
   }, [cart.items]);
+
+  if (pathname === '/links' || pathname.startsWith('/admin')) return null;
 
   return (
     <>

@@ -10,6 +10,7 @@ import BottomNav from "@/components/shared/BottomNav";
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import AuthCheck from "@/components/auth/AuthCheck";
+import MainLayoutWrapper from "@/components/shared/MainLayoutWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -82,9 +83,9 @@ export default function RootLayout({
                                 <Navbar />
                             </Suspense>
                             <Suspense fallback={<div className="flex justify-center items-center h-screen pt-20">...</div>}>
-                            <div className="pt-20 pb-16 md:pb-0">
-                                {children}
-                            </div>
+                                <MainLayoutWrapper>
+                                    {children}
+                                </MainLayoutWrapper>
                             </Suspense>
                             <Footer />
                             <BottomNav />

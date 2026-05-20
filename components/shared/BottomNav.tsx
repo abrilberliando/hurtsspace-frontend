@@ -54,6 +54,8 @@ export default function BottomNav() {
     }
   ], [pathname, cartCount, user]);
 
+  if (pathname === '/links' || pathname.startsWith('/admin')) return null;
+
   return (
     // Tambahin inline style padding-bottom buat support iOS Safe Area 
     // jaga-jaga kalau class 'pb-safe' lo belum config bener

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Instagram, HelpCircle } from "lucide-react";
 import { memo } from "react";
+import { usePathname } from "next/navigation";
 
 // --- Custom Icons Fixed ---
 
@@ -17,6 +18,9 @@ const TiktokIcon = ({ className }: { className?: string }) => (
 
 const Footer = memo(function Footer() {
   const currentYear = new Date().getFullYear();
+  const pathname = usePathname();
+
+  if (pathname === '/links' || pathname.startsWith('/admin')) return null;
 
   return (
     <footer className="bg-black text-white pt-20 pb-10 border-t border-zinc-900">
