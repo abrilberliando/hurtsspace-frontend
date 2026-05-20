@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { Loader2, ExternalLink } from "lucide-react";
 import api from "@/lib/axios";
 
@@ -28,7 +27,14 @@ interface LinktreeLink {
     url: string;
 }
 
-// We use simpleicons for rendering brand icons dynamically
+// Normalize URL: tambahkan https:// jika belum ada protocol
+function normalizeUrl(url: string): string {
+    if (!url) return '#';
+    // Jika sudah ada protocol (http://, https://, mailto:, tel:, dll)
+    if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)) return url;
+    // Tambahkan https:// sebagai default
+    return `https://${url}`;
+}
 
 export default function LinktreePage() {
     const [settings, setSettings] = useState<LinktreeSetting | null>(null);
@@ -143,10 +149,10 @@ export default function LinktreePage() {
                             };
                         }
 
-                        return (
-                            <Link 
+                            return (
+                            <a 
                                 key={link.id}
-                                href={link.url}
+                                href={normalizeUrl(link.url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className={`
@@ -191,7 +197,7 @@ export default function LinktreePage() {
                                 <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <ExternalLink className="w-5 h-5 opacity-70" />
                                 </div>
-                            </Link>
+                            </a>
                         )
                     })}
                 </div>
