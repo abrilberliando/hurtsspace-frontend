@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Loader2, ExternalLink } from "lucide-react";
+import { Loader2, ExternalLink, Play } from "lucide-react";
 import api from "@/lib/axios";
 
 interface LinktreeSetting {
@@ -27,29 +27,39 @@ interface LinktreeLink {
     url: string;
 }
 
+interface VideoData {
+    id: number;
+    title: string | null;
+    description: string | null;
+    video_url: string;
+    link_url: string | null;
+}
+
 // Normalize URL: tambahkan https:// jika belum ada protocol
 function normalizeUrl(url: string): string {
     if (!url) return '#';
-    // Jika sudah ada protocol (http://, https://, mailto:, tel:, dll)
     if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)) return url;
-    // Tambahkan https:// sebagai default
     return `https://${url}`;
 }
 
 export default function LinktreePage() {
     const [settings, setSettings] = useState<LinktreeSetting | null>(null);
     const [links, setLinks] = useState<LinktreeLink[]>([]);
+    const [video, setVideo] = useState<VideoData | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Since this is public, we can just GET /linktree
-                const res = await api.get('/linktree');
-                setSettings(res.data.settings);
-                setLinks(res.data.links);
+                const [linktreeRes, videoRes] = await Promise.all([
+                    api.get('/linktree'),
+                    api.get(`/video-banner/active?t=${Date.now()}`),
+                ]);
+                setSettings(linktreeRes.data.settings);
+                setLinks(linktreeRes.data.links);
+                setVideo(videoRes.data.data); // bisa null jika tidak ada video aktif
             } catch (error) {
-                console.error("Gagal load linktree data", error);
+                console.error("Gagal load data", error);
             } finally {
                 setLoading(false);
             }
@@ -111,9 +121,76 @@ export default function LinktreePage() {
                     {settings.page_title}
                 </h1>
                 {settings.page_subtitle && (
-                    <p className="text-sm font-medium mb-10 text-center max-w-[280px]" style={{ color: settings.page_text_color, opacity: 0.8 }}>
+                    <p className="text-sm font-medium mb-8 text-center max-w-[280px]" style={{ color: settings.page_text_color, opacity: 0.8 }}>
                         {settings.page_subtitle}
                     </p>
+                )}
+
+                {/* Video Banner (compact, mobile-friendly) */}
+                {video && (
+                    <div className="w-full mb-8 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150">
+                        {video.link_url ? (
+                            <a href={normalizeUrl(video.link_url)} target="_blank" rel="noopener noreferrer" className="block group">
+                                <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+                                    <video
+                                        className="absolute inset-0 w-full h-full object-cover"
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                    >
+                                        <source src={video.video_url} type="video/mp4" />
+                                    </video>
+                                    {/* Overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 group-hover:from-black/50 transition-all duration-500" />
+                                    {/* Content overlay */}
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 z-10">
+                                        {video.title && (
+                                            <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tight drop-shadow-lg mb-1">
+                                                {video.title}
+                                            </h3>
+                                        )}
+                                        {video.description && (
+                                            <p className="text-xs text-white/80 font-medium max-w-[220px] drop-shadow-md">
+                                                {video.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                    {/* Play indicator */}
+                                    <div className="absolute bottom-3 right-3 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                                        <ExternalLink className="w-4 h-4 text-white" />
+                                    </div>
+                                </div>
+                            </a>
+                        ) : (
+                            <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+                                <video
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                    autoPlay
+                                    loop
+                                    muted
+                                    playsInline
+                                >
+                                    <source src={video.video_url} type="video/mp4" />
+                                </video>
+                                {/* Overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+                                {/* Content overlay */}
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 z-10">
+                                    {video.title && (
+                                        <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tight drop-shadow-lg mb-1">
+                                            {video.title}
+                                        </h3>
+                                    )}
+                                    {video.description && (
+                                        <p className="text-xs text-white/80 font-medium max-w-[220px] drop-shadow-md">
+                                            {video.description}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {/* Links Container */}
@@ -149,7 +226,7 @@ export default function LinktreePage() {
                             };
                         }
 
-                            return (
+                        return (
                             <a 
                                 key={link.id}
                                 href={normalizeUrl(link.url)}
