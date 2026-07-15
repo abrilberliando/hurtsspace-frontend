@@ -83,8 +83,9 @@ export default function EditProductPage() {
     setUploadSuccess(false);
     try {
         formData.set("_method", "PUT"); 
-
-        await api.post(`admin/products/${id}`, formData);
+        await api.post(`admin/products/${id}`, formData, {
+            headers: { "Content-Type": "multipart/form-data" }
+        });
 
         toast.success("Produk Berhasil Diupdate!");
         setUploadSuccess(true);

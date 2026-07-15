@@ -109,13 +109,26 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
-      const newItems: GalleryItem[] = filesArray.map((file, idx) => ({
-        id: `new-${Date.now()}-${idx}`,
-        type: "NEW",
-        file: file,
-        preview: URL.createObjectURL(file),
-      }));
-      setGallery((prev) => [...prev, ...newItems]);
+      const validFiles: GalleryItem[] = [];
+      for (const file of filesArray) {
+        if (file.size > 3 * 1024 * 1024) {
+          toast.error(`Ukuran gambar ${file.name} melebihi 3MB.`);
+          continue;
+        }
+        if (!file.type.startsWith('image/')) {
+          toast.error(`File ${file.name} bukan gambar.`);
+          continue;
+        }
+        validFiles.push({
+          id: `new-${Date.now()}-${Math.random()}`,
+          type: "NEW",
+          file: file,
+          preview: URL.createObjectURL(file),
+        });
+      }
+      if (validFiles.length > 0) {
+        setGallery((prev) => [...prev, ...validFiles]);
+      }
       e.target.value = "";
     }
   };
@@ -147,41 +160,55 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
     if (!category) return toast.error("Pilih kategori dulu!");
 
     const formData = new FormData();
-    formData.append("name", name);
-    formData.append("description", description);
-    formData.append("price", price);
-    formData.append("weight", weight);
-    if (stock) formData.append("stock", stock);
-    formData.append("category_id", category);
-    formData.append("is_collab", isCollab ? "1" : "0");
-
     if (initialData) formData.append("_method", "PUT");
 
-    // 👇 LOGIC URUTAN KONGKRIT (SORT ORDER)
-    // Kita kirim 'image_order[]' yang isinya urutan visual user saat ini.
-    // Format: "existing|URL" atau "new|INDEX_UPLOAD"
+    // Only send fields that actually changed
+    if (!initialData || name !== initialData.name) formData.append("name", name);
+    if (!initialData || description !== initialData.description) formData.append("description", description);
+    if (!initialData || price !== initialData.price) formData.append("price", price);
+    if (!initialData || weight !== initialData.weight) formData.append("weight", weight);
     
-    let newImageIndexCounter = 0; // Buat ngitung index khusus foto baru
+    // stock can be optional
+    const currentStock = stock || "";
+    const initialStock = initialData?.stock || "";
+    if (!initialData || currentStock !== initialStock) formData.append("stock", currentStock);
+    
+    if (!initialData || category !== initialData.category_id?.toString()) formData.append("category_id", category);
+    if (!initialData || isCollab !== initialData.is_collab) formData.append("is_collab", isCollab ? "1" : "0");
 
-    gallery.forEach((item) => {
-        if (item.type === "EXISTING" && item.url) {
-            // Kalau foto lama, kirim kodenya "existing|url"
-            formData.append("image_order[]", `existing|${item.url}`);
-            // Kita juga tetep kirim ini biar validasi 'nullable|array' di backend aman (opsional)
-            formData.append("existing_images[]", item.url);
-        } 
-        else if (item.type === "NEW" && item.file) {
-            // Kalau foto baru, kita upload filenya ke "images[]"
-            formData.append("images[]", item.file);
-            
-            // DAN kita catat urutannya: "new|0", "new|1", dst.
-            formData.append("image_order[]", `new|${newImageIndexCounter}`);
-            
-            newImageIndexCounter++;
-        }
-    });
+    // For sizes
+    const initialSizes = initialData?.selected_sizes || [];
+    const sizesChanged = !initialData || selectedSizes.length !== initialSizes.length || !selectedSizes.every(s => initialSizes.includes(s));
+    if (sizesChanged) {
+      selectedSizes.forEach((size) => formData.append("sizes[]", size));
+    }
 
-    selectedSizes.forEach((size) => formData.append("sizes[]", size));
+    // For images
+    const initialUrls = initialData?.image_urls || [];
+    const hasNewImages = gallery.some(g => g.type === "NEW");
+    const imagesChanged = !initialData || hasNewImages || initialUrls.length !== gallery.length || !initialUrls.every((url, i) => url === gallery[i].url);
+
+    if (imagesChanged) {
+      let newImageIndexCounter = 0;
+      gallery.forEach((item) => {
+          if (item.type === "EXISTING" && item.url) {
+              formData.append("image_order[]", `existing|${item.url}`);
+              formData.append("existing_images[]", item.url);
+          } 
+          else if (item.type === "NEW" && item.file) {
+              formData.append("images[]", item.file);
+              formData.append("image_order[]", `new|${newImageIndexCounter}`);
+              newImageIndexCounter++;
+          }
+      });
+    }
+
+    // Jika update dan tidak ada yang berubah, langsung sukses
+    if (initialData && Array.from(formData.keys()).length === 1 && formData.get("_method") === "PUT") {
+      toast.success("Tidak ada perubahan data.");
+      onSubmit(formData, initialData.id); // Trigger close/redirect aja
+      return;
+    }
 
     onSubmit(formData, initialData?.id);
   };
