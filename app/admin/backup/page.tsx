@@ -13,6 +13,17 @@ import { Button } from "@/components/ui/button";
 import api from "@/lib/axios";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Backup {
   id: number;
@@ -26,6 +37,7 @@ export default function AdminBackupPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
+  const [isRestoring, setIsRestoring] = useState<number | null>(null);
 
   const fetchBackups = async () => {
     try {
@@ -60,7 +72,6 @@ export default function AdminBackupPage() {
   };
 
   const handleDeleteBackup = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this backup?")) return;
     try {
       setIsDeleting(id);
       await api.delete(`/admin/backups/${id}`);
@@ -71,6 +82,22 @@ export default function AdminBackupPage() {
       console.error(error);
     } finally {
       setIsDeleting(null);
+    }
+  };
+
+  const handleRestoreBackup = async (id: number) => {
+    try {
+      setIsRestoring(id);
+      toast.info("Restoring database, please wait...");
+      await api.post(`/admin/backups/${id}/restore`);
+      toast.success("Database restored successfully!");
+      // Optionally reload the page to refresh all data globally
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to restore database");
+      console.error(error);
+    } finally {
+      setIsRestoring(null);
     }
   };
 
@@ -135,6 +162,36 @@ export default function AdminBackupPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={isRestoring === backup.id || isDeleting === backup.id}
+                              className="gap-2 bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                            >
+                              {isRestoring === backup.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <DatabaseBackup className="w-4 h-4" />
+                              )}
+                              Restore
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                DANGER: Restoring this backup will OVERWRITE your current database. All data created after this backup will be permanently lost.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleRestoreBackup(backup.id)} className="bg-yellow-600 hover:bg-yellow-700 text-white">Continue Restore</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
                         <Button
                           variant="outline"
                           size="sm"
@@ -146,20 +203,36 @@ export default function AdminBackupPage() {
                             Download
                           </a>
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteBackup(backup.id)}
-                          disabled={isDeleting === backup.id}
-                          className="gap-2"
-                        >
-                          {isDeleting === backup.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
-                          )}
-                          Delete
-                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={isDeleting === backup.id || isRestoring === backup.id}
+                              className="gap-2"
+                            >
+                              {isDeleting === backup.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Backup</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this backup? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteBackup(backup.id)} className="bg-red-600 hover:bg-red-700 text-white">Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </td>
                   </tr>
