@@ -47,7 +47,7 @@ export default function AdminUsersPage() {
     const [search, setSearch] = useState("");
     const [roleFilter, setRoleFilter] = useState("all");
 
-    // Pagination states (kalau nanti API support, skrg static 1 page dulu krn API pakai simple paginate)
+    // Pagination states (if API supports it later, currently static 1 page because API uses simple paginate)
     const [page, setPage] = useState(1);
 
     // Dialog States
@@ -66,10 +66,10 @@ export default function AdminUsersPage() {
                 params: { search, role: roleFilter, page }
             });
             // Assume Laravel pagination structure: res.data.data.data 
-            // karena res()->json(['data' => $users]) -> paginate() di dalam 'data'
+            // because res()->json(['data' => $users]) -> paginate() inside 'data'
             setUsers(res.data.data.data || res.data.data);
         } catch (error) {
-            toast.error("Gagal mengambil data user");
+            toast.error("Failed to load user data");
         } finally {
             setLoading(false);
         }
@@ -80,11 +80,11 @@ export default function AdminUsersPage() {
         setIsProcessing(true);
         try {
             await api.delete(`/admin/users/${suspendDialog.user.id}`);
-            toast.success("User berhasil disuspend");
+            toast.success("User successfully suspended");
             setSuspendDialog({ isOpen: false, user: null });
             fetchUsers();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Gagal suspend user");
+            toast.error(error.response?.data?.message || "Failed to suspend user");
         } finally {
             setIsProcessing(false);
         }
@@ -95,11 +95,11 @@ export default function AdminUsersPage() {
         setIsProcessing(true);
         try {
             await api.post(`/admin/users/${restoreDialog.user.id}/restore`);
-            toast.success("User berhasil dipulihkan");
+            toast.success("User successfully restored");
             setRestoreDialog({ isOpen: false, user: null });
             fetchUsers();
         } catch (error: any) {
-            toast.error("Gagal memulihkan user");
+            toast.error("Failed to restore user");
         } finally {
             setIsProcessing(false);
         }
@@ -109,7 +109,7 @@ export default function AdminUsersPage() {
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
-                <p className="text-muted-foreground">Kelola pengguna, admin, dan hak akses.</p>
+                <p className="text-muted-foreground">Manage users, admins, and access rights.</p>
             </div>
 
             <Card className="bg-card border-border">
@@ -117,7 +117,7 @@ export default function AdminUsersPage() {
                     <div className="relative w-full sm:w-96">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
-                            placeholder="Cari nama, email, atau telepon..."
+                            placeholder="Search name, email, or phone..."
                             className="pl-9"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -126,10 +126,10 @@ export default function AdminUsersPage() {
                     <div className="w-full sm:w-auto">
                         <Select value={roleFilter} onValueChange={setRoleFilter}>
                             <SelectTrigger className="w-full sm:w-[150px]">
-                                <SelectValue placeholder="Semua Role" />
+                                <SelectValue placeholder="All Roles" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Semua Role</SelectItem>
+                                <SelectItem value="all">All Roles</SelectItem>
                                 <SelectItem value="admin">Admin</SelectItem>
                                 <SelectItem value="member">Member</SelectItem>
                             </SelectContent>
@@ -143,13 +143,13 @@ export default function AdminUsersPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Nama</TableHead>
+                                <TableHead>Name</TableHead>
                                 <TableHead>Email</TableHead>
-                                <TableHead>No. HP</TableHead>
+                                <TableHead>Phone</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Points</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Aksi</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -168,7 +168,7 @@ export default function AdminUsersPage() {
                             ) : users.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                                        Tidak ada data user.
+                                        No user data.
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -199,7 +199,7 @@ export default function AdminUsersPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                                                    <DropdownMenuLabel>Action</DropdownMenuLabel>
                                                     <DropdownMenuItem asChild>
                                                         <Link href={`/admin/users/${user.id}`} className="cursor-pointer">
                                                             <Eye className="w-4 h-4 mr-2" /> Detail
@@ -207,7 +207,7 @@ export default function AdminUsersPage() {
                                                     </DropdownMenuItem>
                                                     {user.deleted_at ? (
                                                         <DropdownMenuItem onClick={() => setRestoreDialog({ isOpen: true, user })} className="text-green-500 cursor-pointer">
-                                                            <Undo2 className="w-4 h-4 mr-2" /> Pulihkan (Unsuspend)
+                                                            <Undo2 className="w-4 h-4 mr-2" /> Restore (Unsuspend)
                                                         </DropdownMenuItem>
                                                     ) : (
                                                         <DropdownMenuItem onClick={() => setSuspendDialog({ isOpen: true, user })} className="text-destructive cursor-pointer">
@@ -229,15 +229,15 @@ export default function AdminUsersPage() {
             <AlertDialog open={suspendDialog.isOpen} onOpenChange={(isOpen) => !isProcessing && setSuspendDialog({ ...suspendDialog, isOpen })}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Suspend Akun Ini?</AlertDialogTitle>
+                        <AlertDialogTitle>Suspend This Account?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Tindakan ini akan membuat akun <strong>{suspendDialog.user?.name}</strong> tidak dapat digunakan untuk login lagi sampai dipulihkan kembali. Riwayat transaksi mereka akan tetap tersimpan.
+                            This action will make the account <strong>{suspendDialog.user?.name}</strong> unable to log in until restored. Their transaction history will remain saved.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isProcessing}>Batal</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
                         <Button variant="destructive" onClick={confirmSuspend} disabled={isProcessing}>
-                            {isProcessing ? "Memproses..." : "Ya, Suspend"}
+                            {isProcessing ? "Processing..." : "Yes, Suspend"}
                         </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -247,15 +247,15 @@ export default function AdminUsersPage() {
             <AlertDialog open={restoreDialog.isOpen} onOpenChange={(isOpen) => !isProcessing && setRestoreDialog({ ...restoreDialog, isOpen })}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Pulihkan Akun Ini?</AlertDialogTitle>
+                        <AlertDialogTitle>Restore This Account?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Tindakan ini akan memulihkan akun <strong>{restoreDialog.user?.name}</strong> sehingga mereka bisa kembali login dan mengakses sistem seperti biasa.
+                            This action will restore the account <strong>{restoreDialog.user?.name}</strong> so they can log in and access the system normally.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isProcessing}>Batal</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
                         <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={confirmRestore} disabled={isProcessing}>
-                            {isProcessing ? "Memproses..." : "Ya, Pulihkan"}
+                            {isProcessing ? "Processing..." : "Yes, Restore"}
                         </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>

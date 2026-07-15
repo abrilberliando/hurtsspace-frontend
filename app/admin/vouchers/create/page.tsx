@@ -61,7 +61,7 @@ export default function CreateVoucherPage() {
             router.push("/admin/vouchers");
         } catch (error) {
             const err = error as AxiosError<{ message: string }>;
-            toast.error(err.response?.data?.message || "Gagal buat voucher.");
+            toast.error(err.response?.data?.message || "Failed to create voucher.");
         } finally {
             setLoading(false);
         }
@@ -95,7 +95,7 @@ export default function CreateVoucherPage() {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent className="border-2 border-black rounded-none">
-                                            <SelectItem value="products" className="font-bold uppercase text-xs">Produk</SelectItem>
+                                            <SelectItem value="products" className="font-bold uppercase text-xs">Products</SelectItem>
                                             <SelectItem value="shipping" className="font-bold uppercase text-xs">Ongkos Kirim</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -105,7 +105,7 @@ export default function CreateVoucherPage() {
                                 <div className="h-12">
                                     {target === "products" ? (
                                         <div key="switch-products" className="flex items-center justify-between p-3 border-2 border-black bg-zinc-50 h-full animate-in fade-in">
-                                            <Label className="font-bold uppercase text-[10px]">Semua Produk?</Label>
+                                            <Label className="font-bold uppercase text-[10px]">All Products?</Label>
                                             <Switch 
                                                 checked={isAllProducts} 
                                                 onCheckedChange={(checked) => setIsAllProducts(checked)} 
@@ -123,7 +123,7 @@ export default function CreateVoucherPage() {
 
                             {!isAllProducts && target === "products" && (
                                 <div className="bg-orange-500 text-white p-3 text-[10px] font-black flex items-center gap-2 animate-in slide-in-from-top-2">
-                                    <AlertCircle className="w-4 h-4" /> KHUSUS PRODUK PILIHAN SAJA!
+                                    <AlertCircle className="w-4 h-4" /> SPECIFIC PRODUCTS ONLY!
                                 </div>
                             )}
                         </div>

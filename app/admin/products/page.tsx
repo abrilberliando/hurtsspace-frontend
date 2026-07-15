@@ -32,7 +32,7 @@ interface Product {
     is_featured: boolean; 
 }
 
-// 👇 TYPE BARU: Buat handle data mentah dari API yang is_featured-nya masih random (number/string/boolean)
+// 👇 NEW TYPE: To handle raw data from API whose is_featured is still random (number/string/boolean)
 interface RawProduct extends Omit<Product, "is_featured"> {
     is_featured: boolean | number | string;
 }
@@ -47,7 +47,7 @@ export default function AdminProductsPage() {
 
     const fetchProducts = useCallback(async () => {
         try {
-            // Hit API produk
+            // Hit product API
             const res = await api.get(`/products?t=${Date.now()}`);
             // Ambil data array (handle paginasi atau wrapper)
             const dataProduk = res.data.data.data || res.data.data || []; 
@@ -62,7 +62,7 @@ export default function AdminProductsPage() {
 
             setProducts(parsedProducts);
         } catch {
-            toast.error("Gagal load produk.");
+            toast.error("Failed to load products.");
             setProducts([]); 
         }
     }, []);
@@ -83,7 +83,7 @@ export default function AdminProductsPage() {
     const handleSetFeatured = async (id: number) => {
         const originalProducts = [...products];
 
-        // 1. Optimistic Update (Langsung ubah tampilan)
+        // 1. Optimistic Update (Change view immediately)
         const optimisProducts = products.map((item) => {
             if (item.id === id) {
                 // Toggle status featured (inversi nilai boolean)
@@ -101,22 +101,22 @@ export default function AdminProductsPage() {
             await api.put(`admin/products/${id}/featured`);
             
             if (isNowFeatured) {
-                toast.success("Produk jadi Featured! 🌟");
+                toast.success("Product is now Featured! 🌟");
             } else {
                 toast.success("Featured dihapus.");
             }
-            // Optional: fetchProducts() lagi kalau mau sync total
+            // Optional: fetchProducts() again if you want to sync fully
         } catch (error) { 
             const err = error as AxiosError<{ message: string }>;
 
             // 3. Handle Error (Slot Penuh - 422)
             if (err.response && err.response.status === 422) {
-                const errorMessage = err.response.data.message || "Gagal karena slot penuh.";
+                const errorMessage = err.response?.data?.message || "Failed because slots are full.";
                 toast.error(errorMessage);
             } else {
-                toast.error("Gagal update status.");
+                toast.error("Failed to update status.");
             }
-            // 4. Rollback State kalau gagal
+            // 4. Rollback State if failed
             setProducts(originalProducts);
         }
     };
@@ -130,17 +130,17 @@ export default function AdminProductsPage() {
         if (!targetProductId) return;
 
         setIsDeleting(true);
-        const toastId = toast.loading(`Menghapus produk ID: ${targetProductId}...`);
+        const toastId = toast.loading(`Deleting product ID: ${targetProductId}...`);
 
         try {
             await api.delete(`admin/products/${targetProductId}`);
             
-            // Hapus dari state
+            // Remove from state
             setProducts(prev => prev.filter(p => p.id !== targetProductId));
             
-            toast.success("Produk berhasil dihapus.");
+            toast.success("Product successfully deleted.");
         } catch {
-            toast.error("Gagal hapus produk.");
+            toast.error("Failed to delete product.");
         } finally {
             toast.dismiss(toastId);
             setIsDeleting(false);
@@ -149,7 +149,7 @@ export default function AdminProductsPage() {
         }
     };
 
-    const targetProductName = products.find(p => p.id === targetProductId)?.name || "produk ini";
+    const targetProductName = products.find(p => p.id === targetProductId)?.name || "this product";
 
 
     return (
@@ -157,7 +157,7 @@ export default function AdminProductsPage() {
             <div className="flex justify-between items-center border-b border-border pb-6">
                 <div>
                     <h1 className="text-3xl font-black tracking-tight">Manage Products</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Atur katalog produk toko lo disini.</p>
+                    <p className="text-muted-foreground text-sm mt-1">Manage your store product catalog here.</p>
                 </div>
                 <Button asChild size="lg" className="font-bold">
                     <Link href="/admin/products/create">
@@ -197,7 +197,7 @@ export default function AdminProductsPage() {
                                     <Star className={`w-3.5 h-3.5 md:w-4 md:h-4 ${item.is_featured ? '' : 'fill-current'}`} />
                                 </button>
 
-                                {/* Badge Kategori */}
+                                {/* Category Badge */}
                                 <Badge variant="secondary" className="absolute bottom-2 left-2 text-[8px] md:text-[10px] font-bold uppercase px-1.5 md:px-2 h-4 md:h-5 backdrop-blur-md bg-background/80">
                                     {item.category?.name || "Uncategorized"}
                                 </Badge>
@@ -249,10 +249,10 @@ export default function AdminProductsPage() {
                 ) : (
                     <div className="col-span-full flex flex-col items-center justify-center py-24 text-muted-foreground border-2 border-dashed border-border rounded-xl bg-muted/10">
                         <PackageOpen className="w-16 h-16 mb-4 opacity-20" />
-                        <p className="text-lg font-medium">Belum ada produk nih.</p>
+                        <p className="text-lg font-medium">No products yet.</p>
                         <Button asChild variant="secondary" className="mt-4">
                             <Link href="/admin/products/create">
-                                Buat Produk Pertama
+                                Create First Product
                             </Link>
                         </Button>
                     </div>
@@ -263,9 +263,9 @@ export default function AdminProductsPage() {
             <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <AlertDialogContent className="w-[90%] max-w-sm rounded-xl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Hapus {targetProductName}?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete {targetProductName}?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Tindakan ini akan menghapus produk <strong>{targetProductName}</strong> secara permanen dari database. Apakah kamu yakin ingin melanjutkan?
+                            This action will permanently delete the product <strong>{targetProductName}</strong> from the database. Are you sure you want to continue?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:gap-2">
@@ -287,7 +287,7 @@ export default function AdminProductsPage() {
                                     Hapus
                                 </>
                             ) : (
-                                "Hapus"
+                                "Delete"
                             )}
                         </AlertDialogAction>
                     </AlertDialogFooter>

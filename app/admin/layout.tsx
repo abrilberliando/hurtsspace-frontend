@@ -182,7 +182,7 @@ export default function AdminLayout({
     return () => clearTimeout(timer);
   }, []);
 
-  // 1. Tampilkan Loading Screen kalau masih ngecek
+  // 1. Show Loading Screen if still checking
   if (isChecking) {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center">
@@ -191,13 +191,13 @@ export default function AdminLayout({
       );
   }
 
-  // 2. Security Check: Kalau bukan admin atau gak login -> 404
+  // 2. Security Check: If not admin or not logged in -> 404
   if (!user || user.role !== "admin") {
       notFound(); // Lempar ke halaman 404
       return null;
   }
 
-  // 3. Render Dashboard kalau Lulus
+  // 3. Render Dashboard if Passed
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col lg:flex-row relative">
       {/* 👇 FLOATING MOBILE TOGGLE (Sticky on Left Edge) */}

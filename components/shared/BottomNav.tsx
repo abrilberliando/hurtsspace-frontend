@@ -19,7 +19,7 @@ export default function BottomNav() {
   }, [cart.items]);
 
   // 2. MEMOIZE NAV ITEMS
-  // Array ini cuma dibuat ulang kalau state penting berubah
+  // This array is only recreated if important state changes
   const navItems = useMemo(() => [
     { 
       href: "/", 
@@ -57,8 +57,8 @@ export default function BottomNav() {
   if (pathname === '/links' || pathname.startsWith('/admin')) return null;
 
   return (
-    // Tambahin inline style padding-bottom buat support iOS Safe Area 
-    // jaga-jaga kalau class 'pb-safe' lo belum config bener
+    // Add inline style padding-bottom to support iOS Safe Area 
+    // just in case your 'pb-safe' class is not configured correctly
     <div 
       className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border md:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}

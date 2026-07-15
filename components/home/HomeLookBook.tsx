@@ -65,7 +65,7 @@ const LookbookHotspot = memo(({ item, activePoint, setActivePoint }: {
                 >
                     <Plus className="w-4 h-4" strokeWidth={3} />
                     
-                    {/* Ping Effect (Cuma muncul kalau belum dibuka) */}
+                    {/* Ping Effect (Only appears if not opened yet) */}
                     {!isOpen && (
                         <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-30 animate-ping duration-1000"></span>
                     )}
@@ -78,7 +78,7 @@ const LookbookHotspot = memo(({ item, activePoint, setActivePoint }: {
                 side="top"
                 align="center"
             >
-                {/* Render Content Cuma Kalau Open (Lazy Render) */}
+                {/* Render Content Only If Open (Lazy Render) */}
                 {isOpen && (
                     <div className="flex gap-3 p-3 items-center animate-in fade-in zoom-in-95 duration-200">
                         {/* Thumbnail Image */}
@@ -134,7 +134,7 @@ export default function HomeLookbook() {
         const data = res.data?.data || [];
         setLookbooks(Array.isArray(data) ? data.slice(0, 2) : []);
       } catch (error) {
-        console.error("Gagal load lookbook home", error);
+        console.error("Failed to load lookbook home", error);
       } finally {
         setLoading(false);
       }

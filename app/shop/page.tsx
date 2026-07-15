@@ -102,7 +102,7 @@ function ShopContent() {
         const cats = Array.isArray(res.data) ? res.data : res.data.data || [];
         setCategories(cats);
       } catch (err) {
-        console.error("Gagal load kategori:", err);
+        console.error("Failed to load categories:", err);
       }
     };
     fetchCategories();
@@ -121,7 +121,7 @@ function ShopContent() {
 
         if (searchQuery) {
           params.append("search", searchQuery);
-          // 👇 TAMBAH LIMIT GEDE PAS SEARCH
+          // 👇 ADD BIG LIMIT WHEN SEARCHING
           params.append("limit", "100");
         }
 
@@ -136,7 +136,7 @@ function ShopContent() {
         setAllProducts(dataFix);
         setVisibleCount(16);
       } catch (error) {
-        console.error("❌ Gagal fetch products:", error);
+        console.error("❌ Failed to fetch products:", error);
         setAllProducts([]);
       } finally {
         setLoading(false);
@@ -158,7 +158,7 @@ function ShopContent() {
       );
     }
 
-    // B. FILTER KATEGORI (Fallback Client-side)
+    // B. CATEGORY FILTER (Client-side Fallback)
     if (categoryId && categoryId !== "all") {
       data = data.filter((p) => {
         const productCatId = p.category_id || p.category?.id;
@@ -255,7 +255,7 @@ function ShopContent() {
           </div>
         </div>
 
-        {/* GRID PRODUK */}
+        {/* PRODUCT GRID */}
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8 justify-items-center">
             {/* Optimized Array.from */}
@@ -316,7 +316,7 @@ function ShopContent() {
 }
 
 // --- COMPONENT: CUSTOM DROPDOWN ---
-// Dibungkus memo biar gak re-render kalau parent (ShopContent) update state lain
+// Wrapped in memo to avoid re-render if parent (ShopContent) updates other state
 const CustomDropdown = memo(function CustomDropdown({
   options,
   value,

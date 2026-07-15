@@ -26,7 +26,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
   const [loading, setLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   
-  // Ref buat nyimpen cache data sementara di memory (biar gak fetch ulang kalau unmount-remount)
+  // Ref to store temporary cache data in memory (to avoid re-fetching on unmount-remount)
   const cache = useRef<Map<number, SplitBannerData>>(new Map());
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
 
     const fetchBanner = async () => {
       try {
-        // Optimization: Hapus timestamp cache busting yang agresif (t=Date.now())
+        // Optimization: Remove aggressive cache busting timestamp (t=Date.now())
         // Biarkan browser/CDN cache request ini sebentar (misal 60s) biar gak spam server
         const res = await api.get("/banner/active");
         
@@ -51,7 +51,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
 
         if (found) {
           setBanner(found);
-          cache.current.set(position, found); // Simpan ke cache
+          cache.current.set(position, found); // Save to cache
         } else {
           setIsError(true);
         }
@@ -93,7 +93,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
             src={banner.image_left}
             alt={`${banner.title} - Left View`}
             fill
-            quality={60} // Turunin dikit buat background, mata gak bisa bedain 60 vs 75 di HP
+            quality={60} // Lower slightly for background, eyes can't tell 60 vs 75 on mobile
             sizes="(max-width: 768px) 50vw, 50vw" // Akurat: Selalu setengah layar
             className="object-cover object-center transition-transform duration-1000 ease-out"
             priority // 🔥 Banner gede wajib priority biar LCP hijau

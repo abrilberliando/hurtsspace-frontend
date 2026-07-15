@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
+import { Loader2, Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { AxiosError } from "axios";
 
 export default function LoginPage() {
@@ -25,12 +25,13 @@ export default function LoginPage() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
 
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
-        toast.success("Email Berhasil Diverifikasi! 🎉", {
-            description: "Silakan login sekarang, akun lo udah aktif."
+        toast.success("Email Verified Successfully! 🎉", {
+            description: "Please login now, your account is active."
         });
         router.replace('/login');
     }
@@ -49,13 +50,13 @@ export default function LoginPage() {
 
     } catch (err: unknown) {
       const error = err as AxiosError<{ message: string, not_verified?: boolean }>;
-      const msg = error.response?.data?.message || "Login gagal, cek email/password.";
+      const msg = error.response?.data?.message || "Login failed, check email/password.";
       
       if (error.response?.data?.not_verified) {
           setNeedsVerification(true);
-          toast.warning("Verifikasi Email Dulu!", { description: msg });
+          toast.warning("Verify Your Email First!", { description: msg });
       } else {
-          toast.error("Gagal Masuk", { description: msg });
+          toast.error("Login Failed", { description: msg });
       }
     } finally {
       setLoading(false);
@@ -83,23 +84,23 @@ export default function LoginPage() {
     } catch (err: unknown) {
         console.error("Google Login Error:", err);
         const error = err as Error;
-        toast.error("Gagal Login Google", { description: error.message || "Ada masalah koneksi ke Google." });
+        toast.error("Google Login Failed", { description: error.message || "Connection problem with Google." });
     } finally {
         setGoogleLoading(false);
     }
   };
 
   const handleResendEmail = async () => {
-    if (!email) return toast.error("Isi email dulu di form ya.");
-    const loadingToast = toast.loading("Mengirim ulang email...");
+    if (!email) return toast.error("Please enter your email in the form.");
+    const loadingToast = toast.loading("Resending email...");
     try {
         const res = await api.post('/email/verification-notification', { email });
         toast.dismiss(loadingToast);
-        toast.success("Terkirim! 📧", { description: res.data.message });
+        toast.success("Sent! 📧", { description: res.data.message });
         setNeedsVerification(false);
     } catch {
         toast.dismiss(loadingToast);
-        toast.error("Gagal Kirim", { description: "Coba lagi nanti atau pastikan email bener." });
+        toast.error("Failed to Send", { description: "Try again later or make sure your email is correct." });
     }
   };
 
@@ -109,7 +110,7 @@ export default function LoginPage() {
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-3xl font-black uppercase tracking-tighter">Welcome Back</CardTitle>
           <CardDescription>
-            Masuk ke akun Hurtsspace lo.
+            Log in to your Hurtsspace account.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -151,11 +152,11 @@ export default function LoginPage() {
               <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 p-3 rounded-md mb-4 text-sm flex flex-col gap-2 animate-in fade-in zoom-in duration-300">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
-                    <span className="font-bold">Akun belum aktif!</span>
+                    <span className="font-bold">Account not active!</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">Cek email lo atau klik tombol di bawah buat kirim ulang.</p>
+                  <p className="text-xs text-muted-foreground">Check your email or click the button below to resend.</p>
                   <Button variant="secondary" size="sm" onClick={handleResendEmail} className="w-full h-8 text-xs font-bold mt-1 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-colors">
-                     Kirim Ulang Link Verifikasi
+                     Resend Verification Link
                   </Button>
               </div>
           )}
@@ -178,20 +179,27 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                {/* 👇 INI LINK YANG LO CARI G! */}
+                {/* 👇 FORGOT PASSWORD LINK */}
                 <Link href="/forgot-password" className="text-xs text-primary hover:underline font-bold transition-colors">
-                   Lupa password?
+                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
-                    id="password" name="password" type="password" 
+                    id="password" name="password" type={showPassword ? "text" : "password"} 
                     placeholder="••••••••••••" 
-                    className="pl-10 h-11" 
+                    className="pl-10 pr-10 h-11" 
                     required 
                     value={password} onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
@@ -202,9 +210,9 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="justify-center pb-6">
           <p className="text-sm text-muted-foreground">
-            Belum punya akun?{" "}
+            Don't have an account?{" "}
             <Link href="/register" className="text-primary hover:underline font-bold">
-              Daftar disini
+              Sign up here
             </Link>
           </p>
         </CardFooter>

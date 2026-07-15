@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import api from "@/lib/axios";
 import { useAuth } from "@/lib/useAuth";
-import { notFound } from "next/navigation"; // 👈 Cukup notFound, useRouter HAPUS AJA
+import { notFound } from "next/navigation"; // 👈 Just notFound, REMOVE useRouter
 import { Skeleton } from "@/components/ui/skeleton";
 import { HeartOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,12 +39,12 @@ interface RawWishlistItem {
 
 export default function WishlistPage() {
   const { user } = useAuth();
-  // const router = useRouter(); 👈 INI BIANG KEROKNYA, HAPUS AJA G!
+  // const router = useRouter(); 👈 THIS IS THE CULPRIT, JUST REMOVE IT!
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 🔥 STEALTH MODE: 404 kalau ga login
+    // 🔥 STEALTH MODE: 404 if not logged in
     if (!loading && !user) {
         notFound(); 
         return;
@@ -75,7 +75,7 @@ export default function WishlistPage() {
 
         setProducts(mappedProducts);
       } catch (error) {
-        console.error("Gagal load wishlist", error);
+        console.error("Failed to load wishlist", error);
       } finally {
         setLoading(false);
       }
@@ -83,7 +83,7 @@ export default function WishlistPage() {
 
     if (user) fetchWishlist();
     
-    // Safety check kalau user null
+    // Safety check if user is null
     if (!user) {
         const timer = setTimeout(() => setLoading(false), 1000); 
         return () => clearTimeout(timer);
@@ -117,15 +117,17 @@ export default function WishlistPage() {
            </div>
         ) : products.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 gap-y-8 md:gap-8 md:gap-y-12 justify-items-center">
-              <ShopCard key={item.id} item={item as any} />
+              {products.map((item) => (
+                  <ShopCard key={item.id} item={item as any} />
+              ))}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 border border-dashed border-zinc-700 rounded-xl bg-muted/10">
             <HeartOff className="w-12 h-12 text-muted-foreground mb-4 opacity-50" />
-            <h2 className="text-xl font-bold mb-2">Wishlist Kosong</h2>
-            <p className="text-muted-foreground mb-6">Belum ada barang inceran nih, G.</p>
+            <h2 className="text-xl font-bold mb-2">Wishlist Empty</h2>
+            <p className="text-muted-foreground mb-6">No items on your wishlist yet.</p>
             <Button asChild variant="outline">
-                <Link href="/shop">CARI BARANG</Link>
+                <Link href="/shop">FIND ITEMS</Link>
             </Button>
           </div>
         )}

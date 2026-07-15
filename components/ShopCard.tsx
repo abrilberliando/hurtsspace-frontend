@@ -85,7 +85,7 @@ function ShopCardComponent({ item }: { item: Product }) {
         >
           {images.length > 0 ? (
             images.map((img, idx) => {
-              // 🔥 OPTIMASI: HANYA RENDER JIKA: idx === 0 ATAU user sudah pernah hover
+              // 🔥 OPTIMIZATION: ONLY RENDER IF: idx === 0 OR user has hovered before
               if (idx !== 0 && !hasHovered) return null;
 
               return (

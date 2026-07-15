@@ -26,7 +26,7 @@ export default function AdminBroadcastPage() {
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if(!confirm("Yakin mau kirim broadcast ke SEMUA user?")) return;
+        if(!confirm("Are you sure you want to send a broadcast to ALL users?")) return;
 
         setSending(true);
         try {
@@ -36,12 +36,12 @@ export default function AdminBroadcastPage() {
                 url,
                 target
             });
-            toast.success("Broadcast Terkirim!", { description: res.data.message });
+            toast.success("Broadcast Sent!", { description: res.data.message });
             setTitle("");
             setMessage("");
             setUrl("");
         } catch {
-            toast.error("Gagal mengirim broadcast.");
+            toast.error("Failed to send broadcast.");
         } finally {
             setSending(false);
         }
@@ -55,27 +55,27 @@ export default function AdminBroadcastPage() {
                 </div>
                 <div>
                     <h1 className="text-3xl font-black uppercase tracking-tight">System Broadcast</h1>
-                    <p className="text-muted-foreground text-sm">Kirim notifikasi & email massal ke user.</p>
+                    <p className="text-muted-foreground text-sm">Send mass notifications & emails to users.</p>
                 </div>
             </div>
 
             <Card className="border-border shadow-lg">
                 <CardHeader>
                     <CardTitle>Compose Message</CardTitle>
-                    <CardDescription>Pesan akan masuk ke Lonceng Notifikasi dan Email user.</CardDescription>
+                    <CardDescription>Message will be sent to Notification Bell and User's Email.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSend} className="space-y-4">
                         <div className="space-y-2">
-                            <Label>Judul Broadcast</Label>
-                            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Contoh: FLASH SALE 12.12!" required />
+                            <Label>Broadcast Title</Label>
+                            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Example: 12.12 FLASH SALE!" required />
                         </div>
                         <div className="space-y-2">
-                            <Label>Pesan Utama</Label>
-                            <Textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Isi pesan yang menarik..." required rows={4} />
+                            <Label>Main Message</Label>
+                            <Textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Enter an engaging message..." required rows={4} />
                         </div>
                         <div className="space-y-2">
-                            <Label>Link Tujuan (Opsional)</Label>
+                            <Label>Target Link (Optional)</Label>
                             <Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://hurtsspace.com/shop" />
                         </div>
                         <div className="space-y-2">
@@ -85,8 +85,8 @@ export default function AdminBroadcastPage() {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Semua User (Admin + Member)</SelectItem>
-                                    <SelectItem value="members">Hanya Member</SelectItem>
+                                    <SelectItem value="all">All Users (Admin + Member)</SelectItem>
+                                    <SelectItem value="members">Members Only</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -94,7 +94,7 @@ export default function AdminBroadcastPage() {
                         <div className="pt-4">
                             <Button type="submit" className="w-full font-bold h-12 text-lg" disabled={sending}>
                                 {sending ? <Loader2 className="animate-spin mr-2" /> : <Send className="w-5 h-5 mr-2" />}
-                                KIRIM BROADCAST
+                                SEND BROADCAST
                             </Button>
                         </div>
                     </form>

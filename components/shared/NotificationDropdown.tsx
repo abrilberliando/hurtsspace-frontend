@@ -42,7 +42,7 @@ export default function NotificationDropdown() {
         setNotifications(res.data.notifications);
         setUnreadCount(res.data.unread_count);
       } catch (error) {
-        console.error("Gagal load notif", error);
+        console.error("Failed to load notifications", error);
       }
     };
 
@@ -66,7 +66,7 @@ export default function NotificationDropdown() {
         prev.map((n) => ({ ...n, read_at: new Date().toISOString() }))
       );
     } catch (error) {
-      console.error("Gagal mark as read", error);
+      console.error("Failed to mark as read", error);
     }
   };
 
@@ -104,7 +104,7 @@ export default function NotificationDropdown() {
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center text-muted-foreground">
               <Bell className="w-8 h-8 mb-2 opacity-20" />
-              <p className="text-xs">Belum ada notifikasi, G.</p>
+              <p className="text-xs">No notifications yet.</p>
             </div>
           ) : (
             <div className="divide-y divide-border">

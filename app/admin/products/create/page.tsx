@@ -29,7 +29,7 @@ export default function CreateProductPage() {
             headers: { "Content-Type": "multipart/form-data" },
         });
         
-        toast.success("Produk Berhasil Ditambahkan!");
+        toast.success("Product Added Successfully!");
         setUploadSuccess(true); setLoading(false);
 
     } catch (error) {
@@ -40,13 +40,13 @@ export default function CreateProductPage() {
             if (errorData) {
                 const firstErrorKey = Object.keys(errorData)[0];
                 const firstErrorMessage = errorData[firstErrorKey][0];
-                toast.error(`Gagal: ${firstErrorMessage}`);
+                toast.error(`Failed: ${firstErrorMessage}`);
             } else {
-                toast.error("Data tidak valid.");
+                toast.error("Invalid data.");
             }
         } else {
             // Server error or upload error -> Show Overlay
-            setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
+            setUploadError(err.response?.data?.message || "Server error occurred while uploading.");
         }
     }
   };
@@ -74,7 +74,7 @@ export default function CreateProductPage() {
             </Button>
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Add New Product</h1>
-                <p className="text-sm text-muted-foreground">Upload foto terbaik lo biar cepet laku.</p>
+                <p className="text-sm text-muted-foreground">Upload your best photos to sell quickly.</p>
             </div>
         </div>
         

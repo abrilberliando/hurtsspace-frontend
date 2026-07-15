@@ -35,7 +35,7 @@ interface VideoData {
     link_url: string | null;
 }
 
-// Normalize URL: tambahkan https:// jika belum ada protocol
+// Normalize URL: add https:// if protocol is missing
 function normalizeUrl(url: string): string {
     if (!url) return '#';
     if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)) return url;
@@ -57,9 +57,9 @@ export default function LinktreePage() {
                 ]);
                 setSettings(linktreeRes.data.settings);
                 setLinks(linktreeRes.data.links);
-                setVideo(videoRes.data.data); // bisa null jika tidak ada video aktif
+                setVideo(videoRes.data.data); // can be null if there is no active video
             } catch (error) {
-                console.error("Gagal load data", error);
+                console.error("Failed to load data", error);
             } finally {
                 setLoading(false);
             }

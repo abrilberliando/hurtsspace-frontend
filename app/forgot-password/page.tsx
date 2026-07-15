@@ -21,29 +21,29 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      // Hit endpoint Laravel yang udah kita buat di PasswordResetController
+      // Hit the Laravel endpoint created in PasswordResetController
       await api.post("/forgot-password", { email });
       
       setIsSent(true);
-      toast.success("Link Terkirim! 📧", { 
-        description: "Cek inbox atau spam folder lo sekarang." 
+      toast.success("Link Sent! 📧", { 
+        description: "Check your inbox or spam folder now." 
       });
 
     } catch (err: unknown) {
       const error = err as AxiosError<{ message: string }>;
       console.error(error);
       
-      // Biar aman, biasanya backend gak ngasih tau kalau email gak ada (security reason)
-      // Tapi kalau ada error lain, kita tampilin
-      toast.error("Gagal Kirim", { 
-        description: error.response?.data?.message || "Terjadi kesalahan, coba lagi nanti." 
+      // For security, backend usually doesn't reveal if email doesn't exist
+      // But if there are other errors, display them
+      toast.error("Failed to Send", { 
+        description: error.response?.data?.message || "An error occurred, try again later." 
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // TAMPILAN SUKSES (Cek Email)
+  // SUCCESS VIEW (Check Email)
   if (isSent) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -53,18 +53,18 @@ export default function ForgotPasswordPage() {
             </div>
             <h2 className="text-2xl font-black uppercase text-green-700 mb-2">Check Your Inbox</h2>
             <p className="text-muted-foreground mb-6 text-sm">
-                Kami udah kirim link reset password ke <strong>{email}</strong>. <br/>
-                Klik link di email itu buat bikin password baru.
+                We have sent a password reset link to <strong>{email}</strong>. <br/>
+                Click the link in the email to create a new password.
             </p>
             <div className="flex flex-col gap-3">
                 <Button asChild variant="outline" className="w-full h-11 font-bold">
-                    <Link href="/login">Kembali ke Login</Link>
+                    <Link href="/login">Back to Login</Link>
                 </Button>
                 <button 
                     onClick={() => setIsSent(false)}
                     className="text-xs text-muted-foreground hover:text-foreground underline"
                 >
-                    Salah email? Kirim ulang
+                    Wrong email? Resend
                 </button>
             </div>
         </Card>
@@ -72,14 +72,14 @@ export default function ForgotPasswordPage() {
     );
   }
 
-  // TAMPILAN FORM INPUT EMAIL
+  // EMAIL INPUT FORM VIEW
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-10">
       <Card className="w-full max-w-md border-border shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-black uppercase tracking-tighter">Forgot Password?</CardTitle>
           <CardDescription>
-            Santai G, masukin email lo di bawah. Kita kirim link resetnya.
+            Enter your email below and we will send you a reset link.
           </CardDescription>
         </CardHeader>
         <CardContent>

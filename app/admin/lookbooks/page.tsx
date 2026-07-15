@@ -26,24 +26,24 @@ export default function AdminLookbooksPage() {
     try {
       const res = await api.get("/admin/lookbooks");
       setLookbooks(res.data.data);
-    } catch { toast.error("Gagal load lookbooks"); }
+    } catch { toast.error("Failed to load lookbooks"); }
   }, []);
 
   // 👇 PERBAIKAN DISINI:
   // 1. Kosongin array dependency jadi []
-  // 2. Tambah komentar eslint-disable
+  // 2. Add eslint-disable comment
   useEffect(() => { 
       fetchLookbooks(); 
       // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Hapus lookbook ini?")) return;
+    if (!confirm("Delete this lookbook?")) return;
     try {
         await api.delete(`/admin/lookbooks/${id}`);
-        toast.success("Terhapus!");
+        toast.success("Deleted!");
         fetchLookbooks();
-    } catch { toast.error("Gagal hapus."); }
+    } catch { toast.error("Failed to delete."); }
   };
 
   return (

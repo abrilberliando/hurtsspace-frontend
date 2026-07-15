@@ -17,19 +17,19 @@ export default function PaymentCheckPage() {
             Status Pembayaran
           </CardTitle>
           <CardDescription className="text-base mt-2">
-            Transaksi anda belum terkonfirmasi selesai atau anda menutup halaman pembayaran.
+            Your transaction has not been confirmed complete or you closed the payment page.
           </CardDescription>
         </CardHeader>
         
         <CardContent className="space-y-4">
           <div className="bg-muted/50 p-4 rounded-lg border border-border text-sm text-left">
-            <p className="font-bold mb-2">Udah transfer / bayar?</p>
+            <p className="font-bold mb-2">Already transferred / paid?</p>
             <p className="text-muted-foreground mb-4">
-              Sistem kami kadang butuh waktu beberapa menit buat verifikasi pembayaran anda. Cek status terbaru di halaman <strong>Order History</strong>.
+              Our system sometimes needs a few minutes to verify your payment. Check the latest status on the <strong>Order History</strong>.
             </p>
-            <p className="font-bold mb-2">Belum bayar?</p>
+            <p className="font-bold mb-2">Haven't paid?</p>
             <p className="text-muted-foreground">
-              Santai, pesanan anda udah tersimpan. Anda bisa lanjutin pembayaran lewat halaman <strong>Order History</strong> juga kok.
+              Relax, your order has been saved. You can continue payment via the <strong>Order History</strong> juga kok.
             </p>
           </div>
         </CardContent>

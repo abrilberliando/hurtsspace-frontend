@@ -78,7 +78,7 @@ export default function AdminLinktreePage() {
             setBgPreview(res.data.settings.background_image);
             setLinks(res.data.links);
         } catch (error) {
-            toast.error("Gagal load data linktree");
+            toast.error("Failed to load linktree data");
         } finally {
             setLoading(false);
         }

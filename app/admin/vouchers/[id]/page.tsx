@@ -48,10 +48,10 @@ export default function VoucherDetailPage() {
                 setVoucher(voucherData);
                 setAllProducts(pRes.data.data);
                 
-                // Ambil ID produk yang emang udah nempel di voucher ini
+                // Get product IDs that are already attached to this voucher
                 setSelectedIds(voucherData.products.map((p: Product) => p.id));
             } catch {
-                toast.error("Gagal tarik data dari server.");
+                toast.error("Failed to fetch data from server.");
             } finally {
                 setLoading(false);
             }
@@ -59,7 +59,7 @@ export default function VoucherDetailPage() {
         fetchData();
     }, [id]);
 
-    // 2. SEARCH LOGIC (Biar gak pusing kalau barang ribuan)
+    // 2. SEARCH LOGIC (To avoid headache if there are thousands of items)
     const filteredProducts = useMemo(() => {
         return allProducts.filter(p => 
             p.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -84,7 +84,7 @@ export default function VoucherDetailPage() {
             });
             toast.success("Voucher rules updated! 🔥");
         } catch {
-            toast.error("Gagal sinkronisasi produk.");
+            toast.error("Failed to sync products.");
         } finally {
             setSaving(false);
         }
@@ -136,7 +136,7 @@ export default function VoucherDetailPage() {
                 <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                     <Input 
-                        placeholder="CARI PRODUK (CONTOH: DECK, WHEELS...)" 
+                        placeholder="SEARCH PRODUCT (EXAMPLE: DECK, WHEELS...)" 
                         className="pl-12 h-14 border-2 border-black rounded-none font-bold uppercase tracking-widest focus-visible:ring-0 focus-visible:border-primary"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -147,7 +147,7 @@ export default function VoucherDetailPage() {
                     <CardHeader className="bg-zinc-100 border-b-2 border-black py-4">
                         <CardTitle className="text-xs font-black flex items-center gap-3 uppercase tracking-widest">
                             <PackageSearch className="w-5 h-5" /> 
-                            Daftar Produk ({selectedIds.length} terpilih)
+                            Product List ({selectedIds.length} selected)
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -172,7 +172,7 @@ export default function VoucherDetailPage() {
                                 ))
                             ) : (
                                 <div className="p-20 text-center text-zinc-400 font-black uppercase tracking-widest italic text-xs">
-                                    Barang nggak ketemu G! Coba cari yang lain.
+                                    Product not found G! Try searching for another.
                                 </div>
                             )}
                         </div>
@@ -181,7 +181,7 @@ export default function VoucherDetailPage() {
             </div>
             
             <p className="text-[10px] text-center text-zinc-400 font-bold uppercase tracking-widest italic">
-                *Hanya produk yang dichecklist yang bakal dapet diskon pas pake voucher ini.
+                *Only checked products will get the discount when using this voucher.
             </p>
         </div>
     );

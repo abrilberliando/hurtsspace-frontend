@@ -58,7 +58,7 @@ export default function CreateBannerPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!imageLeft || !imageRight) return toast.error("Wajib upload kedua gambar (Kiri & Kanan)!");
+        if (!imageLeft || !imageRight) return toast.error("Both images (Left & Right) are required!");
 
         setLoading(true);
         setUploadError(null);
@@ -74,15 +74,15 @@ export default function CreateBannerPage() {
             await api.post("/admin/banners", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
-            toast.success("Banner berhasil dipublish!");
+            toast.success("Banner published successfully!");
             setUploadSuccess(true); setLoading(false);
         } catch (error) {
             const err = error as AxiosError<{ message: string }>;
             if (err.response?.status === 422) {
                 setLoading(false);
-                toast.error("Data tidak valid, mohon periksa inputan.");
+                toast.error("Invalid data, please check your inputs.");
             } else {
-                setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
+                setUploadError(err.response?.data?.message || "Server error occurred while uploading.");
             }
         }
     };
@@ -132,11 +132,11 @@ export default function CreateBannerPage() {
                                 <Label>Position</Label>
                                 <Select value={position} onValueChange={setPosition}>
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Pilih Slot" />
+                                        <SelectValue placeholder="Select Slot" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="1">Slot 1 (Hero/Atas)</SelectItem>
-                                        <SelectItem value="2">Slot 2 (Tengah/Bawah)</SelectItem>
+                                        <SelectItem value="1">Slot 1 (Hero/Top)</SelectItem>
+                                        <SelectItem value="2">Slot 2 (Middle/Bottom)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -150,7 +150,7 @@ export default function CreateBannerPage() {
                                 onChange={e => setLinkUrl(e.target.value)} 
                                 required 
                             />
-                            <p className="text-[10px] text-muted-foreground">Contoh: /shop, /lookbook, atau /products/nama-slug</p>
+                            <p className="text-[10px] text-muted-foreground">Example: /shop, /lookbook, or /products/slug-name</p>
                         </div>
 
                         {/* Area Upload Gambar */}

@@ -46,7 +46,7 @@ export default function EditProductPage() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [initialData, setInitialData] = useState<ProductData | null>(null);
 
-  // 1. Fetch Data Produk Lama
+  // 1. Fetch Old Product Data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -66,7 +66,7 @@ export default function EditProductPage() {
           selected_sizes: product.variants.map((v: any) => v.size),
         });
       } catch {
-        toast.error("Gagal memuat data produk lama.");
+        toast.error("Failed to load old product data.");
         router.push("/admin/products"); 
       } finally {
         setLoadingForm(false);
@@ -87,7 +87,7 @@ export default function EditProductPage() {
             headers: { "Content-Type": "multipart/form-data" }
         });
 
-        toast.success("Produk Berhasil Diupdate!");
+        toast.success("Product Successfully Updated!");
         setUploadSuccess(true);
         setSubmitting(false);
 
@@ -100,9 +100,9 @@ export default function EditProductPage() {
             if (errorData) {
                 const firstErrorKey = Object.keys(errorData)[0];
                 const firstErrorMessage = errorData[firstErrorKey][0];
-                toast.error(`Gagal: ${firstErrorMessage}`);
+                toast.error(`Failed: ${firstErrorMessage}`);
             } else {
-                toast.error("Data tidak valid, periksa kembali inputan.");
+                toast.error("Invalid data, please check your input.");
             }
         } else {
             setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
@@ -150,7 +150,7 @@ export default function EditProductPage() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Edit Product</h1>
                 <p className="text-sm text-muted-foreground">
-                    Perbarui informasi produk: <span className="font-semibold text-foreground">{initialData.name}</span>
+                    Update product information: <span className="font-semibold text-foreground">{initialData.name}</span>
                 </p>
             </div>
         </div>

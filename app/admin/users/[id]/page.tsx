@@ -54,7 +54,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
             setUser(res.data.data);
             setRole(res.data.data.role);
         } catch (error) {
-            toast.error("Gagal memuat data pengguna");
+            toast.error("Failed to load user data");
             router.push("/admin/users");
         } finally {
             setLoading(false);
@@ -65,10 +65,10 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         setSaving(true);
         try {
             await api.put(`/admin/users/${id}`, { role });
-            toast.success("Role pengguna berhasil diperbarui");
+            toast.success("User role successfully updated");
             fetchUser(); // reload data
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Gagal memperbarui role");
+            toast.error(error.response?.data?.message || "Failed to update role");
         } finally {
             setSaving(false);
         }
@@ -102,7 +102,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                     </Link>
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Detail Pengguna</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">User Details</h1>
                     <p className="text-muted-foreground">ID: {user.id}</p>
                 </div>
                 {user.deleted_at && (
@@ -117,12 +117,12 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                     <CardHeader>
                         <CardTitle className="text-lg flex items-center gap-2">
                             <UserIcon className="w-5 h-5" />
-                            Profil
+                            Profile
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="flex flex-col gap-1">
-                            <p className="text-sm text-muted-foreground font-medium">Nama Lengkap</p>
+                            <p className="text-sm text-muted-foreground font-medium">Full Name</p>
                             <p className="font-semibold text-lg">{user.name}</p>
                         </div>
                         <div className="flex flex-col gap-1">
@@ -133,15 +133,15 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                         </div>
                         <div className="flex flex-col gap-1">
                             <p className="text-sm text-muted-foreground font-medium flex items-center gap-2">
-                                <Phone className="w-4 h-4" /> No. Telepon
+                                <Phone className="w-4 h-4" /> Phone Number
                             </p>
                             <p>{user.phone || "-"}</p>
                         </div>
                         <div className="flex flex-col gap-1">
                             <p className="text-sm text-muted-foreground font-medium flex items-center gap-2">
-                                <MapPin className="w-4 h-4" /> Alamat Utama
+                                <MapPin className="w-4 h-4" /> Main Address
                             </p>
-                            <p className="text-sm">{user.address_detail || "Belum ada alamat"}</p>
+                            <p className="text-sm">{user.address_detail || "No address yet"}</p>
                         </div>
                         <div className="flex flex-col gap-1">
                             <p className="text-sm text-muted-foreground font-medium flex items-center gap-2">
@@ -151,7 +151,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                         </div>
                         <div className="flex flex-col gap-1">
                             <p className="text-sm text-muted-foreground font-medium flex items-center gap-2">
-                                <Clock className="w-4 h-4" /> Bergabung Sejak
+                                <Clock className="w-4 h-4" /> Joined Since
                             </p>
                             <p className="text-sm">{formatDate(user.created_at)}</p>
                         </div>
@@ -164,14 +164,14 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                     {/* KONTROL ROLE */}
                     <Card className="border-border">
                         <CardHeader>
-                            <CardTitle className="text-lg">Kontrol Akses (Role)</CardTitle>
-                            <CardDescription>Ubah tingkat akses pengguna di dalam sistem</CardDescription>
+                            <CardTitle className="text-lg">Access Control (Role)</CardTitle>
+                            <CardDescription>Change the user's access level in the system</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center gap-4">
                                 <Select value={role} onValueChange={setRole} disabled={user.deleted_at !== null}>
                                     <SelectTrigger className="w-full sm:w-[200px]">
-                                        <SelectValue placeholder="Pilih Role" />
+                                        <SelectValue placeholder="Select Role" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="admin">Admin</SelectItem>
@@ -182,12 +182,12 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                                     onClick={handleUpdateRole} 
                                     disabled={role === user.role || saving || user.deleted_at !== null}
                                 >
-                                    {saving ? "Menyimpan..." : "Simpan Perubahan"}
+                                    {saving ? "Saving..." : "Save Changes"}
                                 </Button>
                             </div>
                             {user.deleted_at && (
                                 <p className="text-sm text-destructive mt-3">
-                                    * Pengguna ini sedang di-suspend, role tidak bisa diubah.
+                                    * This user is suspended, role cannot be changed.
                                 </p>
                             )}
                         </CardContent>
@@ -198,7 +198,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                         <CardHeader>
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <History className="w-5 h-5" />
-                                Riwayat Pembelian
+                                Purchase History
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -207,7 +207,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Invoice</TableHead>
-                                            <TableHead>Tanggal</TableHead>
+                                            <TableHead>Date</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead className="text-right">Total</TableHead>
                                         </TableRow>
@@ -216,7 +216,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                                         {user.orders.length === 0 ? (
                                             <TableRow>
                                                 <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                                                    Pengguna ini belum pernah melakukan pembelian.
+                                                    This user has never made a purchase.
                                                 </TableCell>
                                             </TableRow>
                                         ) : (

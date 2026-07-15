@@ -6,10 +6,10 @@ import { useMemo } from "react";
 export default function MidtransScriptLoader() {
 
   // Ambil mode dari ENV (Nilai harus berupa STRING: 'true' atau 'false')
-  // Ini yang menentukan apakah Midtrans pop-up lo jadi SANDBOX atau LIVE.
+  // This determines if your Midtrans pop-up is SANDBOX or LIVE.
   const isProduction = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true';
 
-  // Pilih URL Snap berdasarkan mode produksi
+  // Select Snap URL based on production mode
   const snapUrl = useMemo(() => {
     return isProduction
       ? 'https://app.midtrans.com/snap/snap.js' // URL LIVE (Saat MIDTRANS_IS_PRODUCTION=true)
@@ -19,8 +19,8 @@ export default function MidtransScriptLoader() {
 
   return (
     <>
-      {/* Script ini akan me-load URL Snap yang dinamis.
-          data-client-key harus sesuai dengan mode yang dipilih di Server Key Laravel lo.
+      {/* This script will load the dynamic Snap URL.
+          data-client-key must match the mode selected in your Laravel Server Key.
       */}
       <Script 
         src={snapUrl}

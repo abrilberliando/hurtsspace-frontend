@@ -15,7 +15,7 @@
   }
 }
 
-/* 👇 INI YANG BIKIN GLOBAL HILANG TAPI BISA SCROLL */
+/* 👇 THIS IS WHAT MAKES GLOBAL DISAPPEAR BUT CAN STILL SCROLL */
 @layer base {
   html::-webkit-scrollbar {
     display: none;

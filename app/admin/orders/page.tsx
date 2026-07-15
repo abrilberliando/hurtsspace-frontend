@@ -80,7 +80,7 @@ export default function AdminOrdersPage() {
       const res = await api.get("/admin/orders");
       setOrders(res.data.data.data || res.data.data); 
     } catch {
-      toast.error("Gagal load order admin.");
+      toast.error("Failed to load admin orders.");
     } finally {
       setLoading(false);
     }
@@ -109,7 +109,7 @@ export default function AdminOrdersPage() {
       if (items.length === 0) return "-";
       const firstItem = `${items[0].product.name} (${items[0].variant.size})`;
       if (items.length === 1) return firstItem;
-      return `${firstItem} + ${items.length - 1} lainnya`;
+      return `${firstItem} + ${items.length - 1} more`;
   };
 
   const filteredOrders = useMemo(() => {
@@ -134,25 +134,25 @@ export default function AdminOrdersPage() {
 
 
   const handleShipOrder = async () => {
-    if (!selectedOrder || !resiInput) return toast.error("Resi wajib diisi!");
+    if (!selectedOrder || !resiInput) return toast.error("Receipt number is required!");
 
     try {
         await api.put(`/admin/orders/${selectedOrder.id}`, {
             status: 'shipped',
             shipping_resi: resiInput
         });
-        toast.success(`Order ${selectedOrder.invoice_number} dikirim!`);
+        toast.success(`Order ${selectedOrder.invoice_number} shipped!`);
         setIsResiDialogOpen(false);
         setResiInput("");
         fetchOrders(); 
     } catch {
-        toast.error("Gagal update status.");
+        toast.error("Failed to update status.");
     }
   };
 
  // 👇 UPDATE: PRINT LABEL LEBIH GEDE & DETAIL (RESIZE UP)
   const handlePrintLabel = (order: Order) => {
-    // URL Logo (Simpan file 'logo.png' di folder 'public' project Next.js lo)
+    // Logo URL (Save 'logo.png' in the 'public' folder of your Next.js project)
     const logoUrl = window.location.origin + "/logo.png"; 
 
     const printWindow = window.open('', '', 'width=900,height=700');
@@ -205,13 +205,13 @@ export default function AdminOrdersPage() {
                         <img src="${logoUrl}" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" />
                         <div class="fallback-logo" style="display:none">HURTSSPACE</div>
                         
-                        <div class="courier-badge">${order.shipping_courier || 'KURIR'} - ${order.shipping_service || 'REG'}</div>
+                        <div class="courier-badge">${order.shipping_courier || 'COURIER'} - ${order.shipping_service || 'REG'}</div>
                         <div class="inv-number">INV: ${order.invoice_number}</div>
                     </div>
 
                     <!-- Layout Penerima -->
                     <div class="section">
-                        <div class="section-header">PENERIMA (RECIPIENT)</div>
+                        <div class="section-header">RECIPIENT</div>
                         <div class="recipient-row" style="margin-top: 5px;">
                             <span class="recipient-val address-val">${order.shipping_address}</span>
                         </div>
@@ -219,18 +219,18 @@ export default function AdminOrdersPage() {
 
                     <!-- Layout Pengirim -->
                     <div class="section" style="border-style: dashed;">
-                        <div class="section-header" style="background: #444;">PENGIRIM (SENDER)</div>
+                        <div class="section-header" style="background: #444;">SENDER</div>
                         <div class="sender-info">
                             <strong>HURTSSPACE OFFICIAL STORE</strong><br>
                             0812-3456-7890<br>
-                            Surabaya, Jawa Timur
+                            Surabaya, East Java
                         </div>
                     </div>
 
                     <div class="section" style="border-color: #666; background: #fafafa;">
-                        <div class="section-header" style="background: #666;">CATATAN PEMBELI (ORDER NOTE)</div>
+                        <div class="section-header" style="background: #666;">ORDER NOTE</div>
                         <div style="font-size: 14px; font-weight: bold; font-style: italic; color: #000; padding: 5px 0;">
-                            ${order.note ? order.note : '- Tidak ada catatan -'}
+                            ${order.note ? order.note : '- No note -'}
                         </div>
                     </div>
 
@@ -239,7 +239,7 @@ export default function AdminOrdersPage() {
                         <table class="items-table">
                             <thead>
                                 <tr>
-                                    <th>Produk</th>
+                                    <th>Product</th>
                                     <th width="15%">Size</th>
                                     <th width="10%">Qty</th>
                                 </tr>
@@ -253,7 +253,7 @@ export default function AdminOrdersPage() {
                                     </tr>
                                 `).join('')}
                                 <tr>
-                                    <td colspan="2" style="text-align:right; font-weight:bold;">Ongkos Kirim</td>
+                                    <td colspan="2" style="text-align:right; font-weight:bold;">Shipping Cost</td>
                                     <td style="text-align:center;">${formatPrice(order.shipping_cost || 0)}</td>
                                 </tr>
                             </tbody>
@@ -272,7 +272,7 @@ export default function AdminOrdersPage() {
         `);
         printWindow.document.close();
     } else {
-        toast.error("Pop-up diblokir browser, G! Izinkan pop-up dulu.");
+        toast.error("Pop-up blocked by browser, G! Allow pop-ups first.");
     }
   };
 
@@ -293,7 +293,7 @@ export default function AdminOrdersPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Manage Orders</h1>
-                <p className="text-sm text-muted-foreground">List pesanan masuk & status pengiriman.</p>
+                <p className="text-sm text-muted-foreground">List of incoming orders & shipping status.</p>
             </div>
             <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchOrders(); }}>Refresh Data</Button>
         </div>
@@ -304,7 +304,7 @@ export default function AdminOrdersPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                     type="text"
-                    placeholder="Cari Invoice / Nama User..."
+                    placeholder="Search Invoice / User Name..."
                     className="pl-9"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -318,11 +318,11 @@ export default function AdminOrdersPage() {
                     onValueChange={(val: string) => setSortOrder(val as "newest" | "oldest")}
                 >
                     <SelectTrigger className="w-full md:w-[180px]">
-                        <SelectValue placeholder="Urutkan" />
+                        <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="newest" className="cursor-pointer">Terbaru</SelectItem>
-                        <SelectItem value="oldest" className="cursor-pointer">Terlama</SelectItem>
+                        <SelectItem value="newest" className="cursor-pointer">Newest</SelectItem>
+                        <SelectItem value="oldest" className="cursor-pointer">Oldest</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -344,7 +344,7 @@ export default function AdminOrdersPage() {
                     </thead>
                     <tbody className="divide-y divide-border">
                         {filteredOrders.length === 0 ? (
-                            <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Tidak ada pesanan ditemukan.</td></tr>
+                            <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No orders found.</td></tr>
                         ) : (
                             filteredOrders.map((order) => (
                                 <tr key={order.id} className="hover:bg-muted/50 transition">
@@ -399,7 +399,7 @@ export default function AdminOrdersPage() {
         {/* --- MOBILE VIEW (COMPACT CARD) --- */}
         <div className="block md:hidden space-y-3">
             {filteredOrders.length === 0 ? (
-                <div className="p-6 text-center border rounded-lg bg-card text-muted-foreground">Tidak ada pesanan.</div>
+                <div className="p-6 text-center border rounded-lg bg-card text-muted-foreground">No orders.</div>
             ) : (
                 filteredOrders.map((order) => (
                     <div key={order.id} className="bg-card border border-border rounded-lg p-4 shadow-sm space-y-3">
@@ -460,22 +460,22 @@ export default function AdminOrdersPage() {
         <Dialog open={isResiDialogOpen} onOpenChange={setIsResiDialogOpen}>
             <DialogContent className="w-[95vw] rounded-lg sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Input Nomor Resi</DialogTitle>
+                    <DialogTitle>Input Receipt Number</DialogTitle>
                     <DialogDescription>
-                          Masukkan nomor resi untuk order <b>{selectedOrder?.invoice_number}</b>.
+                          Enter the receipt number for order <b>{selectedOrder?.invoice_number}</b>.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <Label className="mb-2 block">No. Resi / AWB</Label>
+                    <Label className="mb-2 block">Receipt Number / AWB</Label>
                     <Input 
                         value={resiInput} 
                         onChange={(e) => setResiInput(e.target.value)}
-                        placeholder="Contoh: JP1234567890"
+                        placeholder="Example: JP1234567890"
                     />
                 </div>
                 <DialogFooter>
-                    <Button variant="ghost" onClick={() => setIsResiDialogOpen(false)}>Batal</Button>
-                    <Button onClick={handleShipOrder} className="bg-blue-600 hover:bg-blue-700 text-white">Simpan & Kirim</Button>
+                    <Button variant="ghost" onClick={() => setIsResiDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleShipOrder} className="bg-blue-600 hover:bg-blue-700 text-white">Save & Ship</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -485,7 +485,7 @@ export default function AdminOrdersPage() {
             <DialogContent className="w-[95vw] rounded-lg max-h-[90vh] overflow-y-auto sm:max-w-2xl bg-card p-4 sm:p-6">
                 <DialogHeader className="mb-4">
                     <DialogTitle className="flex items-center gap-2 text-xl">
-                        <Package className="w-5 h-5" /> Detail Pesanan
+                        <Package className="w-5 h-5" /> Order Details
                     </DialogTitle>
                     <DialogDescription>Invoice: {selectedOrder?.invoice_number}</DialogDescription>
                 </DialogHeader>
@@ -495,13 +495,13 @@ export default function AdminOrdersPage() {
                         {/* 👇 UPDATED: DETAIL HARGA LENGKAP */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                             <div className="space-y-1">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Penerima</Label>
+                                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Recipient</Label>
                                 <div className="flex items-center gap-2 font-bold text-base"><User className="w-4 h-4" /> {selectedOrder.user.name}</div>
                                 <div className="text-sm">{selectedOrder.user.email}</div>
                                 <div className="text-sm font-medium text-muted-foreground">{selectedOrder.user.phone}</div>
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Rincian Biaya</Label>
+                                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Cost Details</Label>
                                 <div className="space-y-1 bg-muted/30 p-3 rounded border border-border/50 text-sm">
                                      {/* Hitung Subtotal Item */}
                                      <div className="flex justify-between">
@@ -509,7 +509,7 @@ export default function AdminOrdersPage() {
                                         <span>{formatPrice(Number(selectedOrder.total_price) - Number(selectedOrder.shipping_cost || 0))}</span>
                                      </div>
                                      <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Ongkir ({selectedOrder.shipping_courier || 'Kurir'}):</span>
+                                        <span className="text-muted-foreground">Shipping ({selectedOrder.shipping_courier || 'Courier'}):</span>
                                         <span>{formatPrice(selectedOrder.shipping_cost || 0)}</span>
                                      </div>
                                      <div className="border-t border-border/50 my-1"></div>
@@ -527,7 +527,7 @@ export default function AdminOrdersPage() {
                         </div>
                         
                         <div className="space-y-1">
-                             <Label className="text-xs text-muted-foreground uppercase tracking-wider">Alamat Pengiriman</Label>
+                             <Label className="text-xs text-muted-foreground uppercase tracking-wider">Shipping Address</Label>
                              <div className="flex gap-2 text-sm bg-muted p-3 rounded-md border border-border">
                                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
                                 <p className="leading-relaxed">{selectedOrder.shipping_address}</p>
@@ -535,16 +535,16 @@ export default function AdminOrdersPage() {
                         </div>
 
                         <div className="space-y-1">
-                            <Label className="text-xs font-bold text-blue-600 uppercase tracking-wider">Catatan Pembeli</Label>
+                            <Label className="text-xs font-bold text-blue-600 uppercase tracking-wider">Buyer's Note</Label>
                             <div className="text-sm bg-blue-50/50 p-3 rounded-md border border-blue-100 italic text-zinc-700">
-                                {selectedOrder.note || "Tidak ada catatan dari pembeli."}
+                                {selectedOrder.note || "No note from the buyer."}
                             </div>
                         </div>
 
                         <Separator />
 
                         <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Daftar Barang</Label>
+                            <Label className="text-xs text-muted-foreground uppercase tracking-wider">Item List</Label>
                             <div className="border border-border rounded-md divide-y divide-border max-h-48 overflow-y-auto">
                                 {selectedOrder.items.map((item, idx) => (
                                     <div key={idx} className="p-3 flex justify-between items-center text-sm">
@@ -561,9 +561,9 @@ export default function AdminOrdersPage() {
                 )}
 
                 <DialogFooter className="gap-2 sm:gap-0 mt-6 flex-col-reverse sm:flex-row">
-                    <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsDetailDialogOpen(false)}>Tutup</Button>
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsDetailDialogOpen(false)}>Close</Button>
                     <Button onClick={() => selectedOrder && handlePrintLabel(selectedOrder)} className="w-full sm:w-auto md:ml-2 bg-zinc-800 text-white hover:bg-zinc-900">
-                        <Printer className="w-4 h-4 mr-2" /> Cetak Label
+                        <Printer className="w-4 h-4 mr-2" /> Print Label
                     </Button>
                 </DialogFooter>
             </DialogContent>

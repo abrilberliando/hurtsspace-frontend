@@ -60,11 +60,11 @@ export default function DashboardProfile() {
          login(updatedUser, token); 
       }
 
-      toast.success("Profile Updated!", { description: "Data diri lo aman terkendali." });
+      toast.success("Profile Updated!", { description: "Your personal data is safe and secured." });
 
     } catch (error) {
       const err = error as AxiosError<{ message: string }>;
-      toast.error(err.response?.data?.message || "Gagal Update Profile");
+      toast.error(err.response?.data?.message || "Failed to Update Profile");
     } finally {
       setLoadingProfile(false);
     }
@@ -84,7 +84,7 @@ export default function DashboardProfile() {
             _method: "PUT"
         };
 
-        const res = await api.post("/user", payload); // Pake endpoint /user yang sama
+        const res = await api.post("/user", payload); // Use the same /user endpoint
         
         if (user) {
              const updatedUser = { ...user, ...res.data.user };
@@ -92,9 +92,9 @@ export default function DashboardProfile() {
              login(updatedUser, token);
         }
 
-        toast.success("Alamat Berhasil Disimpan!", { description: "Siap buat checkout barang baru." });
+        toast.success("Address Saved Successfully!", { description: "Ready to checkout new items." });
     } catch {
-        toast.error("Gagal simpen alamat.");
+        toast.error("Failed to save address.");
     } finally {
         setLoadingAddress(false);
     }
@@ -102,7 +102,7 @@ export default function DashboardProfile() {
 
   if (!user) return null;
 
-  // Data default buat form alamat
+  // Default data for address form
   const addressDefaultValues = {
       name: user.name,
       phone: user.phone || "",
@@ -144,7 +144,7 @@ export default function DashboardProfile() {
                         </div>
                         <div>
                             <h3 className="text-lg font-bold">Personal Information</h3>
-                            <p className="text-sm text-muted-foreground">Atur data diri utama lo disini.</p>
+                            <p className="text-sm text-muted-foreground">Manage your main personal data here.</p>
                         </div>
                     </div>
 
@@ -161,7 +161,7 @@ export default function DashboardProfile() {
                             <div className="space-y-2 md:col-span-2">
                                 <Label>Email Address</Label>
                                 <Input value={email} disabled readOnly className="bg-muted/50 cursor-not-allowed h-11" />
-                                <p className="text-[10px] text-muted-foreground pt-1">Email dikunci untuk keamanan akun.</p>
+                                <p className="text-[10px] text-muted-foreground pt-1">Email is locked for account security.</p>
                             </div>
                         </div>
 
@@ -183,7 +183,7 @@ export default function DashboardProfile() {
                         </div>
                         <div>
                             <h3 className="text-lg font-bold">Shipping Address</h3>
-                            <p className="text-sm text-muted-foreground">Alamat ini bakal otomatis kepake pas checkout.</p>
+                            <p className="text-sm text-muted-foreground">This address will be automatically used during checkout.</p>
                         </div>
                     </div>
 

@@ -25,13 +25,13 @@ export default function AnnouncementBar() {
         const data = res.data.data || [];
         setTexts(data);
       } catch (error) {
-        console.error("Gagal load running text", error);
+        console.error("Failed to load running text", error);
       }
     };
     fetchData();
   }, []);
 
-  // Kalau gak ada teks aktif atau user nge-close, jangan render apa-apa
+  // If no active text or user closed it, do not render anything
   if (texts.length === 0 || !isVisible) return null;
 
   return (

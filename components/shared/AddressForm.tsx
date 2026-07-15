@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Search, MapPin, X } from "lucide-react";
 import { toast } from "sonner";
 
-// Interface Data yang akan dikirim keluar
+// Data Interface to be sent out
 export interface AddressData {
   name: string;
   phone: string;
@@ -28,12 +28,12 @@ interface Area {
 
 interface AddressFormProps {
   defaultValues?: Partial<AddressData>; // Data awal (opsional)
-  onSave: (data: AddressData) => void;  // Fungsi yang dipanggil pas tombol diklik
+  onSave: (data: AddressData) => void;  // Function called when button is clicked
   isLoading?: boolean;
   buttonText?: string;
 }
 
-export default function AddressForm({ defaultValues, onSave, isLoading, buttonText = "SIMPAN ALAMAT" }: AddressFormProps) {
+export default function AddressForm({ defaultValues, onSave, isLoading, buttonText = "SAVE ADDRESS" }: AddressFormProps) {
   // State Form
   const [name, setName] = useState(defaultValues?.name || "");
   const [phone, setPhone] = useState(defaultValues?.phone || "");
@@ -46,7 +46,7 @@ export default function AddressForm({ defaultValues, onSave, isLoading, buttonTe
   const [selectedAreaName, setSelectedAreaName] = useState(defaultValues?.areaName || "");
   const [loadingArea, setLoadingArea] = useState(false);
 
-  // Update state kalau defaultValues berubah (misal data user baru keload)
+  // Update state if defaultValues change (e.g. new user data loaded)
   useEffect(() => {
     if (defaultValues) {
         setName(defaultValues.name || "");
@@ -59,19 +59,19 @@ export default function AddressForm({ defaultValues, onSave, isLoading, buttonTe
 
   // Logic Cari Kota
   const handleSearchArea = async () => {
-    if (areaQuery.length < 3) return toast.error("Ketik minimal 3 huruf, G!");
+    if (areaQuery.length < 3) return toast.error("Type at least 3 letters!");
     setLoadingArea(true);
     try {
       const res = await api.get(`/shipping/areas?query=${areaQuery}`);
       setAreas(res.data.areas || []);
     } catch {
-      toast.error("Gagal cari lokasi.");
+      toast.error("Failed to search location.");
     } finally {
       setLoadingArea(false);
     }
   };
 
-  // Logic Pilih Kota
+  // Select City Logic
   const handleSelectArea = (area: Area) => {
     setSelectedAreaId(area.id);
     // Format: Kecamatan, Kota, Provinsi, Kode Pos
@@ -80,7 +80,7 @@ export default function AddressForm({ defaultValues, onSave, isLoading, buttonTe
     setAreas([]); 
   };
 
-  // Logic Hapus Pilihan Kota
+  // Clear City Selection Logic
   const handleResetArea = () => {
     setSelectedAreaId("");
     setSelectedAreaName("");
@@ -90,7 +90,7 @@ export default function AddressForm({ defaultValues, onSave, isLoading, buttonTe
   // Submit Handler
   const handleSubmit = () => {
     if (!name || !phone || !street || !selectedAreaId) {
-        return toast.error("Lengkapi semua data alamat dulu, G!");
+        return toast.error("Please complete all address details!");
     }
 
     onSave({
@@ -108,9 +108,9 @@ export default function AddressForm({ defaultValues, onSave, isLoading, buttonTe
         
         {/* 1. Nama Lengkap */}
         <div className="space-y-2">
-            <Label>Nama Penerima</Label>
+            <Label>Recipient Name</Label>
             <Input 
-                placeholder="Nama Lengkap" 
+                placeholder="Full Name" 
                 value={name} 
                 onChange={(e) => setName(e.target.value)} 
             />
@@ -118,7 +118,7 @@ export default function AddressForm({ defaultValues, onSave, isLoading, buttonTe
 
         {/* 2. No Telepon */}
         <div className="space-y-2">
-            <Label>Nomor Telepon (WhatsApp)</Label>
+            <Label>Phone Number (WhatsApp)</Label>
             <Input 
                 placeholder="08xxxxxxxxxx" 
                 type="tel"
@@ -129,10 +129,10 @@ export default function AddressForm({ defaultValues, onSave, isLoading, buttonTe
 
         {/* 3. Area (Provinsi, Kota, Kec, Kode Pos) */}
         <div className="space-y-2 relative">
-            <Label>Wilayah (Kecamatan / Kota / Kode Pos)</Label>
+            <Label>Area (District / City / Postal Code)</Label>
             
             {selectedAreaId ? (
-                // Tampilan kalau sudah pilih kota
+                // View when city is selected
                 <div className="flex items-center justify-between p-3 bg-muted rounded-md border border-border">
                     <div className="flex items-center gap-2 text-sm">
                         <MapPin className="w-4 h-4 text-primary" />
@@ -146,7 +146,7 @@ export default function AddressForm({ defaultValues, onSave, isLoading, buttonTe
                 // Input Pencarian
                 <div className="flex gap-2">
                     <Input 
-                        placeholder="Cari kecamatan atau kode pos..." 
+                        placeholder="Search district or postal code..." 
                         value={areaQuery}
                         onChange={(e) => setAreaQuery(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearchArea()}
@@ -178,16 +178,16 @@ export default function AddressForm({ defaultValues, onSave, isLoading, buttonTe
 
         {/* 4. Jalan, Gedung, No Rumah */}
         <div className="space-y-2">
-            <Label>Detail Alamat (Jalan, Gedung, No. Rumah)</Label>
+            <Label>Address Detail (Street, Building, House No.)</Label>
             <Textarea 
-                placeholder="Contoh: Jl. Sudirman No. 45, Gedung Cyber Lt. 2"
+                placeholder="Example: Jl. Sudirman No. 45, Cyber Building 2nd Floor"
                 value={street}
                 onChange={(e) => setStreet(e.target.value)}
                 rows={3}
             />
         </div>
 
-        {/* 5. Tombol Simpan */}
+        {/* 5. Save Button */}
         <Button onClick={handleSubmit} disabled={isLoading} className="w-full font-bold">
             {isLoading ? <Loader2 className="animate-spin mr-2" /> : null}
             {buttonText}

@@ -60,7 +60,7 @@ export default function Suggested() {
 
         setProducts(dataFix.slice(0, 15));
       } catch (error) {
-        console.error("Gagal load suggested products", error);
+        console.error("Failed to load suggested products", error);
       } finally {
         setLoading(false);
       }
@@ -184,7 +184,7 @@ export default function Suggested() {
                 ))
               ) : (
                 <div className="w-full text-center py-10 text-muted-foreground">
-                  Lagi nggak ada saran barang nih, G.
+                  No suggested products available at the moment.
                 </div>
               )}
             </div>
@@ -229,7 +229,7 @@ function ProductCard({
     return false;
   }, [item.is_new_arrival, item.created_at]);
 
-  // 1. Hitung ukuran CUMA pas mouse masuk
+  // 1. Calculate size ONLY on mouse enter
   const handleMouseEnter = useCallback(() => {
     if (containerRef.current) {
       boundsRef.current = containerRef.current.getBoundingClientRect();
@@ -290,7 +290,7 @@ function ProductCard({
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
                 fill
-                // Optimization: Sizes yang pas buat grid 2-4 kolom
+                // Optimization: Perfect sizes for 2-4 column grid
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className={`
                   absolute inset-0 w-full h-full object-contain object-center

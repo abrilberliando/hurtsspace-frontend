@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-// import { useRouter } from "next/navigation"; // 👈 Gak butuh router lagi buat nge-kick
+// import { useRouter } from "next/navigation"; // 👈 No longer need router to kick
 import api from "@/lib/axios";
 import { AxiosError } from "axios";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +48,7 @@ interface Order {
 export default function OrderHistoryPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  // const router = useRouter(); // 👈 Hapus aja
+  // const router = useRouter(); // 👈 Just remove this
 
   const fetchOrders = async () => {
     try {
@@ -57,15 +57,15 @@ export default function OrderHistoryPage() {
     } catch (error) {
       // 🔥 LOGIC BARU: Handling Santuy
       if (error instanceof AxiosError && error.response?.status === 401) {
-        // Kalau 401 (Belum login), kita set orders kosong aja
+        // If 401 (Not logged in), we set orders to empty
         setOrders([]);
         // Kasih toast friendly sesuai request
-        toast("Cart kosong nih, yuk belanja my G", { 
+        toast("Your cart is empty, let's shop!", { 
              duration: 4000,
         });
       } else {
         // Error beneran (Server down, dll) baru kasih error merah
-        toast.error("Gagal mengambil riwayat pesanan.");
+        toast.error("Failed to fetch order history.");
       }
     } finally {
       setLoading(false);
@@ -87,29 +87,29 @@ export default function OrderHistoryPage() {
     if (!snapToken) return toast.error("Token pembayaran hilang.");
     const snap = (window as unknown as MidtransWindow).snap;
     snap.pay(snapToken, {
-        onSuccess: () => { toast.success("Pembayaran Berhasil!"); fetchOrders(); },
-        onPending: () => { toast.warning("Menunggu pembayaran..."); fetchOrders(); },
-        onError: () => toast.error("Pembayaran Gagal!"),
-        onClose: () => toast.info("Pop-up ditutup."),
+        onSuccess: () => { toast.success("Payment Successful!"); fetchOrders(); },
+        onPending: () => { toast.warning("Waiting for payment..."); fetchOrders(); },
+        onError: () => toast.error("Payment Failed!"),
+        onClose: () => toast.info("Pop-up closed."),
     });
   };
 
   const executeCancelOrder = async (orderId: number) => {
-    const toastId = toast.loading("Membatalkan pesanan...");
+    const toastId = toast.loading("Canceling order...");
     try {
         await api.post(`/orders/${orderId}/cancel`);
         toast.dismiss(toastId);
-        toast.success("Pesanan dibatalkan.");
+        toast.success("Order canceled.");
         fetchOrders(); 
     } catch {
         toast.dismiss(toastId);
-        toast.error("Gagal membatalkan pesanan.");
+        toast.error("Failed to cancel order.");
     }
   };
 
   const copyResi = (resi: string) => {
     navigator.clipboard.writeText(resi);
-    toast.success("Nomor Resi disalin!");
+    toast.success("Tracking number copied!");
   };
 
   const trackPackage = (courier: string, resi: string) => {
@@ -143,7 +143,7 @@ export default function OrderHistoryPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border pb-6">
             <div>
                 <h1 className="text-3xl font-black uppercase tracking-tight">Order History</h1>
-                <p className="text-muted-foreground text-sm mt-1">Lacak status pesanan dan riwayat belanja lo di sini.</p>
+                <p className="text-muted-foreground text-sm mt-1">Track your order status and shopping history here.</p>
             </div>
             <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchOrders(); }} className="gap-2">
                 <RefreshCw className="w-4 h-4" /> Refresh Data
@@ -156,10 +156,10 @@ export default function OrderHistoryPage() {
                 <div className="bg-muted p-4 rounded-full mb-4">
                     <Package className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-bold">Belum ada pesanan</h3>
-                <p className="text-muted-foreground text-sm mb-6">Lo belum checkout barang apapun, G.</p>
+                <h3 className="text-lg font-bold">No orders yet</h3>
+                <p className="text-muted-foreground text-sm mb-6">You haven't checked out any items.</p>
                 <Button asChild>
-                    <a href="/shop">Mulai Belanja</a>
+                    <a href="/shop">Start Shopping</a>
                 </Button>
             </div>
         ) : (
@@ -202,7 +202,7 @@ export default function OrderHistoryPage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-sm truncate pr-4">
-                                                {item.product?.name || <span className="text-red-500 italic">Produk dihapus</span>}
+                                                {item.product?.name || <span className="text-red-500 italic">Product deleted</span>}
                                             </p>
                                             <p className="text-muted-foreground text-xs mt-1">
                                                 Size: <span className="font-medium text-foreground">{item.variant?.size || "-"}</span> &bull; Qty: {item.quantity}
@@ -218,7 +218,7 @@ export default function OrderHistoryPage() {
                     <div className="bg-muted/20 p-4 md:p-6 border-t border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         
                         <div className="flex flex-col">
-                            <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Total Tagihan</span>
+                            <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Total Bill</span>
                             <span className="text-xl font-black">
                                 Rp {displayPrice(order.total_price).toLocaleString("id-ID")}
                             </span>
@@ -231,23 +231,23 @@ export default function OrderHistoryPage() {
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                             <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-500/10 font-bold">
-                                                <XCircle className="w-4 h-4 mr-2" /> Batalkan
+                                                <XCircle className="w-4 h-4 mr-2" /> Cancel
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle>Batalkan Pesanan?</AlertDialogTitle>
-                                                <AlertDialogDescription>Pesanan akan dihapus dan stok dikembalikan ke toko.</AlertDialogDescription>
+                                                <AlertDialogTitle>Cancel Order?</AlertDialogTitle>
+                                                <AlertDialogDescription>The order will be deleted and stock returned to the store.</AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
-                                                <AlertDialogCancel>Gak Jadi</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => executeCancelOrder(order.id)} className="bg-red-600 hover:bg-red-700 text-white">Ya, Batalin</AlertDialogAction>
+                                                <AlertDialogCancel>Nevermind</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => executeCancelOrder(order.id)} className="bg-red-600 hover:bg-red-700 text-white">Yes, Cancel</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
 
                                     <Button size="sm" className="font-bold bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg shadow-yellow-500/20" onClick={() => handlePayNow(order.snap_token)}>
-                                        <CreditCard className="w-4 h-4 mr-2" /> BAYAR SEKARANG
+                                        <CreditCard className="w-4 h-4 mr-2" /> PAY NOW
                                     </Button>
                                 </>
                             )}
@@ -263,7 +263,7 @@ export default function OrderHistoryPage() {
                                         </button>
                                     </div>
                                     <Button variant="outline" size="sm" className="text-xs font-bold" onClick={() => trackPackage(order.shipping_courier || 'jne', order.shipping_resi!)}>
-                                        <ExternalLink className="w-3 h-3 mr-2" /> LACAK
+                                        <ExternalLink className="w-3 h-3 mr-2" /> TRACK
                                     </Button>
                                 </div>
                             )}
@@ -271,7 +271,7 @@ export default function OrderHistoryPage() {
                              {/* ACTION: PAID */}
                              {order.status === 'paid' && (
                                 <span className="text-xs font-medium text-green-600 flex items-center gap-1 bg-green-100 px-3 py-1.5 rounded-full">
-                                    <Package className="w-3 h-3" /> Menunggu Pengiriman
+                                    <Package className="w-3 h-3" /> Waiting for Shipping
                                 </span>
                             )}
                         </div>

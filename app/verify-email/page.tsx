@@ -10,7 +10,7 @@ import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
 function VerifyEmailContent() {
     const searchParams = useSearchParams();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-    const [message, setMessage] = useState("Memverifikasi status email lo...");
+    const [message, setMessage] = useState("Verifying your email status...");
 
     useEffect(() => {
         // Backend Laravel akan redirect ke sini dengan query param:
@@ -24,14 +24,14 @@ function VerifyEmailContent() {
         const timer = setTimeout(() => {
             if (isVerified) {
                 setStatus('success');
-                setMessage("Email berhasil diverifikasi! Akun lo udah aktif dan siap dipake belanja.");
+                setMessage("Email successfully verified! Your account is active and ready to use.");
             } else if (errorMsg) {
                 setStatus('error');
                 setMessage(decodeURIComponent(errorMsg));
             } else {
-                // Fallback kalau user iseng buka page ini tanpa link dari email
+                // Fallback if user randomly opens this page without a link from email
                 setStatus('error');
-                setMessage("Link tidak valid atau parameter hilang.");
+                setMessage("Invalid link or missing parameters.");
             }
         }, 1000);
 
@@ -77,16 +77,16 @@ function VerifyEmailContent() {
                 {status === 'success' ? (
                     <Button asChild size="lg" className="w-full font-bold h-12 uppercase tracking-wide gap-2 group">
                         <Link href="/login">
-                            Login Sekarang <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                            Login Now <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                         </Link>
                     </Button>
                 ) : status === 'error' ? (
                      <Button asChild variant="outline" className="w-full">
-                        <Link href="/login">Kembali ke Login</Link>
+                        <Link href="/login">Back to Login</Link>
                     </Button>
                 ) : (
                     <Button disabled variant="ghost" className="w-full text-muted-foreground">
-                        Mohon tunggu sebentar...
+                        Please wait...
                     </Button>
                 )}
             </CardFooter>
@@ -97,7 +97,7 @@ function VerifyEmailContent() {
 export default function VerifyEmailPage() {
     return (
         <main className="min-h-screen flex items-center justify-center bg-background px-4 bg-[url('/grid-pattern.svg')]">
-             {/* Suspense wajib buat page yang baca useSearchParams */}
+             {/* Suspense is required for pages that read useSearchParams */}
              <Suspense fallback={<div className="text-sm text-muted-foreground animate-pulse">Loading verification...</div>}>
                 <VerifyEmailContent />
              </Suspense>

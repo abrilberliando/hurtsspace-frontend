@@ -110,7 +110,7 @@ function NewArrivalsContent() {
         const cats = Array.isArray(res.data) ? res.data : res.data.data || [];
         setCategories(cats);
       } catch (err) {
-        console.error("Gagal load kategori:", err);
+        console.error("Failed to load categories:", err);
       }
     };
     fetchCategories();
@@ -121,7 +121,7 @@ function NewArrivalsContent() {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        // Fetch Limit gede sekalian buat client-side filtering
+        // Fetch large limit at once for client-side filtering
         const res = await api.get("/products?limit=100"); 
 
         let dataFix: Product[] = [];
@@ -154,13 +154,13 @@ function NewArrivalsContent() {
         // Mapping biar tipe datanya konsisten boolean
         const mappedProducts: Product[] = newDrops.map((p) => ({
           ...p,
-          is_new_arrival: true, // Karena udah difilter, pasti true semua context-nya disini
+          is_new_arrival: true, // Because it's already filtered, it must be true for all contexts here
         }));
 
         setProducts(mappedProducts);
         setVisibleCount(16);
       } catch (error) {
-        console.error("❌ Gagal fetch new arrivals:", error);
+        console.error("❌ Failed to fetch new arrivals:", error);
         setProducts([]);
       } finally {
         setLoading(false);
@@ -174,7 +174,7 @@ function NewArrivalsContent() {
   const processedProducts = useMemo(() => {
     let data = [...products];
 
-    // Filter Kategori
+    // Category Filter
     if (categoryId && categoryId !== "all") {
       data = data.filter((p) => {
         const productCatId = p.category_id || p.category?.id;
@@ -190,7 +190,7 @@ function NewArrivalsContent() {
         return data.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
       case "latest":
       default:
-        // Sort by ID desc (produk terbaru di atas)
+        // Sort by ID desc (newest products on top)
         return data.sort((a, b) => b.id - a.id);
     }
   }, [products, categoryId, sortBy]);
@@ -272,7 +272,9 @@ function NewArrivalsContent() {
         ) : visibleProducts.length > 0 ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 gap-y-8 md:gap-8 md:gap-y-12 justify-items-center z-0">
-                <ShopCard key={item.id} item={item} />
+              {visibleProducts.map((item) => (
+                <ShopCard key={item.id} item={item as any} />
+              ))}
             </div>
 
             {hasMore && (

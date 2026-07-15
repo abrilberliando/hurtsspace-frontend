@@ -52,7 +52,7 @@ export default function AdminVouchersPage() {
       const res = await api.get("/admin/vouchers");
       setVouchers(res.data.data);
     } catch {
-      toast.error("Gagal load voucher.");
+      toast.error("Failed to load vouchers.");
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export default function AdminVouchersPage() {
           </Badge>
           {voucher.max_discount_amount && (
             <span className="text-[10px] text-muted-foreground italic">
-              Maks: Rp {voucher.max_discount_amount.toLocaleString("id-ID")}
+              Max: Rp {voucher.max_discount_amount.toLocaleString("id-ID")}
             </span>
           )}
         </div>
@@ -96,15 +96,15 @@ export default function AdminVouchersPage() {
 
   const executeDelete = async () => {
     if (!targetVoucherId) return;
-    const toastId = toast.loading("Menghapus voucher...");
+    const toastId = toast.loading("Deleting voucher...");
     try {
       await api.delete(`/admin/vouchers/${targetVoucherId}`);
       toast.dismiss(toastId);
-      toast.success("Voucher dihapus!");
+      toast.success("Voucher deleted!");
       setVouchers((prev) => prev.filter((v) => v.id !== targetVoucherId));
     } catch {
       toast.dismiss(toastId);
-      toast.error("Gagal hapus.");
+      toast.error("Failed to delete.");
     } finally {
       setIsDialogOpen(false);
       setTargetVoucherId(null);
@@ -138,7 +138,7 @@ export default function AdminVouchersPage() {
           <thead className="bg-muted text-xs uppercase font-black border-b-2 border-border">
             <tr>
               <th className="px-6 py-4">Code</th>
-              <th className="px-6 py-4">Target</th> {/* 👈 Kolom Baru */}
+              <th className="px-6 py-4">Target</th>
               <th className="px-6 py-4">Value</th>
               <th className="px-6 py-4">Stock</th>
               <th className="px-6 py-4 text-right">Action</th>
@@ -252,17 +252,17 @@ export default function AdminVouchersPage() {
       <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <AlertDialogContent className="rounded-none border-2">
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Voucher?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Voucher?</AlertDialogTitle>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-none">
-              BATAL
+              CANCEL
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={executeDelete}
               className="bg-destructive text-white rounded-none"
             >
-              HAPUS
+              DELETE
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

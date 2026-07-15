@@ -23,7 +23,7 @@ export default function Error({
         500: Server Down
       </h1>
       <p className="text-lg text-muted-foreground mb-4 max-w-md">
-        Terjadi Kesalahan Internal Server
+        Internal Server Error Occurred
       </p>
       {/* <p className="text-xs text-red-400 mb-8">
         Error detail: {error.message}
@@ -34,7 +34,7 @@ export default function Error({
         size="lg" 
         className="font-bold gap-2"
       >
-        <RefreshCw className="w-4 h-4" /> Coba Lagi
+        <RefreshCw className="w-4 h-4" /> Try Again
       </Button>
     </div>
   );

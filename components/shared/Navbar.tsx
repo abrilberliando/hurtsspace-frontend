@@ -98,7 +98,7 @@ export default function Navbar() {
         const cats = Array.isArray(res.data) ? res.data : res.data.data || [];
         setCategories(cats);
       } catch (err) {
-        console.error("Gagal load navbar categories:", err);
+        console.error("Failed to load navbar categories:", err);
       }
     };
     fetchCategories();
@@ -169,7 +169,7 @@ export default function Navbar() {
   return (
     <>
       {/* --- HEADER WRAPPER (Fixed Top) --- */}
-      {/* Container utama ini yang nempel di atas (Fixed), membungkus Announcement + Nav */}
+      {/* This main container sticks to the top (Fixed), wrapping Announcement + Nav */}
       <header className="fixed top-0 left-0 right-0 z-50 flex flex-col w-full">
         
         {/* A. Announcement Bar (Paling Atas) */}
@@ -594,7 +594,7 @@ export default function Navbar() {
       </header>
 
       {/* --- BOTTOM NAVIGATION BAR (Mobile Only) --- */}
-      {/* Bagian ini tidak perlu dibungkus header fixed top karena dia fixed bottom */}
+      {/* This part does not need to be wrapped in fixed top header because it is fixed bottom */}
       <div className="fixed bottom-0 left-0 z-50 w-full h-[60px] bg-background/90 backdrop-blur-lg border-t border-border flex items-center justify-around lg:hidden pb-[env(safe-area-inset-bottom)]">
         <Link
           href="/"

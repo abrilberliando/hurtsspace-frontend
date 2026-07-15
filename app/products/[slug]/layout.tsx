@@ -42,7 +42,7 @@ export async function generateMetadata(
 
     return {
       title: product.name,
-      description: product.description ? product.description.substring(0, 160) : "Detail produk Hurtsspace.",
+      description: product.description ? product.description.substring(0, 160) : "Hurtsspace product details.",
       openGraph: {
         title: `${product.name} | HURTSSPACE`,
         description: `Beli ${product.name} original hanya di Hurtsspace. Harga: Rp ${product.price.toLocaleString("id-ID")}`,
@@ -57,7 +57,7 @@ export async function generateMetadata(
       },
     };
   } catch {
-    // 👇 FIX 2: Hapus '(error)' karena gak dipake (Unused vars)
+    // 👇 FIX 2: Remove '(error)' because it is unused
     return { title: "Hurtsspace Product" };
   }
 }
@@ -73,7 +73,7 @@ export default async function ProductLayout({
   const { slug } = await params;
   let jsonLd = null;
 
-  // Fetch data lagi khusus buat JSON-LD (Tenang, Next.js otomatis nge-dedupe request yg sama)
+  // Fetch data again specifically for JSON-LD (Don't worry, Next.js automatically deduplicates the same requests)
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products/${slug}`, { next: { revalidate: 60 } });
     const json = await res.json();
@@ -86,7 +86,7 @@ export default async function ProductLayout({
         "@context": "https://schema.org",
         "@type": "Product",
         "name": product.name,
-        // 👇 Hapus ': any', TS udah tau ini ProductImage[]
+        // 👇 Remove ': any', TS already knows this is ProductImage[]
         "image": product.images.map((img) => img.image_url),
         "description": product.description,
         "sku": `HURTS-${product.id}`,
@@ -96,7 +96,7 @@ export default async function ProductLayout({
           "url": `https://hurtsspace.com/products/${slug}`, // Ganti domain asli nanti
           "priceCurrency": "IDR",
           "price": product.price,
-          // 👇 Hapus ': any', TS udah tau ini ProductVariant[]
+          // 👇 Remove ': any', TS already knows this is ProductVariant[]
           "availability": product.variants.some((v) => v.stock > 0) 
             ? "https://schema.org/InStock" 
             : "https://schema.org/OutOfStock",
@@ -105,7 +105,7 @@ export default async function ProductLayout({
       };
     }
   } catch (error) {
-    console.error("Gagal generate JSON-LD:", error);
+    console.error("Failed to generate JSON-LD:", error);
   }
 
   return (

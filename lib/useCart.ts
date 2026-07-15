@@ -21,7 +21,7 @@ interface CartStore {
   removeItem: (id: string) => void;
   clearCart: () => void;
   totalPrice: () => number;
-  totalWeight: () => number; // 👇 FITUR BARU (Buat Ongkir nanti)
+  totalWeight: () => number; // 👇 NEW FEATURE (For Shipping later)
 }
 
 export const useCart = create<CartStore>()(
@@ -54,14 +54,14 @@ export const useCart = create<CartStore>()(
 
         if (existingItem) {
             if (existingItem.quantity > 1) {
-                // Kalau qty > 1, kurangi 1
+                // If qty > 1, subtract 1
                 set({
                     items: currentItems.map((item) => 
                         item.id === id ? { ...item, quantity: item.quantity - 1 } : item
                     )
                 });
             } else {
-                // Kalau sisa 1 dikurangin, hapus aja
+                // If only 1 left and subtracted, just remove it
                 set({ items: currentItems.filter((item) => item.id !== id) });
             }
         }

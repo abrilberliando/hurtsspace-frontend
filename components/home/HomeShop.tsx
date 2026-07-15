@@ -48,7 +48,7 @@ export default function HomeShop() {
           : [];
         setProducts(limitedData);
       } catch (error) {
-        console.error("Gagal load shop home", error);
+        console.error("Failed to load shop home", error);
       } finally {
         setLoading(false);
       }
@@ -66,7 +66,7 @@ export default function HomeShop() {
 
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 justify-items-center">
-          {/* Array.from lebih efisien drpd spread syntax buat array kosong */}
+          {/* Array.from is more efficient than spread syntax for empty arrays */}
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="w-full max-w-[350px] space-y-3">
               <Skeleton className="aspect-[3/4] w-full rounded-lg bg-muted" />
@@ -111,10 +111,10 @@ function ShopCard({ item }: { item: Product }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Optimization: Ref buat nyimpen ukuran bounding box
+  // Optimization: Ref to store bounding box size
   const boundsRef = useRef<DOMRect | null>(null);
 
-  // 1. Hitung ukuran CUMA pas mouse masuk (Hemat CPU!)
+  // 1. Calculate size ONLY on mouse enter (Save CPU!)
   const handleMouseEnter = useCallback(() => {
     if (containerRef.current) {
       boundsRef.current = containerRef.current.getBoundingClientRect();
@@ -164,7 +164,7 @@ function ShopCard({ item }: { item: Product }) {
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
                 fill
-                // Optimization: Sizes yang pas buat grid 2-4 kolom
+                // Optimization: Perfect sizes for 2-4 column grid
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 className={`
                   absolute inset-0 w-full h-full object-contain object-center
@@ -257,5 +257,5 @@ function ShopCard({ item }: { item: Product }) {
   );
 }
 
-// 🔥 MEMOIZATION: Mencegah re-render yang tidak perlu
+// 🔥 MEMOIZATION: Prevent unnecessary re-renders
 const ShopCardMemo = memo(ShopCard);

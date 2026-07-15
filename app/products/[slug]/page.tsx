@@ -52,7 +52,7 @@ export default function ProductDetailPage() {
         const res = await api.get(`/products/${slug}`);
         setProduct(res.data.data);
       } catch (error) {
-        console.error("Gagal load detail:", error);
+        console.error("Failed to load details:", error);
       } finally {
         setLoading(false);
       }
@@ -81,7 +81,7 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           
           {/* 🔥 FIX 1: Pake key={product.id} */}
-          {/* Ini maksa React buat hancurin component lama dan bikin baru tiap ID berubah */}
+          {/* This forces React to destroy the old component and create a new one every time the ID changes */}
           {/* Jadi state gambar & size otomatis ke-reset tanpa useEffect aneh-aneh */}
           
           {/* BAGIAN KIRI: GALERI */}
@@ -104,8 +104,8 @@ const ProductGallery = memo(function ProductGallery({
   product: ProductDetail;
 }) {
   // 🔥 FIX 2: State Initialization Langsung
-  // Gak perlu useEffect buat set gambar awal. Langsung aja di sini.
-  // Karena ada key di parent, ini bakal selalu fresh tiap ganti produk.
+  // No need for useEffect to set initial image. Just do it here.
+  // Because there is a key in the parent, this will always be fresh when changing products.
   const [mainImage, setMainImage] = useState(
     product.images.length > 0 ? product.images[0].image_url : ""
   );
@@ -170,7 +170,7 @@ const ProductInfo = memo(function ProductInfo({
   const { user } = useAuth();
   const { triggerFlyAnimation } = useCartAnimation();
 
-  // State size otomatis null tiap produk ganti (karena key di parent)
+  // Size state automatically null when product changes (because of key in parent)
   const [selectedSize, setSelectedSize] = useState<Variant | null>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
@@ -186,7 +186,7 @@ const ProductInfo = memo(function ProductInfo({
 
   // Logic Add Cart
   const handleAddToCart = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!selectedSize) return toast.error("Pilih size dulu, G!");
+    if (!selectedSize) return toast.error("Please select a size first, G!");
 
     const safePrice = displayPrice(product.price);
 
@@ -217,7 +217,7 @@ const ProductInfo = memo(function ProductInfo({
 
   // Logic Wishlist
   const handleToggleWishlist = useCallback(async () => {
-    if (!user) return toast.error("Login dulu bos buat simpen wishlist!");
+    if (!user) return toast.error("Login first to save to wishlist!");
 
     // Optimistic Update
     setIsWishlisted((prev) => !prev);
@@ -229,7 +229,7 @@ const ProductInfo = memo(function ProductInfo({
       toast.success(res.data.message);
     } catch {
       setIsWishlisted((prev) => !prev); // Rollback
-      toast.error("Gagal update wishlist");
+      toast.error("Failed to update wishlist");
     }
   }, [user, product.id]);
 

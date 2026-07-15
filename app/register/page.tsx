@@ -4,27 +4,29 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-// Firebase cuma buat Google Login aja
+// Firebase is only used for Google Login
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth as firebaseAuth } from "@/lib/firebase"; 
 
-import api from "@/lib/axios"; // Axios buat hit Laravel
-import { useAuth } from "@/lib/useAuth"; // Hook auth kita
+import api from "@/lib/axios"; // Axios to hit Laravel
+import { useAuth } from "@/lib/useAuth"; // Our auth hook
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, User, AlertCircle } from "lucide-react";
+import { Loader2, Mail, Lock, User, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { AxiosError } from "axios";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { login } = useAuth(); // Ambil fungsi login dari store
+  const { login } = useAuth(); // Get login function from store
   
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -37,41 +39,41 @@ export default function RegisterPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 👇 VALIDASI PASSWORD KETAT (Tetap kita pertahankan)
+  // 👇 STRICT PASSWORD VALIDATION (Retained)
   const validatePassword = (password: string) => {
-    if (password.length < 12) return "Password minimal 12 karakter, G!";
-    if (!/[A-Z]/.test(password)) return "Harus ada huruf BESAR.";
-    if (!/[a-z]/.test(password)) return "Harus ada huruf kecil.";
-    if (!/[0-9]/.test(password)) return "Harus ada angka.";
-    if (!/[!@#$%^&*]/.test(password)) return "Harus ada simbol (!@#$%^&*).";
+    if (password.length < 12) return "Password must be at least 12 characters!";
+    if (!/[A-Z]/.test(password)) return "Must contain uppercase letter.";
+    if (!/[a-z]/.test(password)) return "Must contain lowercase letter.";
+    if (!/[0-9]/.test(password)) return "Must contain number.";
+    if (!/[!@#$%^&*]/.test(password)) return "Must contain symbol (!@#$%^&*).";
     return null;
   };
 
-  // 1. JALUR GOOGLE (Login via Firebase -> Sync ke Laravel)
+  // 1. GOOGLE PATH (Login via Firebase -> Sync to Laravel)
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     const provider = new GoogleAuthProvider();
 
     try {
-        // A. Login ke Google (Firebase)
+        // A. Login to Google (Firebase)
         const result = await signInWithPopup(firebaseAuth, provider);
         const firebaseUser = result.user;
-        // const idToken = await firebaseUser.getIdToken(); // 👈 Hapus atau komen ini karena unused
+        // const idToken = await firebaseUser.getIdToken(); // 👈 Delete or comment this since unused
 
-        // B. Sync/Login ke Backend Laravel
-        // Kita kirim data Google ke endpoint khusus di Laravel
-        // (Pastikan endpoint '/auth/firebase-login' atau sejenisnya sudah siap handle 'firstOrCreate')
+        // B. Sync/Login to Laravel Backend
+        // Send Google data to a specific endpoint in Laravel
+        // (Ensure the '/auth/firebase-login' endpoint is ready to handle 'firstOrCreate')
         const res = await api.post('/auth/firebase-login', {
             name: firebaseUser.displayName,
             email: firebaseUser.email,
             uid: firebaseUser.uid,
         });
 
-        // C. Simpan Token dari Laravel ke LocalStorage (Login Sukses)
+        // C. Save Token from Laravel to LocalStorage (Login Success)
         login(res.data.user, res.data.access_token);
 
         toast.success(`Wadap, ${firebaseUser.displayName}!`, {
-            description: "Login Google sukses."
+            description: "Google login successful."
         });
         
         router.push('/dashboard'); 
@@ -80,55 +82,55 @@ export default function RegisterPage() {
         console.error("Google Auth Error:", error);
         
         // Casting error message
-        let errorMessage = "Gagal login pake Google.";
+        let errorMessage = "Failed to login with Google.";
         if (error instanceof Error) {
             errorMessage = error.message;
         }
 
         toast.error(errorMessage, {
-            description: "Cek koneksi atau coba lagi nanti."
+            description: "Check your connection or try again later."
         });
     } finally {
         setGoogleLoading(false);
     }
   };
 
-  // 2. JALUR MANUAL (Register ke Laravel Database)
+  // 2. MANUAL PATH (Register to Laravel Database)
   const handleManualRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Validasi Match
+    // Validate Match
     if (formData.password !== formData.password_confirmation) {
-        toast.error("Password & Konfirmasi gak sama, cek lagi G!");
+        toast.error("Password & Confirmation do not match!");
         setLoading(false);
         return;
     }
 
-    // Validasi Kekuatan Password
+    // Validate Password Strength
     const passwordError = validatePassword(formData.password);
     if (passwordError) {
-        toast.error("Password Lemah!", { description: passwordError });
+        toast.error("Weak Password!", { description: passwordError });
         setLoading(false);
         return;
     }
 
     try {
-      // Hit API Register Laravel (Pure Database)
+      // Hit Laravel Register API (Pure Database)
       const res = await api.post("/register", formData);
       
-      // Skenario 1: Auto Login setelah Register (Kalau backend balikin token)
+      // Scenario 1: Auto Login after Register (If backend returns token)
       if (res.data.access_token) {
           login(res.data.user, res.data.access_token);
           toast.success("Welcome to the Society!", {
-            description: "Akun berhasil dibuat."
+            description: "Account created successfully."
           });
           router.push("/dashboard");
       } 
-      // Skenario 2: Harus Verifikasi Email dulu (Kalau backend gak ngasih token langsung)
+      // Scenario 2: Must Verify Email first (If backend doesn't give token directly)
       else {
-          toast.success("Registrasi Berhasil!", {
-             description: "Cek email lo buat verifikasi akun ya."
+          toast.success("Registration Successful!", {
+             description: "Check your email to verify your account."
           });
           router.push("/login");
       }
@@ -138,15 +140,15 @@ export default function RegisterPage() {
       const error = err as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
       console.error(error);
       
-      let msg = error.response?.data?.message || "Gagal daftar.";
+      let msg = error.response?.data?.message || "Failed to register.";
       
-      // Handle validasi error dari Laravel (misal email udah ada)
+      // Handle validation error from Laravel (e.g. email already exists)
       if (error.response?.data?.errors) {
          const firstErrorKey = Object.keys(error.response.data.errors)[0];
          msg = error.response.data.errors[firstErrorKey][0];
       }
       
-      toast.error("Gagal Register", { description: msg });
+      toast.error("Registration Failed", { description: msg });
     } finally {
       setLoading(false);
     }
@@ -160,7 +162,7 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent>
           
-          {/* 👇 TOMBOL GOOGLE */}
+          {/* 👇 GOOGLE BUTTON */}
           <Button 
             variant="outline" 
             className="w-full h-12 font-bold mb-6 flex items-center justify-center gap-2 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
@@ -198,12 +200,12 @@ export default function RegisterPage() {
           <form onSubmit={handleManualRegister} className="space-y-4">
             
             <div className="space-y-2">
-              <Label htmlFor="name">Nama Lengkap</Label>
+              <Label htmlFor="name">Full Name</Label>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
                     id="name" name="name" 
-                    placeholder="Nama Lo" 
+                    placeholder="Your Name" 
                     className="pl-10 h-11" 
                     required 
                     value={formData.name} onChange={handleChange}
@@ -226,34 +228,48 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password (12+ Karakter)</Label>
+              <Label htmlFor="password">Password (12+ Characters)</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
-                    id="password" name="password" type="password" 
+                    id="password" name="password" type={showPassword ? "text" : "password"} 
                     placeholder="••••••••••••" 
-                    className="pl-10 h-11" 
+                    className="pl-10 pr-10 h-11" 
                     required 
                     value={formData.password} onChange={handleChange}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
               <div className="text-[10px] text-muted-foreground flex gap-1 items-start mt-1">
                  <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
-                 <span>Min 12 huruf, ada Huruf Besar, Kecil, Angka, & Simbol (!@#$)</span>
+                 <span>Min 12 chars, Uppercase, Lowercase, Number, & Symbol (!@#$)</span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password_confirmation">Ulangi Password</Label>
+              <Label htmlFor="password_confirmation">Repeat Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
-                    id="password_confirmation" name="password_confirmation" type="password" 
+                    id="password_confirmation" name="password_confirmation" type={showConfirmPassword ? "text" : "password"} 
                     placeholder="••••••••••••" 
-                    className="pl-10 h-11" 
+                    className="pl-10 pr-10 h-11" 
                     required 
                     value={formData.password_confirmation} onChange={handleChange}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
@@ -264,9 +280,9 @@ export default function RegisterPage() {
         </CardContent>
         <CardFooter className="justify-center pb-6">
           <p className="text-sm text-muted-foreground">
-            Udah punya akun?{" "}
+            Already have an account?{" "}
             <Link href="/login" className="text-primary hover:underline font-bold">
-              Login disini
+              Login here
             </Link>
           </p>
         </CardFooter>

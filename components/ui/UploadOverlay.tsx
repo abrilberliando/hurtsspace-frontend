@@ -24,12 +24,12 @@ export function UploadOverlay({ isOpen, isError, isSuccess, errorMessage, succes
                         <div className="bg-destructive/10 p-3 rounded-full mb-4">
                             <AlertCircle className="w-8 h-8 text-destructive" />
                         </div>
-                        <h2 className="text-xl font-bold tracking-tight mb-2">Upload Gagal</h2>
+                        <h2 className="text-xl font-bold tracking-tight mb-2">Upload Failed</h2>
                         <p className="text-muted-foreground mb-6 text-sm">
-                            {errorMessage || "Terdapat file yang gagal diunggah karena masalah jaringan atau server."}
+                            {errorMessage || "There are files that failed to upload due to network or server issues."}
                         </p>
                         <Button onClick={onRetry} variant="default" className="w-full">
-                            Coba Lagi
+                            Try Again
                         </Button>
                     </>
                 ) : isSuccess ? (
@@ -37,13 +37,13 @@ export function UploadOverlay({ isOpen, isError, isSuccess, errorMessage, succes
                         <div className="bg-green-500/10 p-3 rounded-full mb-4">
                             <CheckCircle2 className="w-8 h-8 text-green-500" />
                         </div>
-                        <h2 className="text-xl font-bold tracking-tight mb-2">Berhasil!</h2>
+                        <h2 className="text-xl font-bold tracking-tight mb-2">Success!</h2>
                         <p className="text-muted-foreground mb-6 text-sm">
-                            {successMessage || "File dan data berhasil diunggah."}
+                            {successMessage || "Files and data uploaded successfully."}
                         </p>
                         {onCloseSuccess && (
                             <Button onClick={onCloseSuccess} variant="default" className="w-full">
-                                Tutup
+                                Close
                             </Button>
                         )}
                     </>
@@ -52,9 +52,9 @@ export function UploadOverlay({ isOpen, isError, isSuccess, errorMessage, succes
                         <div className="bg-primary/10 p-4 rounded-full mb-4">
                             <Loader2 className="w-8 h-8 text-primary animate-spin" />
                         </div>
-                        <h2 className="text-xl font-bold tracking-tight mb-2">Mengunggah...</h2>
+                        <h2 className="text-xl font-bold tracking-tight mb-2">Uploading...</h2>
                         <p className="text-muted-foreground text-sm">
-                            Mohon tunggu sebentar, jangan tutup halaman ini.
+                            Please wait a moment, do not close this page.
                         </p>
                     </>
                 )}
