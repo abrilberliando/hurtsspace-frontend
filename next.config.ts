@@ -30,10 +30,10 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'picsum.photos',
             },
-            // Tambahan domain yang sering kepake (Avatar & Placeholder)
+            // Tambahan domain yang sering kepake (Placeholder & Cloudinary)
             {
                 protocol: 'https',
-                hostname: 'ui-avatars.com',
+                hostname: 'res.cloudinary.com',
             },
             {
                 protocol: 'https',

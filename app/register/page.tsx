@@ -65,8 +65,6 @@ export default function RegisterPage() {
             name: firebaseUser.displayName,
             email: firebaseUser.email,
             uid: firebaseUser.uid,
-            avatar: firebaseUser.photoURL,
-            // id_token: idToken // Kirim ini kalau mau validasi token di backend
         });
 
         // C. Simpan Token dari Laravel ke LocalStorage (Login Sukses)

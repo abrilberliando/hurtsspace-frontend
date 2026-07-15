@@ -10,13 +10,19 @@ import ProductForm from "@/components/admin/ProductForm";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
 
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
+
 export default function CreateProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   
   // Submit Logic
   const handleCreateSubmit = async (formData: FormData) => {
     setLoading(true);
+    setUploadError(null);
+    setUploadSuccess(false);
     try {
         // Tembak API
         await api.post("/admin/products", formData, {
@@ -24,11 +30,12 @@ export default function CreateProductPage() {
         });
         
         toast.success("Produk Berhasil Ditambahkan!");
-        router.push("/admin/products");
+        setUploadSuccess(true); setLoading(false);
 
     } catch (error) {
         const err = error as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
         if (err.response?.status === 422) {
+            setLoading(false); // Only stop loading if validation error so they can fix it normally
             const errorData = err.response.data.errors;
             if (errorData) {
                 const firstErrorKey = Object.keys(errorData)[0];
@@ -38,15 +45,29 @@ export default function CreateProductPage() {
                 toast.error("Data tidak valid.");
             }
         } else {
-            toast.error("Terjadi kesalahan server.");
+            // Server error or upload error -> Show Overlay
+            setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
         }
-    } finally {
-        setLoading(false);
     }
   };
 
   return (
     <div className="max-w-3xl mx-auto pb-10 px-4">
+        <UploadOverlay 
+            isOpen={loading || uploadSuccess} 
+            isError={!!uploadError} 
+            isSuccess={uploadSuccess}
+            errorMessage={uploadError || undefined}
+            onRetry={() => {
+                setUploadError(null);
+                setLoading(false);
+            }} 
+            onCloseSuccess={() => {
+                setUploadSuccess(false);
+                router.push("/admin/products");
+            }}
+        />
+        
         <div className="flex items-center gap-4 mb-6">
             <Button variant="ghost" size="icon" asChild>
                 <Link href="/admin/products"><ArrowLeft className="w-5 h-5" /></Link>
@@ -57,7 +78,7 @@ export default function CreateProductPage() {
             </div>
         </div>
         
-        <ProductForm onSubmit={handleCreateSubmit} isLoading={loading} />
+        <ProductForm onSubmit={handleCreateSubmit} isLoading={loading && !uploadError} />
         
     </div>
   );

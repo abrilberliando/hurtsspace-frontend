@@ -19,6 +19,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
 
 // --- TYPES ---
 interface Product {
@@ -79,6 +80,8 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
 export default function CreateLookbookPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [uploadSuccess, setUploadSuccess] = useState(false);
     
     // Data Form
     const [title, setTitle] = useState("");
@@ -177,6 +180,8 @@ export default function CreateLookbookPage() {
         if (!finalImageFile || tags.length === 0) return toast.error("Upload foto & tag minimal 1 produk!");
         
         setLoading(true);
+        setUploadError(null);
+        setUploadSuccess(false);
         const formData = new FormData();
         formData.append("title", title);
         formData.append("image", finalImageFile); 
@@ -189,18 +194,34 @@ export default function CreateLookbookPage() {
                 headers: { "Content-Type": "multipart/form-data" }
             });
             toast.success("Lookbook Created!");
-            router.push("/admin/lookbooks");
+            setUploadSuccess(true); setLoading(false);
         } catch (error) {
-            const err = error as AxiosError;
-            console.error(err);
-            toast.error("Gagal create lookbook.");
-        } finally {
-            setLoading(false);
+            const err = error as AxiosError<{ message: string }>;
+            if (err.response?.status === 422) {
+                setLoading(false);
+                toast.error("Data tidak valid, mohon periksa inputan.");
+            } else {
+                setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
+            }
         }
     };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
+            <UploadOverlay 
+                isOpen={loading || uploadSuccess} 
+                isError={!!uploadError} 
+                isSuccess={uploadSuccess}
+                errorMessage={uploadError || undefined}
+                onRetry={() => {
+                    setUploadError(null);
+                    setLoading(false);
+                }} 
+                onCloseSuccess={() => {
+                    setUploadSuccess(false);
+                    router.push("/admin/lookbooks");
+                }}
+            />
             
             {/* --- KOLOM KIRI: CANVAS UTAMA --- */}
             <div className="lg:col-span-2">

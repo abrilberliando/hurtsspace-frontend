@@ -73,8 +73,7 @@ export default function LoginPage() {
         const res = await api.post('/auth/firebase-login', {
             name: fbUser.displayName,
             email: fbUser.email,
-            uid: fbUser.uid,
-            avatar: fbUser.photoURL
+            uid: fbUser.uid
         });
 
         login(res.data.user, res.data.access_token);

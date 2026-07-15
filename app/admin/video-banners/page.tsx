@@ -11,6 +11,7 @@ import { Loader2, Video, Trash2, Power, UploadCloud, Film, PlayCircle, PlusCircl
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { AxiosError } from "axios";
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
 
 interface VideoBanner {
   id: number;
@@ -25,6 +26,8 @@ export default function ManageVideoPage() {
   const [videos, setVideos] = useState<VideoBanner[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   // Form State
   const [title, setTitle] = useState("");
@@ -57,6 +60,8 @@ export default function ManageVideoPage() {
     }
 
     setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(false);
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", desc);
@@ -79,12 +84,15 @@ export default function ManageVideoPage() {
         if (fileInput) fileInput.value = "";
 
         fetchVideos();
+        setUploadSuccess(true); setUploading(false);
     } catch (error: unknown) {
-        console.error(error);
         const err = error as AxiosError<{ message: string }>;
-        toast.error("Upload gagal.", { description: err.response?.data?.message || "Server lagi cranky kayaknya." });
-    } finally {
-        setUploading(false);
+        if (err.response?.status === 422) {
+            setUploading(false);
+            toast.error("Data tidak valid, periksa inputan.");
+        } else {
+            setUploadError(err.response?.data?.message || "Server lagi cranky kayaknya.");
+        }
     }
   };
 
@@ -107,9 +115,19 @@ export default function ManageVideoPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-12 pb-20 pt-6 px-4 sm:px-6">
-
-       
-
+        <UploadOverlay 
+            isOpen={uploading || uploadSuccess} 
+            isError={!!uploadError} 
+            isSuccess={uploadSuccess}
+            errorMessage={uploadError || undefined}
+            onRetry={() => {
+                setUploadError(null);
+                setUploading(false);
+            }} 
+            onCloseSuccess={() => {
+                setUploadSuccess(false);
+            }}
+        />
         {/* SECTION 2: UPLOAD FORM (MENU DI BAWAH) */}
         <section className="pt-8 border-t border-border">
             <div className="flex items-center gap-2 mb-6">

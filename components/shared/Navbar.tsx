@@ -31,7 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useCart } from "@/lib/useCart";
@@ -478,15 +478,9 @@ export default function Navbar() {
                 {user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent hover:border-border transition-all duration-200">
-                        <AvatarImage
-                          src={
-                            user.avatar ||
-                            `https://ui-avatars.com/api/?name=${user.name}&background=000&color=fff`
-                          }
-                        />
-                        <AvatarFallback>CN</AvatarFallback>
-                      </Avatar>
+                      <div className="h-9 w-9 flex items-center justify-center rounded-full bg-muted border-2 border-transparent hover:border-border transition-all duration-200 cursor-pointer">
+                        <User className="w-5 h-5 text-muted-foreground" />
+                      </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
@@ -634,14 +628,9 @@ export default function Navbar() {
           href={user ? "/dashboard" : "/login"}
           className="flex flex-col items-center justify-center w-full h-full text-muted-foreground hover:text-foreground active:scale-95 transition-all"
         >
-          {user?.avatar ? (
-            <Avatar className="w-6 h-6 border border-border">
-              <AvatarImage src={user.avatar} />
-              <AvatarFallback className="text-[10px]">MY</AvatarFallback>
-            </Avatar>
-          ) : (
-            <User className="w-5 h-5" />
-          )}
+          <div className="w-8 h-8 flex items-center justify-center rounded-full bg-muted border border-border">
+            <User className="w-4 h-4 text-muted-foreground" />
+          </div>
           <span className="text-[10px] font-bold mt-1">Profile</span>
         </Link>
       </div>

@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { Loader2, UploadCloud, Save, X, ZoomIn, Check, Image as ImageIcon, RotateCcw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Cropper, { Area } from "react-easy-crop"; 
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
+import { AxiosError } from "axios";
 
 // --- UTILS: CANVAS CROPPER HELPER ---
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -64,6 +66,8 @@ interface HeroImage {
 export default function ManageHeroPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   // Form States
   const [subtitle, setSubtitle] = useState("");
@@ -182,6 +186,8 @@ export default function ManageHeroPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setUploadError(null);
+    setUploadSuccess(false);
 
     const formData = new FormData();
     formData.append("subtitle", subtitle);
@@ -204,10 +210,15 @@ export default function ManageHeroPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       toast.success("Hero section berhasil diupdate! 🔥");
-    } catch {
-      toast.error("Gagal update hero section.");
-    } finally {
-      setSubmitting(false);
+      setUploadSuccess(true); setSubmitting(false);
+    } catch (error) {
+      const err = error as AxiosError<{ message: string }>;
+      if (err.response?.status === 422) {
+          setSubmitting(false);
+          toast.error("Data tidak valid, mohon periksa inputan.");
+      } else {
+          setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
+      }
     }
   };
 
@@ -215,6 +226,19 @@ export default function ManageHeroPage() {
 
   return (
     <div className="max-w-5xl mx-auto pb-10 px-4">
+      <UploadOverlay 
+          isOpen={submitting || uploadSuccess} 
+          isError={!!uploadError} 
+          isSuccess={uploadSuccess}
+          errorMessage={uploadError || undefined}
+          onRetry={() => {
+              setUploadError(null);
+              setSubmitting(false);
+          }} 
+          onCloseSuccess={() => {
+              setUploadSuccess(false);
+          }}
+      />
       
       {/* MODAL CROPPER (16:9) */}
       <Dialog open={isCropping} onOpenChange={setIsCropping}>

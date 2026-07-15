@@ -22,9 +22,13 @@ import {
 } from "@/components/ui/select";
 
 
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
+
 export default function CreateBannerPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [uploadSuccess, setUploadSuccess] = useState(false);
 
     // Form State
     const [title, setTitle] = useState("");
@@ -57,6 +61,8 @@ export default function CreateBannerPage() {
         if (!imageLeft || !imageRight) return toast.error("Wajib upload kedua gambar (Kiri & Kanan)!");
 
         setLoading(true);
+        setUploadError(null);
+        setUploadSuccess(false);
         const formData = new FormData();
         formData.append("title", title);
         formData.append("position", position);
@@ -69,18 +75,35 @@ export default function CreateBannerPage() {
                 headers: { "Content-Type": "multipart/form-data" }
             });
             toast.success("Banner berhasil dipublish!");
-            router.push("/admin/banners");
+            setUploadSuccess(true); setLoading(false);
         } catch (error) {
             const err = error as AxiosError<{ message: string }>;
-            toast.error(err.response?.data?.message || "Gagal upload banner.");
-        } finally {
-            setLoading(false);
+            if (err.response?.status === 422) {
+                setLoading(false);
+                toast.error("Data tidak valid, mohon periksa inputan.");
+            } else {
+                setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
+            }
         }
     };
 
     return (
         <Suspense fallback={<div>Loading form...</div>}>
         <div className="max-w-2xl mx-auto pb-10 px-4">
+            <UploadOverlay 
+                isOpen={loading || uploadSuccess} 
+                isError={!!uploadError} 
+                isSuccess={uploadSuccess}
+                errorMessage={uploadError || undefined}
+                onRetry={() => {
+                    setUploadError(null);
+                    setLoading(false);
+                }} 
+                onCloseSuccess={() => {
+                    setUploadSuccess(false);
+                    router.push("/admin/banners");
+                }}
+            />
             <div className="flex items-center gap-4 mb-6">
                 <Button variant="ghost" size="icon" asChild>
                     <Link href="/admin/banners">

@@ -11,6 +11,7 @@ import api from "@/lib/axios";
 import ProductForm from "@/components/admin/ProductForm";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
 
 // --- INTERFACES ---
 interface APIImage {
@@ -41,6 +42,8 @@ export default function EditProductPage() {
   
   const [loadingForm, setLoadingForm] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [initialData, setInitialData] = useState<ProductData | null>(null);
 
   // 1. Fetch Data Produk Lama
@@ -59,8 +62,8 @@ export default function EditProductPage() {
           stock: product.stock ? product.stock.toString() : "",
           category_id: product.category_id.toString(),
           is_collab: !!product.is_collab, 
-          image_urls: product.images.map((img: APIImage) => img.image_url),
-          selected_sizes: product.variants.map((v: APIVariant) => v.size),
+          image_urls: product.images.map((img: any) => img.image_url),
+          selected_sizes: product.variants.map((v: any) => v.size),
         });
       } catch {
         toast.error("Gagal memuat data produk lama.");
@@ -76,19 +79,22 @@ export default function EditProductPage() {
   // 2. Submit Logic (Update)
   const handleUpdateSubmit = async (formData: FormData, id?: number) => {
     setSubmitting(true);
+    setUploadError(null);
+    setUploadSuccess(false);
     try {
-        // Method Spoofing untuk Laravel (Wajib)
         formData.set("_method", "PUT"); 
 
         await api.post(`admin/products/${id}`, formData);
 
         toast.success("Produk Berhasil Diupdate!");
-        router.push("/admin/products");
+        setUploadSuccess(true);
+        setSubmitting(false);
 
     } catch (error) {
         const err = error as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
         
         if (err.response?.status === 422) {
+            setSubmitting(false);
             const errorData = err.response.data.errors;
             if (errorData) {
                 const firstErrorKey = Object.keys(errorData)[0];
@@ -97,15 +103,9 @@ export default function EditProductPage() {
             } else {
                 toast.error("Data tidak valid, periksa kembali inputan.");
             }
-        } else if (err.response?.status === 404) {
-             toast.error("Produk tidak ditemukan.");
-        } else if (err.response?.status === 413) {
-            toast.error("File terlalu besar (Max server limit).");
         } else {
-            toast.error("Terjadi kesalahan server. Coba lagi nanti.");
+            setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
         }
-    } finally {
-        setSubmitting(false);
     }
   };
 
@@ -128,6 +128,20 @@ export default function EditProductPage() {
   // 4. Render UI
   return (
     <div className="max-w-3xl mx-auto pb-10 px-4">
+        <UploadOverlay 
+            isOpen={submitting || uploadSuccess} 
+            isError={!!uploadError} 
+            isSuccess={uploadSuccess}
+            errorMessage={uploadError || undefined}
+            onRetry={() => {
+                setUploadError(null);
+                setSubmitting(false);
+            }} 
+            onCloseSuccess={() => {
+                setUploadSuccess(false);
+                router.push("/admin/products");
+            }}
+        />
         <div className="flex items-center gap-4 mb-6">
             <Button variant="ghost" size="icon" asChild className="hover:bg-muted">
                 <Link href="/admin/products"><ArrowLeft className="w-5 h-5" /></Link>
@@ -143,7 +157,7 @@ export default function EditProductPage() {
         <ProductForm 
             initialData={initialData} 
             onSubmit={handleUpdateSubmit} 
-            isLoading={submitting} 
+            isLoading={submitting && !uploadError} 
         />
     </div>
   );
