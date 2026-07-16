@@ -32,7 +32,7 @@ interface ProductData {
   is_collab: boolean;
   image_urls: string[];
   selected_sizes: string[];
-  stock?: string;
+  stocks?: Record<string, string>;
 }
 
 export default function EditProductPage() {
@@ -59,11 +59,11 @@ export default function EditProductPage() {
           description: product.description,
           price: product.price.toString(),
           weight: product.weight.toString(),
-          stock: product.stock ? product.stock.toString() : "",
           category_id: product.category_id.toString(),
           is_collab: !!product.is_collab, 
           image_urls: product.images.map((img: any) => img.image_url),
           selected_sizes: product.variants.map((v: any) => v.size),
+          stocks: product.variants.reduce((acc: any, v: any) => ({ ...acc, [v.size]: v.stock.toString() }), {}),
         });
       } catch {
         toast.error("Failed to load old product data.");

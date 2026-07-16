@@ -25,7 +25,7 @@ interface ProductData {
   is_collab: boolean;
   image_urls: string[];
   selected_sizes: string[];
-  stock?: string;
+  stocks?: Record<string, string>;
 }
 
 interface Category {
@@ -53,7 +53,7 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
   const [description, setDescription] = useState(initialData?.description || "");
   const [price, setPrice] = useState(initialData?.price || "");
   const [weight, setWeight] = useState(initialData?.weight || "");
-  const [stock, setStock] = useState(initialData?.stock || "");
+  const [stocks, setStocks] = useState<Record<string, string>>(initialData?.stocks || {});
   const [category, setCategory] = useState(initialData?.category_id?.toString() || "");
   const [isCollab, setIsCollab] = useState(initialData?.is_collab || false);
   const [selectedSizes, setSelectedSizes] = useState<string[]>(initialData?.selected_sizes || []);
@@ -168,19 +168,25 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
     if (!initialData || price !== initialData.price) formData.append("price", price);
     if (!initialData || weight !== initialData.weight) formData.append("weight", weight);
     
-    // stock can be optional
-    const currentStock = stock || "";
-    const initialStock = initialData?.stock || "";
-    if (!initialData || currentStock !== initialStock) formData.append("stock", currentStock);
-    
+    // Check if category or is_collab changed
     if (!initialData || category !== initialData.category_id?.toString()) formData.append("category_id", category);
     if (!initialData || isCollab !== initialData.is_collab) formData.append("is_collab", isCollab ? "1" : "0");
 
-    // For sizes
+    // For sizes and stocks
     const initialSizes = initialData?.selected_sizes || [];
+    const initialStocks = initialData?.stocks || {};
+    
+    // Check if sizes changed
     const sizesChanged = !initialData || selectedSizes.length !== initialSizes.length || !selectedSizes.every(s => initialSizes.includes(s));
-    if (sizesChanged) {
-      selectedSizes.forEach((size) => formData.append("sizes[]", size));
+    
+    // Check if stocks changed
+    const stocksChanged = !initialData || selectedSizes.some(s => stocks[s] !== initialStocks[s]);
+
+    if (sizesChanged || stocksChanged) {
+      selectedSizes.forEach((size) => {
+        formData.append("sizes[]", size);
+        formData.append(`stocks[${size}]`, stocks[size] || "0");
+      });
     }
 
     // For images
@@ -275,13 +281,10 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
       {/* SECTION 2: INFO & SECTION 3: ATTRIBUTES (Sama persis kayak sebelumnya, dipersingkat biar gak kepanjangan) */}
       <div className="grid gap-6">
         <div className="space-y-2"><Label>Product Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
-        <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-                <Label>Category</Label>
-                {loadingCategories ? <div className="h-10 bg-muted animate-pulse rounded" /> : 
-                <Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent></Select>}
-             </div>
-             <div className="space-y-2"><Label>Stock</Label><Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} /></div>
+        <div className="space-y-2">
+            <Label>Category</Label>
+            {loadingCategories ? <div className="h-10 bg-muted animate-pulse rounded" /> : 
+            <Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent></Select>}
         </div>
         <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Price</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required /></div>
@@ -293,7 +296,7 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
       <div className="h-px bg-border my-6" />
 
       <div className="space-y-4">
-        <div className="space-y-3"><Label>Select Size</Label><div className="flex flex-wrap gap-3">{availableSizes.map(s => <div key={s} className="flex items-center space-x-2 border rounded-md px-3 py-2 bg-muted/20"><Checkbox id={`s-${s}`} checked={selectedSizes.includes(s)} onCheckedChange={() => handleSizeChange(s)} /><label htmlFor={`s-${s}`} className="text-sm font-medium cursor-pointer">{s}</label></div>)}</div></div>
+        <div className="space-y-3"><Label>Select Size & Stock</Label><div className="flex flex-col gap-3">{availableSizes.map(s => <div key={s} className="flex items-center space-x-4 border rounded-md px-3 py-2 bg-muted/20"><Checkbox id={`s-${s}`} checked={selectedSizes.includes(s)} onCheckedChange={() => handleSizeChange(s)} /><label htmlFor={`s-${s}`} className="text-sm font-medium cursor-pointer w-20">{s}</label>{selectedSizes.includes(s) && <Input type="number" className="w-24 h-8" placeholder="Stock" value={stocks[s] || ""} onChange={(e) => setStocks(prev => ({ ...prev, [s]: e.target.value }))} />}</div>)}</div></div>
         <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/10"><div className="space-y-0.5"><Label className="text-base">Collaboration?</Label></div><Switch checked={isCollab} onCheckedChange={setIsCollab} /></div>
       </div>
 
