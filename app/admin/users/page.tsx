@@ -47,8 +47,8 @@ export default function AdminUsersPage() {
     const [search, setSearch] = useState("");
     const [roleFilter, setRoleFilter] = useState("all");
 
-    // Pagination states (if API supports it later, currently static 1 page because API uses simple paginate)
     const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     // Dialog States
     const [suspendDialog, setSuspendDialog] = useState<{isOpen: boolean, user: User | null}>({isOpen: false, user: null});
@@ -65,9 +65,14 @@ export default function AdminUsersPage() {
             const res = await api.get(`/admin/users`, {
                 params: { search, role: roleFilter, page }
             });
-            // Assume Laravel pagination structure: res.data.data.data 
-            // because res()->json(['data' => $users]) -> paginate() inside 'data'
-            setUsers(res.data.data.data || res.data.data);
+            const responseData = res.data.data;
+            if (responseData.data) {
+                setUsers(responseData.data);
+                setTotalPages(responseData.last_page || 1);
+            } else {
+                setUsers(responseData);
+                setTotalPages(1);
+            }
         } catch (error) {
             toast.error("Failed to load user data");
         } finally {
@@ -222,6 +227,30 @@ export default function AdminUsersPage() {
                             )}
                         </TableBody>
                     </Table>
+                </div>
+                {/* Pagination Controls */}
+                <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+                    <div className="text-sm text-muted-foreground">
+                        Page {page} of {totalPages}
+                    </div>
+                    <div className="flex space-x-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            disabled={page === 1 || loading}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages || loading}
+                        >
+                            Next
+                        </Button>
+                    </div>
                 </div>
             </Card>
 
