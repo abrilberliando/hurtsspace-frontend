@@ -35,7 +35,7 @@ function ShopCardComponent({ item }: { item: Product }) {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [hasHovered, setHasHovered] = useState(false); // 🔥 Optimasi Lazy Image Fetch
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const boundsRef = useRef<DOMRect | null>(null);
 
@@ -74,7 +74,7 @@ function ShopCardComponent({ item }: { item: Product }) {
       {/* IMAGE */}
       <div
         ref={containerRef}
-        className="relative aspect-[3/4] bg-muted overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer transform-gpu"
+        className="relative aspect-[3/4] bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer transform-gpu"
         onMouseEnter={handleMouseEnter} // Trigger calc here
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
@@ -97,12 +97,11 @@ function ShopCardComponent({ item }: { item: Product }) {
                   // Optimization: sizes accurate for grid
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className={`
-                    absolute inset-0 w-full h-full object-cover object-center 
+                    absolute inset-0 w-full h-full object-contain object-center scale-95
                     transition-opacity duration-300 ease-in-out
-                    ${
-                      idx === activeIndex
-                        ? "opacity-100 z-10"
-                        : "opacity-0 z-0"
+                    ${idx === activeIndex
+                      ? "opacity-100 z-10"
+                      : "opacity-0 z-0"
                     }
                   `}
                   draggable={false}
@@ -118,12 +117,12 @@ function ShopCardComponent({ item }: { item: Product }) {
             </div>
           )}
         </Link>
-        
+
         {/* Badge New */}
         {isNewArrival && (
-            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
+          <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
             New
-            </div>
+          </div>
         )}
 
         {/* Dots */}
@@ -132,9 +131,8 @@ function ShopCardComponent({ item }: { item: Product }) {
             {images.map((_, i) => (
               <div
                 key={i}
-                className={`h-1.5 rounded-full shadow-sm backdrop-blur-sm transition-all duration-300 ${
-                  i === activeIndex ? "w-4 bg-white" : "w-1.5 bg-white/50"
-                }`}
+                className={`h-1.5 rounded-full shadow-sm backdrop-blur-sm transition-all duration-300 ${i === activeIndex ? "w-4 bg-white" : "w-1.5 bg-white/50"
+                  }`}
               />
             ))}
           </div>
@@ -172,10 +170,9 @@ function ShopCardComponent({ item }: { item: Product }) {
                   key={variant.id}
                   className={`
                     text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
-                    ${
-                      isAvailable
-                        ? "border-zinc-700 text-foreground cursor-default"
-                        : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
+                    ${isAvailable
+                      ? "border-zinc-700 text-foreground cursor-default"
+                      : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
                     }
                   `}
                 >
