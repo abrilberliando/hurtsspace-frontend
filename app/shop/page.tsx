@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Check } from "lucide-react";
 import Image from "next/image";
+import { ShopCard } from "@/components/ShopCard";
 
 // --- INTERFACES ---
 interface Variant {
@@ -101,7 +102,7 @@ function ShopContent() {
         const cats = Array.isArray(res.data) ? res.data : res.data.data || [];
         setCategories(cats);
       } catch (err) {
-        console.error("Gagal load kategori:", err);
+        console.error("Failed to load categories:", err);
       }
     };
     fetchCategories();
@@ -120,7 +121,7 @@ function ShopContent() {
 
         if (searchQuery) {
           params.append("search", searchQuery);
-          // 👇 TAMBAH LIMIT GEDE PAS SEARCH
+          // 👇 ADD BIG LIMIT WHEN SEARCHING
           params.append("limit", "100");
         }
 
@@ -135,7 +136,7 @@ function ShopContent() {
         setAllProducts(dataFix);
         setVisibleCount(16);
       } catch (error) {
-        console.error("❌ Gagal fetch products:", error);
+        console.error("❌ Failed to fetch products:", error);
         setAllProducts([]);
       } finally {
         setLoading(false);
@@ -157,7 +158,7 @@ function ShopContent() {
       );
     }
 
-    // B. FILTER KATEGORI (Fallback Client-side)
+    // B. CATEGORY FILTER (Client-side Fallback)
     if (categoryId && categoryId !== "all") {
       data = data.filter((p) => {
         const productCatId = p.category_id || p.category?.id;
@@ -254,7 +255,7 @@ function ShopContent() {
           </div>
         </div>
 
-        {/* GRID PRODUK */}
+        {/* PRODUCT GRID */}
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8 justify-items-center">
             {/* Optimized Array.from */}
@@ -270,8 +271,7 @@ function ShopContent() {
           <>
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 gap-y-8 md:gap-8 md:gap-y-12 justify-items-center z-0">
               {visibleProducts.map((item) => (
-                // Pake Memoized Component
-                <ShopCardMemo key={item.id} item={item} />
+                <ShopCard key={item.id} item={item} />
               ))}
             </div>
 
@@ -316,7 +316,7 @@ function ShopContent() {
 }
 
 // --- COMPONENT: CUSTOM DROPDOWN ---
-// Dibungkus memo biar gak re-render kalau parent (ShopContent) update state lain
+// Wrapped in memo to avoid re-render if parent (ShopContent) updates other state
 const CustomDropdown = memo(function CustomDropdown({
   options,
   value,
@@ -415,155 +415,3 @@ const CustomDropdown = memo(function CustomDropdown({
     </div>
   );
 });
-
-// --- COMPONENT: SHOP CARD (ULTRA OPTIMIZED) ---
-function ShopCard({ item }: { item: Product }) {
-  const images = item.images || [];
-  const variants = item.variants || [];
-
-  const [activeIndex, setActiveIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  // Ref buat nyimpen ukuran element (Reflow Saver!)
-  const boundsRef = useRef<DOMRect | null>(null);
-
-  // 1. Calculate bounds ONLY on mouse enter
-  const handleMouseEnter = useCallback(() => {
-    if (containerRef.current) {
-      boundsRef.current = containerRef.current.getBoundingClientRect();
-    }
-  }, []);
-
-  // 2. Logic hover ringan tanpa getBoundingClientRect() berulang
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (images.length <= 1 || !boundsRef.current) return;
-
-    const { left, width } = boundsRef.current;
-    if (width === 0) return;
-
-    const x = e.clientX - left;
-    const percentage = x / width;
-    const index = Math.floor(percentage * images.length);
-    const safeIndex = Math.min(Math.max(index, 0), images.length - 1);
-
-    setActiveIndex((prev) => (prev !== safeIndex ? safeIndex : prev));
-  }, [images.length]);
-
-  const handleMouseLeave = useCallback(() => {
-    setActiveIndex(0);
-    boundsRef.current = null; // Cleanup
-  }, []);
-
-  return (
-    <div className="w-full max-w-[350px] group relative select-none will-change-transform">
-      {/* IMAGE */}
-      <div
-        ref={containerRef}
-        className="relative aspect-[3/4] bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer transform-gpu"
-        onMouseEnter={handleMouseEnter} // Trigger calc here
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-      >
-        <Link
-          href={`/products/${item.slug}`}
-          className="block w-full h-full relative"
-        >
-          {images.length > 0 ? (
-            images.map((img, idx) => (
-              <Image
-                key={idx}
-                src={img.image_url}
-                alt={`${item.name} - ${idx}`}
-                fill
-                // Optimization: sizes accurate for grid
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                className={`
-                  absolute inset-0 w-full h-full object-contain object-center 
-                  transition-opacity duration-300 ease-in-out
-                  ${
-                    idx === activeIndex
-                      ? "opacity-100 z-10"
-                      : "opacity-0 z-0"
-                  }
-                `}
-                draggable={false}
-                priority={idx === 0}
-                loading={idx === 0 ? "eager" : "lazy"}
-                quality={60} // Sedikit diturunin biar enteng
-              />
-            ))
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700 font-bold text-lg md:text-2xl">
-              HURTS
-            </div>
-          )}
-        </Link>
-
-        {/* Dots */}
-        {images.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex">
-            {images.map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 rounded-full shadow-sm backdrop-blur-sm transition-all duration-300 ${
-                  i === activeIndex ? "w-4 bg-white" : "w-1.5 bg-white/50"
-                }`}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* INFO */}
-      <div className="space-y-1 px-1">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-4">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold uppercase text-xs md:text-sm tracking-wide leading-tight truncate">
-              <Link
-                href={`/products/${item.slug}`}
-                className="hover:underline underline-offset-4"
-              >
-                {item.name}
-              </Link>
-            </h3>
-            <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate">
-              {item.category?.name || "Streetwear"}
-            </p>
-          </div>
-          {/* Pake global helper */}
-          <p className="text-xs md:text-sm font-bold whitespace-nowrap">
-            Rp {displayPrice(item.price).toLocaleString("id-ID")}
-          </p>
-        </div>
-
-        {/* SIZE */}
-        <div className="flex flex-wrap gap-1 pt-1">
-          {variants.length > 0 ? (
-            variants.map((variant) => {
-              const isAvailable = variant.stock > 0;
-              return (
-                <span
-                  key={variant.id}
-                  className={`
-                    text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium transition-colors
-                    ${
-                      isAvailable
-                        ? "border-zinc-700 text-foreground cursor-default"
-                        : "border-border text-muted-foreground/50 line-through bg-muted/30 cursor-not-allowed"
-                    }
-                  `}
-                >
-                  {variant.size}
-                </span>
-              );
-            })
-          ) : (
-            <span className="text-[9px] md:text-[10px] text-muted-foreground italic">
-              No size info
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-const ShopCardMemo = memo(ShopCard);

@@ -32,7 +32,7 @@ interface Category {
   id: number;
   name: string;
   slug: string;
-  products_count?: number; // Opsional kalau mau nampilin jumlah produk
+  products_count?: number; // Optional if you want to display product count
 }
 
 export default function ManageCategoriesPage() {
@@ -54,7 +54,7 @@ export default function ManageCategoriesPage() {
       const res = await api.get("/categories");
       setCategories(res.data.data);
     } catch {
-      toast.error("Gagal load kategori.");
+      toast.error("Failed to load categories.");
     } finally {
       setLoading(false);
     }
@@ -89,17 +89,17 @@ export default function ManageCategoriesPage() {
         if (editingId) {
             // Update
             await api.put(`/admin/categories/${editingId}`, { name: formName });
-            toast.success("Kategori berhasil diupdate!");
+            toast.success("Category successfully updated!");
         } else {
             // Create
             await api.post("/admin/categories", { name: formName });
-            toast.success("Kategori baru dibuat!");
+            toast.success("New category created!");
         }
         setIsModalOpen(false);
         fetchCategories(); // Refresh list
     } catch (error) {
         const err = error as AxiosError<{ message: string }>;
-        toast.error(err.response?.data?.message || "Gagal menyimpan kategori.");
+        toast.error(err.response?.data?.message || "Failed to save category.");
     } finally {
         setIsSubmitting(false);
     }
@@ -110,12 +110,12 @@ export default function ManageCategoriesPage() {
     setIsSubmitting(true);
     try {
         await api.delete(`/admin/categories/${targetDeleteId}`);
-        toast.success("Kategori dihapus.");
+        toast.success("Category deleted.");
         fetchCategories();
     } catch (error) {
         const err = error as AxiosError<{ message: string }>;
-        // Handle error validasi (misal masih ada produk)
-        toast.error(err.response?.data?.message || "Gagal menghapus kategori.");
+        // Handle validation error (e.g. still has products)
+        toast.error(err.response?.data?.message || "Failed to delete category.");
     } finally {
         setIsSubmitting(false);
         setIsDeleteOpen(false);
@@ -130,7 +130,7 @@ export default function ManageCategoriesPage() {
         <div className="flex justify-between items-center border-b border-border pb-6">
             <div>
                 <h1 className="text-3xl font-black tracking-tight">Manage Categories</h1>
-                <p className="text-muted-foreground text-sm mt-1">Atur kategori produk untuk memudahkan pencarian.</p>
+                <p className="text-muted-foreground text-sm mt-1">Manage product categories to ease search.</p>
             </div>
             <Button onClick={openCreateModal} size="lg" className="font-bold">
                 <Plus className="w-5 h-5 mr-2" /> New Category
@@ -144,14 +144,14 @@ export default function ManageCategoriesPage() {
                         <thead className="bg-muted text-muted-foreground font-medium border-b border-border">
                             <tr>
                                 <th className="px-6 py-4 w-[100px]">#</th>
-                                <th className="px-6 py-4">Nama Kategori</th>
+                                <th className="px-6 py-4">Category Name</th>
                                 <th className="px-6 py-4">Slug</th>
                                 <th className="px-6 py-4 text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
                             {categories.length === 0 ? (
-                                <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Belum ada kategori.</td></tr>
+                                <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No categories yet.</td></tr>
                             ) : (
                                 categories.map((cat, idx) => (
                                     <tr key={cat.id} className="hover:bg-muted/50 transition">
@@ -181,11 +181,11 @@ export default function ManageCategoriesPage() {
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{editingId ? "Edit Kategori" : "Buat Kategori Baru"}</DialogTitle>
+                    <DialogTitle>{editingId ? "Edit Category" : "Create New Category"}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label>Nama Kategori</Label>
+                        <Label>Category Name</Label>
                         <Input 
                             placeholder="Contoh: T-Shirts, Hoodies..." 
                             value={formName}
@@ -194,9 +194,9 @@ export default function ManageCategoriesPage() {
                         />
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Batal</Button>
+                        <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? <Loader2 className="animate-spin w-4 h-4" /> : "Simpan"}
+                            {isSubmitting ? <Loader2 className="animate-spin w-4 h-4" /> : "Save"}
                         </Button>
                     </DialogFooter>
                 </form>
@@ -207,19 +207,19 @@ export default function ManageCategoriesPage() {
         <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Hapus Kategori?</AlertDialogTitle>
+                    <AlertDialogTitle>Delete Category?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Tindakan ini permanen. Pastikan tidak ada produk yang menggunakan kategori ini, atau penghapusan akan ditolak.
+                        This action is permanent. Make sure no products are using this category, or the deletion will be rejected.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isSubmitting}>Batal</AlertDialogCancel>
+                    <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
                     <AlertDialogAction 
                         onClick={handleDelete} 
                         className="bg-red-600 hover:bg-red-700"
                         disabled={isSubmitting}
                     >
-                        {isSubmitting ? "Menghapus..." : "Ya, Hapus"}
+                        {isSubmitting ? "Deleting..." : "Yes, Delete"}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

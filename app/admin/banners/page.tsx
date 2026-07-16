@@ -28,7 +28,7 @@ export default function AdminBannersPage() {
       const res = await api.get("/admin/banners");
       setBanners(res.data.data);
     } catch {
-      toast.error("Gagal load banner.");
+      toast.error("Failed to load banners.");
     } finally {
       setLoading(false);
     }
@@ -37,20 +37,20 @@ export default function AdminBannersPage() {
   useEffect(() => { fetchBanners(); }, []);
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Hapus banner ini?")) return;
+    if (!confirm("Delete this banner?")) return;
     try {
         await api.delete(`/admin/banners/${id}`);
-        toast.success("Banner dihapus!");
+        toast.success("Banner deleted!");
         fetchBanners();
-    } catch { toast.error("Gagal hapus."); }
+    } catch { toast.error("Failed to delete."); }
   };
 
   const handleToggle = async (id: number) => {
     try {
         await api.put(`/admin/banners/${id}/toggle`);
-        toast.success("Status banner diupdate!");
+        toast.success("Banner status updated!");
         fetchBanners();
-    } catch { toast.error("Gagal update status."); }
+    } catch { toast.error("Failed to update status."); }
   };
 
   if (loading) return <div className="space-y-4"><Skeleton className="h-32 w-full" /></div>;
@@ -110,7 +110,7 @@ export default function AdminBannersPage() {
                     </div>
                 </div>
             ))}
-            {banners.length === 0 && <p className="text-center text-muted-foreground py-10">Belum ada banner. Buat baru gih!</p>}
+            {banners.length === 0 && <p className="text-center text-muted-foreground py-10">No banners yet. Create a new one!</p>}
         </div>
     </div>
   );

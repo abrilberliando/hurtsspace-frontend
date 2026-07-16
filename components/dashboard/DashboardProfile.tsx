@@ -7,55 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { User, Mail, Phone, Save, Camera, Loader2, ZoomIn, Check, MapPin } from "lucide-react";
+import { User, Mail, Phone, Save, Loader2, Check, MapPin } from "lucide-react";
 import { AxiosError } from "axios";
-import Cropper, { Area } from "react-easy-crop";
 import AddressForm, { AddressData } from "@/components/shared/AddressForm";
 import LogoutButton from "../shared/LogoutButton";
 
-// --- UTILS: CANVAS CROPPER HELPER ---
-const createImage = (url: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
-    const image = new Image();
-    image.addEventListener("load", () => resolve(image));
-    image.addEventListener("error", (error) => reject(error));
-    image.setAttribute("crossOrigin", "anonymous");
-    image.src = url;
-  });
 
-async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
-  const image = await createImage(imageSrc);
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-
-  if (!ctx) throw new Error("No 2d context");
-
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
-
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    pixelCrop.width,
-    pixelCrop.height
-  );
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error("Canvas is empty"));
-    }, "image/jpeg", 0.95);
-  });
-}
 
 export default function DashboardProfile() {
   const { user, login } = useAuth();
@@ -67,14 +26,7 @@ export default function DashboardProfile() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   
-  // State Upload & Cropping 📸
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isCropping, setIsCropping] = useState(false);
-  const [tempImgSrc, setTempImgSrc] = useState<string | null>(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
 
   // Load data user awal
   useEffect(() => {
@@ -82,44 +34,10 @@ export default function DashboardProfile() {
       setName(user.name);
       setEmail(user.email);
       setPhone(user.phone || "");
-      setImagePreview(null);
-      setImageFile(null);
     }
   }, [user]);
 
-  // --- LOGIC IMAGE CROPPER ---
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) return toast.error("File kegedean, G! Max 5MB ya.");
-      const reader = new FileReader();
-      reader.addEventListener("load", () => {
-        setTempImgSrc(reader.result?.toString() || "");
-        setIsCropping(true);
-        setZoom(1);
-      });
-      reader.readAsDataURL(file);
-    }
-  };
 
-  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
-
-  const handleSaveCrop = async () => {
-    if (!tempImgSrc || !croppedAreaPixels) return;
-    try {
-      const croppedImageBlob = await getCroppedImg(tempImgSrc, croppedAreaPixels);
-      const file = new File([croppedImageBlob], "avatar_cropped.jpg", { type: "image/jpeg" });
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-      setIsCropping(false);
-      toast.success("Foto di-crop! Klik Save Changes di bawah ya.");
-    } catch (e) {
-      console.error(e);
-      toast.error("Gagal nge-crop gambar.");
-    }
-  };
 
   // --- LOGIC UPDATE PROFILE (Basic Info + Avatar) ---
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -132,10 +50,6 @@ export default function DashboardProfile() {
       formData.append("phone", phone);
       formData.append("_method", "PUT"); 
 
-      if (imageFile) {
-        formData.append("avatar", imageFile);
-      }
-
       const res = await api.post("/user", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -146,12 +60,11 @@ export default function DashboardProfile() {
          login(updatedUser, token); 
       }
 
-      toast.success("Profile Updated!", { description: "Data diri lo aman terkendali." });
-      setImageFile(null); 
+      toast.success("Profile Updated!", { description: "Your personal data is safe and secured." });
 
     } catch (error) {
       const err = error as AxiosError<{ message: string }>;
-      toast.error(err.response?.data?.message || "Gagal Update Profile");
+      toast.error(err.response?.data?.message || "Failed to Update Profile");
     } finally {
       setLoadingProfile(false);
     }
@@ -171,7 +84,7 @@ export default function DashboardProfile() {
             _method: "PUT"
         };
 
-        const res = await api.post("/user", payload); // Pake endpoint /user yang sama
+        const res = await api.post("/user", payload); // Use the same /user endpoint
         
         if (user) {
              const updatedUser = { ...user, ...res.data.user };
@@ -179,9 +92,9 @@ export default function DashboardProfile() {
              login(updatedUser, token);
         }
 
-        toast.success("Alamat Berhasil Disimpan!", { description: "Siap buat checkout barang baru." });
+        toast.success("Address Saved Successfully!", { description: "Ready to checkout new items." });
     } catch {
-        toast.error("Gagal simpen alamat.");
+        toast.error("Failed to save address.");
     } finally {
         setLoadingAddress(false);
     }
@@ -189,7 +102,7 @@ export default function DashboardProfile() {
 
   if (!user) return null;
 
-  // Data default buat form alamat
+  // Default data for address form
   const addressDefaultValues = {
       name: user.name,
       phone: user.phone || "",
@@ -201,40 +114,9 @@ export default function DashboardProfile() {
   return (
     <div className="space-y-8 max-w-4xl mx-auto py-10 px-2">
         
-        {/* === HEADER & AVATAR === */}
+        {/* === HEADER === */}
         {/* Sekarang layoutnya full width & clean */}
         <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 pb-6 border-b border-border">
-            <div className="relative group">
-                <Avatar className="h-32 w-32 border-4 border-background shadow-2xl cursor-pointer ring-2 ring-border/50">
-                    <AvatarImage 
-                        src={imagePreview || user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=000&color=fff`} 
-                        className="object-cover"
-                    />
-                    <AvatarFallback>CN</AvatarFallback>
-                </Avatar>
-                
-                <label 
-                    htmlFor="avatar-upload" 
-                    className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-all rounded-full cursor-pointer backdrop-blur-sm"
-                >
-                    <Camera className="w-8 h-8" />
-                </label>
-                <input 
-                    id="avatar-upload" 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={handleImageChange}
-                    onClick={(e) => (e.currentTarget.value = "")} 
-                />
-                
-                {/* Badge Status Upload */}
-                {imageFile && (
-                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-full animate-bounce">
-                     New Photo Ready!
-                   </div>
-                )}
-            </div>
 
             <div className="text-center sm:text-left flex-1 space-y-2 mb-2">
                 <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight">{user.name}</h1>
@@ -250,36 +132,6 @@ export default function DashboardProfile() {
             <LogoutButton />
         </div>
 
-        {/* === MODAL CROPPER === */}
-        <Dialog open={isCropping} onOpenChange={setIsCropping}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Atur Posisi Foto</DialogTitle>
-                </DialogHeader>
-                <div className="relative w-full h-64 bg-black rounded-lg overflow-hidden mt-4">
-                    {tempImgSrc && (
-                        <Cropper
-                            image={tempImgSrc}
-                            crop={crop}
-                            zoom={zoom}
-                            aspect={1}
-                            onCropChange={setCrop}
-                            onCropComplete={onCropComplete}
-                            onZoomChange={setZoom}
-                        />
-                    )}
-                </div>
-                <div className="flex items-center gap-4 mt-4">
-                    <ZoomIn className="w-4 h-4 text-muted-foreground" />
-                    <input type="range" value={zoom} min={1} max={3} step={0.1} onChange={(e) => setZoom(Number(e.target.value))} className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black" />
-                </div>
-                <DialogFooter className="mt-4">
-                    <Button variant="outline" onClick={() => setIsCropping(false)}>Batal</Button>
-                    <Button onClick={handleSaveCrop}><Check className="w-4 h-4 mr-2" /> Pakai Foto Ini</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-
         {/* === MAIN CONTENT: UNIFIED CARD === */}
         <Card className="bg-card border-border shadow-sm">
             <CardContent className="p-6 md:p-10 space-y-12">
@@ -292,7 +144,7 @@ export default function DashboardProfile() {
                         </div>
                         <div>
                             <h3 className="text-lg font-bold">Personal Information</h3>
-                            <p className="text-sm text-muted-foreground">Atur data diri utama lo disini.</p>
+                            <p className="text-sm text-muted-foreground">Manage your main personal data here.</p>
                         </div>
                     </div>
 
@@ -309,7 +161,7 @@ export default function DashboardProfile() {
                             <div className="space-y-2 md:col-span-2">
                                 <Label>Email Address</Label>
                                 <Input value={email} disabled readOnly className="bg-muted/50 cursor-not-allowed h-11" />
-                                <p className="text-[10px] text-muted-foreground pt-1">Email dikunci untuk keamanan akun.</p>
+                                <p className="text-[10px] text-muted-foreground pt-1">Email is locked for account security.</p>
                             </div>
                         </div>
 
@@ -331,7 +183,7 @@ export default function DashboardProfile() {
                         </div>
                         <div>
                             <h3 className="text-lg font-bold">Shipping Address</h3>
-                            <p className="text-sm text-muted-foreground">Alamat ini bakal otomatis kepake pas checkout.</p>
+                            <p className="text-sm text-muted-foreground">This address will be automatically used during checkout.</p>
                         </div>
                     </div>
 

@@ -25,7 +25,7 @@ interface ProductData {
   is_collab: boolean;
   image_urls: string[];
   selected_sizes: string[];
-  stock?: string;
+  stocks?: Record<string, string>;
 }
 
 interface Category {
@@ -53,7 +53,7 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
   const [description, setDescription] = useState(initialData?.description || "");
   const [price, setPrice] = useState(initialData?.price || "");
   const [weight, setWeight] = useState(initialData?.weight || "");
-  const [stock, setStock] = useState(initialData?.stock || "");
+  const [stocks, setStocks] = useState<Record<string, string>>(initialData?.stocks || {});
   const [category, setCategory] = useState(initialData?.category_id?.toString() || "");
   const [isCollab, setIsCollab] = useState(initialData?.is_collab || false);
   const [selectedSizes, setSelectedSizes] = useState<string[]>(initialData?.selected_sizes || []);
@@ -97,7 +97,7 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
           setCategory(res.data.data[0].id.toString());
         }
       } catch {
-        toast.error("Gagal load list kategori.");
+        toast.error("Failed to load category list.");
       } finally {
         setLoadingCategories(false);
       }
@@ -109,13 +109,26 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
-      const newItems: GalleryItem[] = filesArray.map((file, idx) => ({
-        id: `new-${Date.now()}-${idx}`,
-        type: "NEW",
-        file: file,
-        preview: URL.createObjectURL(file),
-      }));
-      setGallery((prev) => [...prev, ...newItems]);
+      const validFiles: GalleryItem[] = [];
+      for (const file of filesArray) {
+        if (file.size > 3 * 1024 * 1024) {
+          toast.error(`Image size ${file.name} exceeds 3MB.`);
+          continue;
+        }
+        if (!file.type.startsWith('image/')) {
+          toast.error(`File ${file.name} is not an image.`);
+          continue;
+        }
+        validFiles.push({
+          id: `new-${Date.now()}-${Math.random()}`,
+          type: "NEW",
+          file: file,
+          preview: URL.createObjectURL(file),
+        });
+      }
+      if (validFiles.length > 0) {
+        setGallery((prev) => [...prev, ...validFiles]);
+      }
       e.target.value = "";
     }
   };
@@ -142,46 +155,66 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (gallery.length === 0) return toast.error("Wajib upload minimal 1 foto!");
-    if (selectedSizes.length === 0) return toast.error("Pilih minimal 1 size!");
-    if (!category) return toast.error("Pilih kategori dulu!");
+    if (gallery.length === 0) return toast.error("Must upload at least 1 photo!");
+    if (selectedSizes.length === 0) return toast.error("Select at least 1 size!");
+    if (!category) return toast.error("Select a category first!");
 
     const formData = new FormData();
-    formData.append("name", name);
-    formData.append("description", description);
-    formData.append("price", price);
-    formData.append("weight", weight);
-    if (stock) formData.append("stock", stock);
-    formData.append("category_id", category);
-    formData.append("is_collab", isCollab ? "1" : "0");
-
     if (initialData) formData.append("_method", "PUT");
 
-    // 👇 LOGIC URUTAN KONGKRIT (SORT ORDER)
-    // Kita kirim 'image_order[]' yang isinya urutan visual user saat ini.
-    // Format: "existing|URL" atau "new|INDEX_UPLOAD"
+    // Only send fields that actually changed
+    if (!initialData || name !== initialData.name) formData.append("name", name);
+    if (!initialData || description !== initialData.description) formData.append("description", description);
+    if (!initialData || price !== initialData.price) formData.append("price", price);
+    if (!initialData || weight !== initialData.weight) formData.append("weight", weight);
     
-    let newImageIndexCounter = 0; // Buat ngitung index khusus foto baru
+    // Check if category or is_collab changed
+    if (!initialData || category !== initialData.category_id?.toString()) formData.append("category_id", category);
+    if (!initialData || isCollab !== initialData.is_collab) formData.append("is_collab", isCollab ? "1" : "0");
 
-    gallery.forEach((item) => {
-        if (item.type === "EXISTING" && item.url) {
-            // Kalau foto lama, kirim kodenya "existing|url"
-            formData.append("image_order[]", `existing|${item.url}`);
-            // Kita juga tetep kirim ini biar validasi 'nullable|array' di backend aman (opsional)
-            formData.append("existing_images[]", item.url);
-        } 
-        else if (item.type === "NEW" && item.file) {
-            // Kalau foto baru, kita upload filenya ke "images[]"
-            formData.append("images[]", item.file);
-            
-            // DAN kita catat urutannya: "new|0", "new|1", dst.
-            formData.append("image_order[]", `new|${newImageIndexCounter}`);
-            
-            newImageIndexCounter++;
-        }
-    });
+    // For sizes and stocks
+    const initialSizes = initialData?.selected_sizes || [];
+    const initialStocks = initialData?.stocks || {};
+    
+    // Check if sizes changed
+    const sizesChanged = !initialData || selectedSizes.length !== initialSizes.length || !selectedSizes.every(s => initialSizes.includes(s));
+    
+    // Check if stocks changed
+    const stocksChanged = !initialData || selectedSizes.some(s => stocks[s] !== initialStocks[s]);
 
-    selectedSizes.forEach((size) => formData.append("sizes[]", size));
+    if (sizesChanged || stocksChanged) {
+      selectedSizes.forEach((size) => {
+        formData.append("sizes[]", size);
+        formData.append(`stocks[${size}]`, stocks[size] || "0");
+      });
+    }
+
+    // For images
+    const initialUrls = initialData?.image_urls || [];
+    const hasNewImages = gallery.some(g => g.type === "NEW");
+    const imagesChanged = !initialData || hasNewImages || initialUrls.length !== gallery.length || !initialUrls.every((url, i) => url === gallery[i].url);
+
+    if (imagesChanged) {
+      let newImageIndexCounter = 0;
+      gallery.forEach((item) => {
+          if (item.type === "EXISTING" && item.url) {
+              formData.append("image_order[]", `existing|${item.url}`);
+              formData.append("existing_images[]", item.url);
+          } 
+          else if (item.type === "NEW" && item.file) {
+              formData.append("images[]", item.file);
+              formData.append("image_order[]", `new|${newImageIndexCounter}`);
+              newImageIndexCounter++;
+          }
+      });
+    }
+
+    // If update and nothing changed, success immediately
+    if (initialData && Array.from(formData.keys()).length === 1 && formData.get("_method") === "PUT") {
+      toast.success("No data changed.");
+      onSubmit(formData, initialData.id); // Trigger close/redirect aja
+      return;
+    }
 
     onSubmit(formData, initialData?.id);
   };
@@ -195,7 +228,7 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
           <div>
             <Label className="text-base font-bold">Product Gallery</Label>
             <p className="text-xs text-muted-foreground mt-1">
-              Urutkan foto sesuai keinginan. <strong>Foto pertama = Cover Utama.</strong>
+              Sort photos as desired. <strong>First photo = Main Cover.</strong>
             </p>
           </div>
           <Badge variant="secondary" className="h-6">{gallery.length} Items</Badge>
@@ -208,11 +241,11 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
 
               {index === 0 && (
                 <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-current" /> UTAMA
+                  <Star className="w-3 h-3 fill-current" /> MAIN
                 </div>
               )}
               {item.type === "NEW" && (
-                <div className="absolute bottom-0 left-0 right-0 bg-green-500/90 text-white text-[10px] font-bold text-center py-1">BARU</div>
+                <div className="absolute bottom-0 left-0 right-0 bg-green-500/90 text-white text-[10px] font-bold text-center py-1">NEW</div>
               )}
 
               {/* OVERLAY CONTROLS */}
@@ -237,7 +270,7 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
           ))}
           <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-muted-foreground/25 hover:border-primary hover:bg-primary/5 cursor-pointer transition-all active:scale-95 bg-muted/30">
             <div className="bg-background p-3 rounded-full shadow-sm border mb-2"><Plus className="w-5 h-5 text-primary" /></div>
-            <span className="text-xs font-semibold text-muted-foreground">Tambah Foto</span>
+            <span className="text-xs font-semibold text-muted-foreground">Add Photo</span>
             <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
           </label>
         </div>
@@ -247,31 +280,28 @@ export default function ProductForm({ initialData, onSubmit, isLoading }: Produc
 
       {/* SECTION 2: INFO & SECTION 3: ATTRIBUTES (Sama persis kayak sebelumnya, dipersingkat biar gak kepanjangan) */}
       <div className="grid gap-6">
-        <div className="space-y-2"><Label>Nama Produk</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
-        <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-                <Label>Kategori</Label>
-                {loadingCategories ? <div className="h-10 bg-muted animate-pulse rounded" /> : 
-                <Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger><SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent></Select>}
-             </div>
-             <div className="space-y-2"><Label>Stok</Label><Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} /></div>
+        <div className="space-y-2"><Label>Product Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
+        <div className="space-y-2">
+            <Label>Category</Label>
+            {loadingCategories ? <div className="h-10 bg-muted animate-pulse rounded" /> : 
+            <Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger><SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent></Select>}
         </div>
         <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>Harga</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required /></div>
-            <div className="space-y-2"><Label>Berat</Label><Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} required /></div>
+            <div className="space-y-2"><Label>Price</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required /></div>
+            <div className="space-y-2"><Label>Weight</Label><Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} required /></div>
         </div>
-        <div className="space-y-2"><Label>Deskripsi</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} required className="min-h-[120px]" /></div>
+        <div className="space-y-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} required className="min-h-[120px]" /></div>
       </div>
 
       <div className="h-px bg-border my-6" />
 
       <div className="space-y-4">
-        <div className="space-y-3"><Label>Pilih Ukuran</Label><div className="flex flex-wrap gap-3">{availableSizes.map(s => <div key={s} className="flex items-center space-x-2 border rounded-md px-3 py-2 bg-muted/20"><Checkbox id={`s-${s}`} checked={selectedSizes.includes(s)} onCheckedChange={() => handleSizeChange(s)} /><label htmlFor={`s-${s}`} className="text-sm font-medium cursor-pointer">{s}</label></div>)}</div></div>
-        <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/10"><div className="space-y-0.5"><Label className="text-base">Kolaborasi?</Label></div><Switch checked={isCollab} onCheckedChange={setIsCollab} /></div>
+        <div className="space-y-3"><Label>Select Size & Stock</Label><div className="flex flex-col gap-3">{availableSizes.map(s => <div key={s} className="flex items-center space-x-4 border rounded-md px-3 py-2 bg-muted/20"><Checkbox id={`s-${s}`} checked={selectedSizes.includes(s)} onCheckedChange={() => handleSizeChange(s)} /><label htmlFor={`s-${s}`} className="text-sm font-medium cursor-pointer w-20">{s}</label>{selectedSizes.includes(s) && <Input type="number" className="w-24 h-8" placeholder="Stock" value={stocks[s] || ""} onChange={(e) => setStocks(prev => ({ ...prev, [s]: e.target.value }))} />}</div>)}</div></div>
+        <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/10"><div className="space-y-0.5"><Label className="text-base">Collaboration?</Label></div><Switch checked={isCollab} onCheckedChange={setIsCollab} /></div>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t static md:border-0 md:p-0 md:bg-transparent z-50 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] md:shadow-none">
-        <div className="max-w-3xl mx-auto"><Button type="submit" disabled={isLoading} className="w-full font-bold h-12 text-base shadow-lg">{isLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}{initialData ? "SIMPAN PERUBAHAN" : "PUBLISH PRODUK"}</Button></div>
+        <div className="max-w-3xl mx-auto"><Button type="submit" disabled={isLoading} className="w-full font-bold h-12 text-base shadow-lg">{isLoading ? <Loader2 className="animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}{initialData ? "SAVE CHANGES" : "PUBLISH PRODUCT"}</Button></div>
       </div>
     </form>
   );

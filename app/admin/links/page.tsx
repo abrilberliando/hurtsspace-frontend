@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Plus, GripVertical, Trash2, Link as LinkIcon, Power } from "lucide-react";
 import Image from "next/image";
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
 
 // Preset Icons array
 const PRESET_ICONS = [
@@ -32,6 +33,8 @@ const PRESET_ICONS = [
 export default function AdminLinktreePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [uploadSuccess, setUploadSuccess] = useState(false);
     
     const [settings, setSettings] = useState({
         page_title: '',
@@ -75,7 +78,7 @@ export default function AdminLinktreePage() {
             setBgPreview(res.data.settings.background_image);
             setLinks(res.data.links);
         } catch (error) {
-            toast.error("Gagal load data linktree");
+            toast.error("Failed to load linktree data");
         } finally {
             setLoading(false);
         }
@@ -101,6 +104,8 @@ export default function AdminLinktreePage() {
 
     const saveSettings = async () => {
         setSaving(true);
+        setUploadError(null);
+        setUploadSuccess(false);
         try {
             const formData = new FormData();
             Object.entries(settings).forEach(([key, val]) => formData.append(key, val as string));
@@ -113,8 +118,10 @@ export default function AdminLinktreePage() {
             toast.success("Settings saved!");
             setLogoFile(null);
             setBgFile(null);
+            setUploadSuccess(true); setSaving(false);
         } catch (error) {
-            toast.error("Failed to save settings");
+            const err = error as any;
+            setUploadError(err.response?.data?.message || "Failed to save settings");
         } finally {
             setSaving(false);
         }
@@ -129,6 +136,9 @@ export default function AdminLinktreePage() {
             toast.error("Label and URL are required");
             return;
         }
+        setSaving(true);
+        setUploadError(null);
+        setUploadSuccess(false);
         try {
             const formData = new FormData();
             formData.append('icon', newLink.icon);
@@ -141,8 +151,12 @@ export default function AdminLinktreePage() {
             setNewLink({ icon: 'globe', label: '', url: '' });
             setNewLinkIconFile(null);
             fetchData();
+            setUploadSuccess(true); setSaving(false);
         } catch (error) {
-            toast.error("Failed to add link");
+            const err = error as any;
+            setUploadError(err.response?.data?.message || "Failed to add link");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -198,6 +212,20 @@ export default function AdminLinktreePage() {
 
     return (
         <div className="space-y-6">
+            <UploadOverlay 
+                isOpen={saving || uploadSuccess} 
+                isError={!!uploadError} 
+                isSuccess={uploadSuccess}
+                errorMessage={uploadError || undefined}
+                onRetry={() => {
+                    setUploadError(null);
+                    setSaving(false);
+                }} 
+                onCloseSuccess={() => {
+                    setUploadSuccess(false);
+                    setSaving(false);
+                }}
+            />
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold">Linktree Management</h1>

@@ -13,9 +13,9 @@ const firebaseConfig = {
 };
 
 // Singleton Pattern:
-// Kita cek dulu apakah app sudah ada (getApps().length > 0).
-// Kalau sudah ada, kita pake yang udah jalan (getApp()).
-// Kalau belum, baru kita inisialisasi ulang (initializeApp).
+// We first check if the app already exists (getApps().length > 0).
+// If it already exists, we use the running one (getApp()).
+// If not, we initialize it again (initializeApp).
 // Ini mencegah error "Firebase App named '[DEFAULT]' already exists" di Next.js dev mode (hot reload).
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 

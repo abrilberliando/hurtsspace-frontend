@@ -51,7 +51,7 @@ export default function LookBookCard() {
         // Kita ambil banyak sekalian (misal 50), nanti di-filter pas render
         setLookbooks(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Gagal load lookbook", error);
+        console.error("Failed to load lookbook", error);
       } finally {
         setLoading(false);
       }
@@ -68,10 +68,10 @@ export default function LookBookCard() {
 
   // 👇 HELPER: Handle Load More
   const handleLoadMore = () => {
-    setVisibleCount((prev) => prev + 4); // Tambah 4 item lagi tiap klik
+    setVisibleCount((prev) => prev + 4); // Add 4 more items per click
   };
 
-  // 👇 Data yang mau dirender saat ini
+  // 👇 Current data to render
   const visibleLookbooks = lookbooks.slice(0, visibleCount);
   const hasMore = visibleCount < lookbooks.length; // Cek apa masih ada sisa?
 
@@ -132,14 +132,14 @@ export default function LookBookCard() {
                            </button>
                        </PopoverTrigger>
                        
-                       {/* POPUP PRODUK */}
+                       {/* PRODUCT POPUP */}
                        <PopoverContent 
                            className="w-64 p-0 bg-background/95 backdrop-blur-xl border-border shadow-2xl rounded-xl overflow-hidden animate-in zoom-in-95 duration-200" 
                            sideOffset={10}
                            side="top"
                        >
                            <div className="flex gap-3 p-3 items-center">
-                               {/* Foto Produk Kecil */}
+                               {/* Small Product Photo */}
                                <div className="w-16 h-20 bg-muted rounded-md overflow-hidden flex-shrink-0 border border-border/50">
                                    {/* eslint-disable-next-line @next/next/no-img-element */}
                                    <img src={item.product.images[0]?.image_url} className="w-full h-full object-cover" alt={item.product.name} />

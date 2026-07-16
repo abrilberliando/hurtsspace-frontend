@@ -24,9 +24,9 @@ export default function VideoBanner() {
       try {
         // Pake timestamp biar gak kena cache
         const res = await api.get(`/video-banner/active?t=${Date.now()}`);
-        setData(res.data.data); // Bisa null kalau gak ada video aktif
+        setData(res.data.data); // Can be null if no active video
       } catch (e) {
-        console.error("Gagal load video banner");
+        console.error("Failed to load video banner");
       } finally {
         setLoading(false);
       }
@@ -42,7 +42,7 @@ export default function VideoBanner() {
     );
   }
 
-  // Kalau gak ada data video aktif, return null (komponen gak muncul)
+  // If no active video data, return null (component does not appear)
   if (!data) return null; 
 
   return (

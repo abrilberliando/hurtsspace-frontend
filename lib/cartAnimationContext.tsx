@@ -19,9 +19,9 @@ const CartAnimationContext = createContext<CartAnimationContextType | undefined>
 export function CartAnimationProvider({ children }: { children: React.ReactNode }) {
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
 
-  // 👇 PERBAIKAN DISINI: Kita gak simpen target di state buat trigger, tapi cari langsung
+  // 👇 FIX HERE: We don't save target in state to trigger, but find it directly
   const triggerFlyAnimation = useCallback((buttonElement: HTMLElement, imageSrc: string) => {
-    // 1. Cari elemen target (Keranjang) secara langsung di DOM
+    // 1. Find the target element (Cart) directly in the DOM
     const cartElement = document.getElementById("cart-icon-target");
     
     if (!cartElement) {
@@ -37,7 +37,7 @@ export function CartAnimationProvider({ children }: { children: React.ReactNode 
     // 3. Masukin ke antrian terbang
     setFlyingItems((prev) => [...prev, { id, src: imageSrc, startRect, endRect }]);
 
-    // 4. Hapus setelah 1 detik (animasi selesai)
+    // 4. Remove after 1 second (animation finished)
     setTimeout(() => {
       setFlyingItems((prev) => prev.filter((item) => item.id !== id));
     }, 1000);
@@ -79,7 +79,7 @@ function FlyingElement({ item }: { item: FlyingItem }) {
         width: Math.min(item.startRect.width, 50), // Maksimal 50px biar gak kegedean
         height: Math.min(item.startRect.height, 50),
         backgroundImage: `url(${item.src})`,
-        backgroundColor: '#fff', // Fallback warna putih kalau gambar gagal load
+        backgroundColor: '#fff', // Fallback white color if image fails to load
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         borderRadius: '50%',
@@ -91,7 +91,7 @@ function FlyingElement({ item }: { item: FlyingItem }) {
         border: '2px solid white' // Border biar keliatan jelas
     };
     
-    // Style Posisi Akhir (Di Keranjang)
+    // Final Position Style (In Cart)
     const flyingStyle: React.CSSProperties = {
         ...initialStyle,
         top: item.endRect.top + (item.endRect.height / 2) - 10, // Tengah-tengah icon

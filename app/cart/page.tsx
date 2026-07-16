@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Minus, Plus, ArrowRight, RefreshCw, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
-import { toast } from "sonner"; // Asumsi lo pake sonner/toast buat notif kekinian
+import { toast } from "sonner"; // Assuming you use sonner/toast for modern notifications
 
-// Tipe data buat validasi response dari server
+// Data type for validating response from server
 type ProductValidation = {
   id: string;
   price: number;
@@ -42,7 +42,7 @@ export default function CartPage() {
       try {
         setIsSyncing(true);
         
-        // Kita kirim list ID barang yang ada di cart ke backend
+        // We send the list of item IDs in the cart to the backend
         const itemIds = cart.items.map((item) => item.id);
 
         // Ganti URL ini sesuai route API backend lo (Laravel/Node)
@@ -53,7 +53,7 @@ export default function CartPage() {
           body: JSON.stringify({ ids: itemIds }),
         });
 
-        if (!response.ok) throw new Error("Gagal sinkronisasi data");
+        if (!response.ok) throw new Error("Failed to synchronize data");
 
         const latestData: ProductValidation[] = await response.json();
 
@@ -69,27 +69,27 @@ export default function CartPage() {
               // Update harga di local storage via function di useCart lo
               // Pastiin useCart lo punya method updateItem ya G!
               // cart.updateItem(localItem.id, { price: serverItem.price }); 
-              console.log(`Harga berubah untuk ${localItem.name}`);
+              console.log(`Price changed for ${localItem.name}`);
               hasChanges = true;
             }
 
             // 2. Cek Stok (Kalo stok server lebih dikit dari yg di cart, turunin qty)
             if (serverItem.stock < localItem.quantity) {
               // cart.updateItem(localItem.id, { quantity: serverItem.stock });
-              console.log(`Stok menipis untuk ${localItem.name}`);
+              console.log(`Low stock for ${localItem.name}`);
               hasChanges = true;
             }
 
             // 3. Cek Ketersediaan (Soft Delete / Unpublished)
             if (!serverItem.isAvailable) {
               cart.removeItem(localItem.id);
-              toast.error(`Produk ${localItem.name} sudah tidak tersedia dan dihapus.`);
+              toast.error(`Product ${localItem.name} is no longer available and has been removed.`);
             }
           }
         });
 
         if (hasChanges) {
-          toast.warning("Beberapa harga atau stok telah diperbarui mengikuti data terbaru.");
+          toast.warning("Some prices or stock have been updated to reflect the latest data.");
         }
 
       } catch (error) {

@@ -82,7 +82,7 @@ export default function Hero() {
         const res = await api.get("/hero-section");
         setData(res.data.data);
       } catch (error) {
-        console.error("Gagal load hero section:", error);
+        console.error("Failed to load hero section:", error);
       } finally {
         setLoading(false);
       }

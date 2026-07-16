@@ -20,6 +20,8 @@ import {
   TextWrapIcon,
   Mail, // 👈 Pake Loader
   Link as LinkIcon,
+  Users as UsersIcon,
+  DatabaseBackup,
 } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import { Button } from "@/components/ui/button";
@@ -45,6 +47,8 @@ const menus = [
   { name: "Broadcast", href: "/admin/broadcast", icon: Mail },
   { name: "Running Text", href: "/admin/running-text", icon: TextWrapIcon },
   { name: "Links", href: "/admin/links", icon: LinkIcon },
+  { name: "Users", href: "/admin/users", icon: UsersIcon },
+  { name: "Database Backup", href: "/admin/backup", icon: DatabaseBackup },
 ];
 
 // 2. ADMIN NAV COMPONENT (Smart & Collapsible)
@@ -180,7 +184,7 @@ export default function AdminLayout({
     return () => clearTimeout(timer);
   }, []);
 
-  // 1. Tampilkan Loading Screen kalau masih ngecek
+  // 1. Show Loading Screen if still checking
   if (isChecking) {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center">
@@ -189,13 +193,13 @@ export default function AdminLayout({
       );
   }
 
-  // 2. Security Check: Kalau bukan admin atau gak login -> 404
+  // 2. Security Check: If not admin or not logged in -> 404
   if (!user || user.role !== "admin") {
       notFound(); // Lempar ke halaman 404
       return null;
   }
 
-  // 3. Render Dashboard kalau Lulus
+  // 3. Render Dashboard if Passed
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col lg:flex-row relative">
       {/* 👇 FLOATING MOBILE TOGGLE (Sticky on Left Edge) */}

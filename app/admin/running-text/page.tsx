@@ -34,7 +34,7 @@ export default function AdminRunningTextPage() {
         const data = res.data.data || res.data || [];
         setTexts(data);
     } catch {
-        toast.error("Gagal load data running text.");
+        toast.error("Failed to load running text data.");
     } finally {
         setLoading(false);
     }
@@ -53,13 +53,13 @@ export default function AdminRunningTextPage() {
             link_url: link 
         });
         
-        toast.success("Teks berhasil ditambahkan!");
+        toast.success("Text successfully added!");
         setContent("");
         setLink("");
         fetchTexts(); // Refresh list
     } catch (error) {
         const err = error as AxiosError<{ message: string }>;
-        toast.error("Gagal menambah teks.", { 
+        toast.error("Failed to add text.", { 
             description: err.response?.data?.message || "Cek koneksi lo." 
         });
     } finally {
@@ -68,7 +68,7 @@ export default function AdminRunningTextPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Yakin mau hapus teks ini?")) return;
+    if (!confirm("Are you sure you want to delete this text?")) return;
     
     // Optimistic UI update
     const originalTexts = [...texts];
@@ -78,7 +78,7 @@ export default function AdminRunningTextPage() {
         await api.delete(`/admin/running-texts/${id}`);
         toast.success("Teks dihapus.");
     } catch { 
-        toast.error("Gagal hapus."); 
+        toast.error("Failed to delete."); 
         setTexts(originalTexts); // Rollback
     }
   };
@@ -92,7 +92,7 @@ export default function AdminRunningTextPage() {
         await api.put(`/admin/running-texts/${id}/toggle`);
         toast.success("Status updated!");
     } catch { 
-        toast.error("Gagal update status."); 
+        toast.error("Failed to update status."); 
         setTexts(originalTexts); // Rollback
     }
   };
@@ -103,14 +103,14 @@ export default function AdminRunningTextPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            {/* KOLOM KIRI: FORM TAMBAH */}
+            {/* LEFT COLUMN: ADD FORM */}
             <div className="lg:col-span-1">
                 <Card className="h-fit sticky top-24 border-border shadow-md bg-card">
                     <CardHeader>
                         <CardTitle className="text-lg flex items-center gap-2">
-                            <Plus className="w-5 h-5" /> Tambah Pengumuman
+                            <Plus className="w-5 h-5" /> Add Announcement
                         </CardTitle>
-                        <CardDescription>Buat info promo, flash sale, atau pengumuman penting.</CardDescription>
+                        <CardDescription>Create promo info, flash sales, or important announcements.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleAdd} className="space-y-4">
@@ -134,11 +134,11 @@ export default function AdminRunningTextPage() {
                                         className="pl-9"
                                     />
                                 </div>
-                                <p className="text-[10px] text-muted-foreground">User bisa klik teks buat ke link ini.</p>
+                                <p className="text-[10px] text-muted-foreground">Users can click the text to go to this link.</p>
                             </div>
                             <Button disabled={submitting} className="w-full font-bold mt-2">
                                 {submitting ? <Loader2 className="animate-spin mr-2 w-4 h-4" /> : <Plus className="mr-2 w-4 h-4" />}
-                                {submitting ? "Menyimpan..." : "TAMBAH TEKS"}
+                                {submitting ? "Saving..." : "ADD TEXT"}
                             </Button>
                         </form>
                     </CardContent>
@@ -148,7 +148,7 @@ export default function AdminRunningTextPage() {
             {/* KOLOM KANAN: LIST TEKS */}
             <div className="lg:col-span-2 space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="font-bold text-xl">Daftar Pengumuman</h2>
+                    <h2 className="font-bold text-xl">Announcement List</h2>
                     <Badge variant="outline">{texts.length} Items</Badge>
                 </div>
                 
@@ -159,8 +159,8 @@ export default function AdminRunningTextPage() {
                 ) : texts.length === 0 ? (
                     <div className="text-center py-12 border-2 border-dashed border-border rounded-xl text-muted-foreground bg-muted/10">
                         <Type className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                        <p className="font-medium">Belum ada pengumuman aktif.</p>
-                        <p className="text-xs">Teks yang lo tambah bakal muncul di sini.</p>
+                        <p className="font-medium">No active announcements yet.</p>
+                        <p className="text-xs">The text you add will appear here.</p>
                     </div>
                 ) : (
                     <div className="grid gap-3">
@@ -196,7 +196,7 @@ export default function AdminRunningTextPage() {
                                         size="sm" 
                                         variant="destructive" 
                                         onClick={() => handleDelete(item.id)} 
-                                        title="Hapus Permanen"
+                                        title="Delete Permanently"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </Button>

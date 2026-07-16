@@ -21,7 +21,7 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'images.unsplash.com',
             },
-            // 2. Avatar Google (Wajib buat Login Google)
+            // 2. Google Avatar (Required for Google Login)
             {
                 protocol: 'https',
                 hostname: 'lh3.googleusercontent.com', 
@@ -30,10 +30,10 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'picsum.photos',
             },
-            // Tambahan domain yang sering kepake (Avatar & Placeholder)
+            // Additional frequently used domains (Placeholder & Cloudinary)
             {
                 protocol: 'https',
-                hostname: 'ui-avatars.com',
+                hostname: 'res.cloudinary.com',
             },
             {
                 protocol: 'https',

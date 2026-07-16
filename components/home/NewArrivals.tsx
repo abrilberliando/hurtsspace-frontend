@@ -33,7 +33,7 @@ export default function Featured() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Refs & State untuk Drag Scroll
+  // Refs & State for Drag Scroll
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -44,7 +44,7 @@ export default function Featured() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // Optimization: Kalau backend support filtering, better filter di query params
+        // Optimization: If backend supports filtering, it's better to filter in query params
         // Contoh: /products?limit=15&featured=true
         const res = await api.get("/products?limit=50");
         const fetchedData = res.data?.data || [];
@@ -54,7 +54,7 @@ export default function Featured() {
         else if (Array.isArray(res.data?.data)) dataFix = res.data.data;
         else if (Array.isArray(fetchedData)) dataFix = fetchedData;
 
-        // Filter cuma yang "Featured"
+        // Filter only "Featured"
         const featuredDrops = dataFix.filter((p) => {
           const val = p.is_featured;
           return val === 1 || val === "1" || val === true || val === "true";
@@ -62,7 +62,7 @@ export default function Featured() {
 
         setProducts(featuredDrops.slice(0, 15));
       } catch (error) {
-        console.error("Gagal load featured products", error);
+        console.error("Failed to load featured products", error);
       } finally {
         setLoading(false);
       }
@@ -70,7 +70,7 @@ export default function Featured() {
     fetchProducts();
   }, []);
 
-  // Logic Tombol Panah (Memoized)
+  // Arrow Button Logic (Memoized)
   const scrollButton = useCallback((direction: "left" | "right") => {
     if (scrollRef.current) {
       const { current } = scrollRef;
@@ -98,7 +98,7 @@ export default function Featured() {
 
   const handleMouseUp = useCallback(() => {
     setIsDown(false);
-    // Timeout kecil biar click event di child gak langsung trigger kalau abis drag
+    // Small timeout so child click event doesn't trigger immediately after drag
     setTimeout(() => setIsDragging(false), 50);
   }, []);
 
@@ -181,7 +181,7 @@ export default function Featured() {
             >
               {Array.isArray(products) && products.length > 0 ? (
                 products.map((item) => (
-                  // Memoized Component dipanggil disini
+                  // Memoized Component called here
                   <ArrivalCardMemo
                     key={item.id}
                     item={item}
@@ -190,7 +190,7 @@ export default function Featured() {
                 ))
               ) : (
                 <div className="col-span-full text-center py-10 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-zinc-700 w-full">
-                  Belum ada barang featured nih, G.
+                  No featured items yet, G.
                 </div>
               )}
             </div>
@@ -202,7 +202,7 @@ export default function Featured() {
 }
 
 // --- SUB-COMPONENT: CARD (OPTIMIZED) ---
-// Kita pisah logic displayPrice keluar biar gak dibikin ulang tiap render
+// Extract displayPrice logic so it's not recreated every render
 const displayPrice = (val: string | number): number => {
   const num = typeof val === "string" ? parseFloat(val) : val;
   if (isNaN(num)) return 0;
@@ -221,7 +221,7 @@ function ArrivalCard({
 
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  // Ref untuk nyimpen ukuran bounding box, biar gak hitung ulang terus
+  // Ref to store bounding box size, to prevent recalculating
   const boundsRef = useRef<DOMRect | null>(null);
 
   // Logic New Arrival (Memoized)
@@ -241,7 +241,7 @@ function ArrivalCard({
     return false;
   }, [item.is_new_arrival, item.created_at]);
 
-  // Optimization: Hitung ukuran HANYA saat mouse masuk
+  // Optimization: Calculate size ONLY on mouse enter
   const handleMouseEnter = () => {
     if (containerRef.current) {
       boundsRef.current = containerRef.current.getBoundingClientRect();
@@ -251,10 +251,10 @@ function ArrivalCard({
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isDraggingParent || images.length <= 1 || !boundsRef.current) return;
 
-    // Pakai nilai dari ref, bukan getBoundingClientRect() langsung (Reflow Saver!)
+    // Use value from ref, not getBoundingClientRect() directly (Reflow Saver!)
     const { left, width } = boundsRef.current;
     
-    // Fallback safety kalau width 0 (jarang terjadi tapi amanin aja)
+    // Fallback safety if width is 0 (rare but safe)
     if (width === 0) return;
 
     const x = e.clientX - left;
@@ -262,7 +262,7 @@ function ArrivalCard({
     const index = Math.floor(percentage * images.length);
     const safeIndex = Math.min(Math.max(index, 0), images.length - 1);
     
-    // State update cuma kalau index berubah (React batching handles this usually, but good logic)
+    // State update only if index changes (React batching handles this usually, but good logic)
     setActiveIndex((prev) => (prev !== safeIndex ? safeIndex : prev));
   };
 
@@ -272,7 +272,7 @@ function ArrivalCard({
   };
 
   const handleLinkClick = (e: React.MouseEvent) => {
-    // Prevent navigasi kalau user niatnya cuma nge-drag card
+    // Prevent navigation if user is just dragging the card
     if (isDraggingParent) e.preventDefault();
   };
 
@@ -306,7 +306,7 @@ function ArrivalCard({
                 src={img.image_url}
                 alt={`${item.name} - ${idx}`}
                 fill
-                // Optimization: sizes yang akurat membantu browser download gambar yg tepat
+                // Optimization: accurate sizes help browser download the right image
                 sizes="(max-width: 768px) 220px, 280px"
                 className={`
                   object-contain object-center 
@@ -318,10 +318,10 @@ function ArrivalCard({
                   }
                 `}
                 draggable={false}
-                // Gambar pertama priority false (lazy), sisanya juga lazy
-                // Kita mengandalkan browser cache setelah load pertama
+                // First image priority false (lazy), others also lazy
+                // We rely on browser cache after first load
                 loading="lazy"
-                quality={60} // Sedikit naikin quality biar tajem tapi tetep ringan
+                quality={60} // Slightly increase quality to keep it sharp but lightweight
               />
             ))
           ) : (

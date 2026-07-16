@@ -1,12 +1,12 @@
 import { MetadataRoute } from 'next';
 
-// 👇 1. Definisiin Tipe Data Produk buat Sitemap
+// 👇 1. Define Product Data Type for Sitemap
 interface ProductSitemap {
   slug: string;
   updated_at: string;
 }
 
-// Fungsi ambil semua produk
+// Function to get all products
 async function getProducts(): Promise<ProductSitemap[]> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products?limit=1000`, { 

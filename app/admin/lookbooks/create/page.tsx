@@ -19,6 +19,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
 
 // --- TYPES ---
 interface Product {
@@ -34,7 +35,7 @@ interface TagItem {
 }
 
 // --- UTILS: CANVAS CROPPER ---
-// Fungsi ini buat motong gambar beneran jadi file baru
+// This function actually crops the image into a new file
 const createImage = (url: string): Promise<HTMLImageElement> =>
     new Promise((resolve, reject) => {
         const image = new Image();
@@ -55,7 +56,7 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
     canvas.width = pixelCrop.width;
     canvas.height = pixelCrop.height;
 
-    // Draw image yang udah dicrop ke canvas
+    // Draw the cropped image to canvas
     ctx.drawImage(
         image,
         pixelCrop.x,
@@ -79,6 +80,8 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
 export default function CreateLookbookPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [uploadSuccess, setUploadSuccess] = useState(false);
     
     // Data Form
     const [title, setTitle] = useState("");
@@ -87,7 +90,7 @@ export default function CreateLookbookPage() {
     // State Gambar
     const [rawImageSrc, setRawImageSrc] = useState<string | null>(null); // Gambar mentah dari upload
     const [croppedImagePreview, setCroppedImagePreview] = useState<string | null>(null); // Gambar hasil crop (preview)
-    const [finalImageFile, setFinalImageFile] = useState<File | null>(null); // File final buat dikirim ke API
+    const [finalImageFile, setFinalImageFile] = useState<File | null>(null); // Final file to send to API
     
     // State Cropper
     const [isCropping, setIsCropping] = useState(false);
@@ -113,7 +116,7 @@ export default function CreateLookbookPage() {
             const reader = new FileReader();
             reader.addEventListener("load", () => {
                 setRawImageSrc(reader.result?.toString() || "");
-                setIsCropping(true); // Langsung masuk mode crop
+                setIsCropping(true); // Enter crop mode directly
                 setCroppedImagePreview(null); // Reset preview lama
                 setTags([]); // Reset tags
             });
@@ -121,7 +124,7 @@ export default function CreateLookbookPage() {
         }
     };
 
-    // 2. Simpan Koordinat Crop
+    // 2. Save Crop Coordinates
     const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
         setCroppedAreaPixels(croppedAreaPixels);
     }, []);
@@ -136,11 +139,11 @@ export default function CreateLookbookPage() {
             setFinalImageFile(file);
             setCroppedImagePreview(URL.createObjectURL(croppedBlob));
             
-            setIsCropping(false); // Keluar mode crop
-            toast.success("Foto berhasil di-set! Sekarang saatnya tagging.");
+            setIsCropping(false); // Exit crop mode
+            toast.success("Photo successfully set! Now time for tagging.");
         } catch (e) {
             console.error(e);
-            toast.error("Gagal crop gambar.");
+            toast.error("Failed to crop image.");
         }
     };
 
@@ -154,12 +157,12 @@ export default function CreateLookbookPage() {
         const y = ((e.clientY - rect.top) / rect.height) * 100;
 
         setTempCoords({ x, y });
-        setIsTaggingMode(true); // Munculin popover pilih produk
+        setIsTaggingMode(true); // Show product selection popover
     };
 
-    // 5. Simpan Tag
+    // 5. Save Tag
     const confirmTag = () => {
-        if (!selectedProduct) return toast.error("Pilih produknya dulu bos!");
+        if (!selectedProduct) return toast.error("Please select a product first!");
         
         setTags([...tags, { 
             id: Date.now(), 
@@ -174,9 +177,11 @@ export default function CreateLookbookPage() {
 
     // 6. Submit ke API
     const handleSubmit = async () => {
-        if (!finalImageFile || tags.length === 0) return toast.error("Upload foto & tag minimal 1 produk!");
+        if (!finalImageFile || tags.length === 0) return toast.error("Upload photo & tag at least 1 product!");
         
         setLoading(true);
+        setUploadError(null);
+        setUploadSuccess(false);
         const formData = new FormData();
         formData.append("title", title);
         formData.append("image", finalImageFile); 
@@ -189,31 +194,47 @@ export default function CreateLookbookPage() {
                 headers: { "Content-Type": "multipart/form-data" }
             });
             toast.success("Lookbook Created!");
-            router.push("/admin/lookbooks");
+            setUploadSuccess(true); setLoading(false);
         } catch (error) {
-            const err = error as AxiosError;
-            console.error(err);
-            toast.error("Gagal create lookbook.");
-        } finally {
-            setLoading(false);
+            const err = error as AxiosError<{ message: string }>;
+            if (err.response?.status === 422) {
+                setLoading(false);
+                toast.error("Invalid data, please check your input.");
+            } else {
+                setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
+            }
         }
     };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
+            <UploadOverlay 
+                isOpen={loading || uploadSuccess} 
+                isError={!!uploadError} 
+                isSuccess={uploadSuccess}
+                errorMessage={uploadError || undefined}
+                onRetry={() => {
+                    setUploadError(null);
+                    setLoading(false);
+                }} 
+                onCloseSuccess={() => {
+                    setUploadSuccess(false);
+                    router.push("/admin/lookbooks");
+                }}
+            />
             
             {/* --- KOLOM KIRI: CANVAS UTAMA --- */}
             <div className="lg:col-span-2">
                 <Card className="bg-card border-border overflow-hidden shadow-lg">
                     <CardContent className="p-0 bg-zinc-950 relative flex items-center justify-center min-h-[500px]">
                         
-                        {/* CASE 1: BELUM UPLOAD */}
+                        {/* CASE 1: NOT UPLOADED YET */}
                         {!rawImageSrc && (
                             <div className="flex flex-col items-center justify-center text-muted-foreground gap-4 p-10">
                                 <div className="p-4 bg-muted rounded-full">
                                     <ImagePlus className="w-8 h-8 opacity-50" />
                                 </div>
-                                <p className="text-sm">Upload foto buat mulai Lookbook</p>
+                                <p className="text-sm">Upload photo to start Lookbook</p>
                                 <Input 
                                     type="file" 
                                     accept="image/*" 
@@ -222,7 +243,7 @@ export default function CreateLookbookPage() {
                                     onChange={handleFileChange}
                                 />
                                 <Button asChild variant="outline">
-                                    <label htmlFor="upload-trigger" className="cursor-pointer">Pilih Foto</label>
+                                    <label htmlFor="upload-trigger" className="cursor-pointer">Select Photo</label>
                                 </Button>
                             </div>
                         )}
@@ -279,7 +300,7 @@ export default function CreateLookbookPage() {
                                     alt="Lookbook" 
                                 />
 
-                                {/* Render Tags yang udah dibuat */}
+                                {/* Render Created Tags */}
                                 {tags.map((tag) => (
                                     <div 
                                         key={tag.id}
@@ -287,7 +308,7 @@ export default function CreateLookbookPage() {
                                         style={{ left: `${tag.x}%`, top: `${tag.y}%` }}
                                         onClick={(e) => {
                                             e.stopPropagation(); // Biar gak ngetrigger add tag baru
-                                            setTags(tags.filter(t => t.id !== tag.id)); // Hapus tag kalau diklik
+                                            setTags(tags.filter(t => t.id !== tag.id)); // Delete tag on click
                                         }}
                                     >
                                         <Plus className="w-4 h-4 rotate-45" /> {/* Icon X */}
@@ -297,7 +318,7 @@ export default function CreateLookbookPage() {
                                     </div>
                                 ))}
 
-                                {/* Popover Pilih Produk (Muncul pas klik) */}
+                                {/* Product Selection Popover (Appears on click) */}
                                 {isTaggingMode && (
                                     <div 
                                         className="absolute z-50 transform -translate-x-1/2 mt-2 w-64 bg-background border border-border shadow-2xl rounded-lg p-3 animate-in zoom-in-95"
@@ -310,7 +331,7 @@ export default function CreateLookbookPage() {
                                         </div>
                                         <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                                             <SelectTrigger className="h-8 text-xs mb-2">
-                                                <SelectValue placeholder="Pilih Produk..." />
+                                                <SelectValue placeholder="Select Product..." />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {products.map(p => (
@@ -328,7 +349,7 @@ export default function CreateLookbookPage() {
                 </Card>
                 <div className="flex justify-between items-center mt-2 px-2">
                     <p className="text-xs text-muted-foreground">
-                        * Klik pada area foto untuk menandai produk.
+                        * Click on the photo area to tag a product.
                     </p>
                     {croppedImagePreview && (
                         <Button variant="ghost" size="sm" onClick={() => setIsCropping(true)} className="text-xs h-7 text-muted-foreground hover:text-foreground">
@@ -349,11 +370,11 @@ export default function CreateLookbookPage() {
                             <Input placeholder="e.g. Summer Drop Vol. 1" value={title} onChange={e => setTitle(e.target.value)} />
                         </div>
 
-                        {/* List Barang yang udah di-Tag */}
+                        {/* List of Tagged Items */}
                         <div className="space-y-3 pt-4 border-t border-border">
                             <Label>Tagged Items ({tags.length})</Label>
                             <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                                {tags.length === 0 && <p className="text-xs text-muted-foreground italic">Belum ada produk yang di-tag.</p>}
+                                {tags.length === 0 && <p className="text-xs text-muted-foreground italic">No products tagged yet.</p>}
                                 
                                 {tags.map(tag => {
                                     const prodName = products.find(p => p.id.toString() === tag.product_id)?.name || "Unknown";

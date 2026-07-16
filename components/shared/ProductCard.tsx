@@ -42,7 +42,7 @@ export default function ProductCard({ item }: { item: Product }) {
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
       </div>
 
-      {/* Info Produk */}
+      {/* Product Info */}
       <div className="space-y-1">
         <p className="text-xs text-muted-foreground uppercase tracking-wider">
             {item.category?.name || "Streetwear"}

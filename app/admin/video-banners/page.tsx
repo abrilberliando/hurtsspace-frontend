@@ -11,6 +11,7 @@ import { Loader2, Video, Trash2, Power, UploadCloud, Film, PlayCircle, PlusCircl
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { AxiosError } from "axios";
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
 
 interface VideoBanner {
   id: number;
@@ -25,6 +26,8 @@ export default function ManageVideoPage() {
   const [videos, setVideos] = useState<VideoBanner[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   // Form State
   const [title, setTitle] = useState("");
@@ -39,7 +42,7 @@ export default function ManageVideoPage() {
         const data = res.data.data || res.data || [];
         setVideos(data);
     } catch {
-        toast.error("Gagal load video, coba refresh G!");
+        toast.error("Failed to load videos, please refresh!");
     } finally {
         setLoading(false);
     }
@@ -49,14 +52,16 @@ export default function ManageVideoPage() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!videoFile) return toast.error("Mana videonya G? Pilih dulu dong!");
+    if (!videoFile) return toast.error("Please select a video file!");
     
     // Validasi Ukuran (2MB sesuai request lo, tapi biasanya video butuh gedean dikit sih)
     if (videoFile.size > 7 * 1024 * 1024) {
-        return toast.error("Size kegedean! Maksimal 7MB ya (coba compress dulu).");
+        return toast.error("File size too large! Maximum 7MB.");
     }
 
     setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(false);
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", desc);
@@ -67,7 +72,7 @@ export default function ManageVideoPage() {
         await api.post("/admin/video-banners", formData, {
             headers: { "Content-Type": "multipart/form-data" }
         });
-        toast.success("Boom! Video berhasil mendarat! 🎥");
+        toast.success("Video uploaded successfully! 🎥");
         
         // Reset Form
         setVideoFile(null);
@@ -79,37 +84,50 @@ export default function ManageVideoPage() {
         if (fileInput) fileInput.value = "";
 
         fetchVideos();
+        setUploadSuccess(true); setUploading(false);
     } catch (error: unknown) {
-        console.error(error);
         const err = error as AxiosError<{ message: string }>;
-        toast.error("Upload gagal.", { description: err.response?.data?.message || "Server lagi cranky kayaknya." });
-    } finally {
-        setUploading(false);
+        if (err.response?.status === 422) {
+            setUploading(false);
+            toast.error("Invalid data, please check your inputs.");
+        } else {
+            setUploadError(err.response?.data?.message || "Server error occurred.");
+        }
     }
   };
 
   const handleDelete = async (id: number) => {
-      if(!confirm('Real talk, mau dihapus nih? Gak bisa undo lho.')) return;
+      if(!confirm('Are you sure you want to delete this? This cannot be undone.')) return;
       try {
           await api.delete(`/admin/video-banners/${id}`);
-          toast.success("Video lenyap dari muka bumi.");
+          toast.success("Video deleted successfully.");
           fetchVideos();
-      } catch { toast.error("Gagal hapus, coba lagi nanti."); }
+      } catch { toast.error("Failed to delete, please try again."); }
   };
 
   const handleToggle = async (id: number) => {
       try {
           await api.put(`/admin/video-banners/${id}/toggle`);
-          toast.success("Status updated! Website lo makin fresh.");
+          toast.success("Status updated successfully!");
           fetchVideos();
-      } catch { toast.error("Gagal ganti status."); }
+      } catch { toast.error("Failed to change status."); }
   };
 
   return (
     <div className="max-w-7xl mx-auto space-y-12 pb-20 pt-6 px-4 sm:px-6">
-
-       
-
+        <UploadOverlay 
+            isOpen={uploading || uploadSuccess} 
+            isError={!!uploadError} 
+            isSuccess={uploadSuccess}
+            errorMessage={uploadError || undefined}
+            onRetry={() => {
+                setUploadError(null);
+                setUploading(false);
+            }} 
+            onCloseSuccess={() => {
+                setUploadSuccess(false);
+            }}
+        />
         {/* SECTION 2: UPLOAD FORM (MENU DI BAWAH) */}
         <section className="pt-8 border-t border-border">
             <div className="flex items-center gap-2 mb-6">
@@ -127,7 +145,7 @@ export default function ManageVideoPage() {
                         </div>
                         <h3 className="text-xl font-bold mb-2">Upload Zone</h3>
                         <p className="text-muted-foreground mb-6">
-                            Format yang disupport MP4 atau MOV. Pastikan size di bawah 7MB ya bosss.
+                            Supported formats are MP4 or MOV. Please ensure the size is under 7MB.
                         </p>
                         <div className="text-sm text-muted-foreground space-y-2">
                             <div className="flex items-center gap-2">✓ Aspect Ratio 16:9 Recommended</div>
@@ -143,17 +161,17 @@ export default function ManageVideoPage() {
                             {/* Input Group 1 */}
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="title">Judul Video (Opsional)</Label>
+                                    <Label htmlFor="title">Video Title (Optional)</Label>
                                     <Input 
                                         id="title" 
                                         value={title} 
                                         onChange={e => setTitle(e.target.value)} 
-                                        placeholder="Misal: SUMMER SALE 2025" 
+                                        placeholder="Example: SUMMER SALE 2025" 
                                         className="bg-background"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="link">Link Redirect (Opsional)</Label>
+                                    <Label htmlFor="link">Redirect Link (Optional)</Label>
                                     <Input 
                                         id="link" 
                                         value={link} 
@@ -163,12 +181,12 @@ export default function ManageVideoPage() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="desc">Deskripsi (Opsional)</Label>
+                                    <Label htmlFor="desc">Description (Optional)</Label>
                                     <Textarea 
                                         id="desc" 
                                         value={desc} 
                                         onChange={e => setDesc(e.target.value)} 
-                                        placeholder="Kasih caption dikit biar user paham..." 
+                                        placeholder="Add a short caption..." 
                                         rows={4}
                                         className="resize-none bg-background"
                                     />
@@ -242,8 +260,8 @@ export default function ManageVideoPage() {
             ) : videos.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-3xl bg-muted/5 text-muted-foreground">
                     <Video className="w-16 h-16 mb-4 opacity-20" />
-                    <h3 className="text-xl font-bold">Sepi banget G!</h3>
-                    <p>Belum ada video nih, scroll ke bawah buat upload ya.</p>
+                    <h3 className="text-xl font-bold">It's so quiet here!</h3>
+                    <p>No videos yet, scroll down to upload.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -11,7 +11,7 @@ export default function DashboardPage() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Kasih waktu bentar buat useAuth load dari localStorage biar gak flashing 404
+    // Give it some time for useAuth to load from localStorage to avoid flashing 404
     const timer = setTimeout(() => {
       setIsChecking(false);
     }, 800);
@@ -28,12 +28,12 @@ export default function DashboardPage() {
     );
   }
 
-  // 2. Security Check: Kalau gak login -> 404 Not Found
+  // 2. Security Check: If not logged in -> 404 Not Found
   if (!user) {
     return notFound();
   }
 
-  // 3. Render Dashboard kalau Lulus
+  // 3. Render Dashboard if Passed
   return (
     <div>
       <DashboardProfile />

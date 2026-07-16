@@ -11,6 +11,7 @@ import api from "@/lib/axios";
 import ProductForm from "@/components/admin/ProductForm";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
 
 // --- INTERFACES ---
 interface APIImage {
@@ -31,7 +32,7 @@ interface ProductData {
   is_collab: boolean;
   image_urls: string[];
   selected_sizes: string[];
-  stock?: string;
+  stocks?: Record<string, string>;
 }
 
 export default function EditProductPage() {
@@ -41,9 +42,11 @@ export default function EditProductPage() {
   
   const [loadingForm, setLoadingForm] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [initialData, setInitialData] = useState<ProductData | null>(null);
 
-  // 1. Fetch Data Produk Lama
+  // 1. Fetch Old Product Data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -56,14 +59,14 @@ export default function EditProductPage() {
           description: product.description,
           price: product.price.toString(),
           weight: product.weight.toString(),
-          stock: product.stock ? product.stock.toString() : "",
           category_id: product.category_id.toString(),
           is_collab: !!product.is_collab, 
-          image_urls: product.images.map((img: APIImage) => img.image_url),
-          selected_sizes: product.variants.map((v: APIVariant) => v.size),
+          image_urls: product.images.map((img: any) => img.image_url),
+          selected_sizes: product.variants.map((v: any) => v.size),
+          stocks: product.variants.reduce((acc: any, v: any) => ({ ...acc, [v.size]: v.stock.toString() }), {}),
         });
       } catch {
-        toast.error("Gagal memuat data produk lama.");
+        toast.error("Failed to load old product data.");
         router.push("/admin/products"); 
       } finally {
         setLoadingForm(false);
@@ -76,36 +79,34 @@ export default function EditProductPage() {
   // 2. Submit Logic (Update)
   const handleUpdateSubmit = async (formData: FormData, id?: number) => {
     setSubmitting(true);
+    setUploadError(null);
+    setUploadSuccess(false);
     try {
-        // Method Spoofing untuk Laravel (Wajib)
         formData.set("_method", "PUT"); 
+        await api.post(`admin/products/${id}`, formData, {
+            headers: { "Content-Type": "multipart/form-data" }
+        });
 
-        await api.post(`admin/products/${id}`, formData);
-
-        toast.success("Produk Berhasil Diupdate!");
-        router.push("/admin/products");
+        toast.success("Product Successfully Updated!");
+        setUploadSuccess(true);
+        setSubmitting(false);
 
     } catch (error) {
         const err = error as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
         
         if (err.response?.status === 422) {
+            setSubmitting(false);
             const errorData = err.response.data.errors;
             if (errorData) {
                 const firstErrorKey = Object.keys(errorData)[0];
                 const firstErrorMessage = errorData[firstErrorKey][0];
-                toast.error(`Gagal: ${firstErrorMessage}`);
+                toast.error(`Failed: ${firstErrorMessage}`);
             } else {
-                toast.error("Data tidak valid, periksa kembali inputan.");
+                toast.error("Invalid data, please check your input.");
             }
-        } else if (err.response?.status === 404) {
-             toast.error("Produk tidak ditemukan.");
-        } else if (err.response?.status === 413) {
-            toast.error("File terlalu besar (Max server limit).");
         } else {
-            toast.error("Terjadi kesalahan server. Coba lagi nanti.");
+            setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
         }
-    } finally {
-        setSubmitting(false);
     }
   };
 
@@ -128,6 +129,20 @@ export default function EditProductPage() {
   // 4. Render UI
   return (
     <div className="max-w-3xl mx-auto pb-10 px-4">
+        <UploadOverlay 
+            isOpen={submitting || uploadSuccess} 
+            isError={!!uploadError} 
+            isSuccess={uploadSuccess}
+            errorMessage={uploadError || undefined}
+            onRetry={() => {
+                setUploadError(null);
+                setSubmitting(false);
+            }} 
+            onCloseSuccess={() => {
+                setUploadSuccess(false);
+                router.push("/admin/products");
+            }}
+        />
         <div className="flex items-center gap-4 mb-6">
             <Button variant="ghost" size="icon" asChild className="hover:bg-muted">
                 <Link href="/admin/products"><ArrowLeft className="w-5 h-5" /></Link>
@@ -135,7 +150,7 @@ export default function EditProductPage() {
             <div>
                 <h1 className="text-2xl font-bold tracking-tight">Edit Product</h1>
                 <p className="text-sm text-muted-foreground">
-                    Perbarui informasi produk: <span className="font-semibold text-foreground">{initialData.name}</span>
+                    Update product information: <span className="font-semibold text-foreground">{initialData.name}</span>
                 </p>
             </div>
         </div>
@@ -143,7 +158,7 @@ export default function EditProductPage() {
         <ProductForm 
             initialData={initialData} 
             onSubmit={handleUpdateSubmit} 
-            isLoading={submitting} 
+            isLoading={submitting && !uploadError} 
         />
     </div>
   );

@@ -7,7 +7,6 @@ export interface User {
   email: string;
   role: 'admin' | 'member';
   points: number;
-  avatar?: string;
   phone?: string;
   address_detail?: string;
   city_id?: string;
@@ -29,7 +28,7 @@ export const useAuth = create<AuthState>()(
       token: null,
 
       login: (user, token) => {
-        // 👇 UPDATE: Simpan token mentah ke key 'token' biar gampang diakses
+        // 👇 UPDATE: Save raw token to 'token' key for easy access
         if (typeof window !== 'undefined') {
             localStorage.setItem("token", token);
         }
@@ -39,7 +38,7 @@ export const useAuth = create<AuthState>()(
       logout: () => {
         set({ user: null, token: null });
         
-        // 👇 UPDATE: Hapus key 'token' saat logout
+        // 👇 UPDATE: Remove 'token' key on logout
         if (typeof window !== 'undefined') {
            localStorage.removeItem("token");
            window.location.href = "/login";

@@ -8,15 +8,15 @@ export default function AuthCheck() {
   const { token, logout } = useAuth();
 
   useEffect(() => {
-    // Kalau ada token di storage, coba tes validitasnya ke backend
+    // If there is a token in storage, try to test its validity to the backend
     if (token) {
         api.get('/user')
            .then(() => {
-               // Token Valid, lanjut
+               // Token Valid, continue
            })
            .catch((err) => {
-               // Kalau error (401), interceptor axios di atas sebenernya udah handle,
-               // tapi kita bisa double down di sini buat memastikan.
+               // If error (401), axios interceptor above actually already handled it,
+               // but we can double down here to make sure.
                if (err.response?.status === 401) {
                    logout();
                }

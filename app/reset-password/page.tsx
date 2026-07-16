@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Lock, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { AxiosError } from "axios";
 
 function ResetPasswordContent() {
@@ -25,11 +25,13 @@ function ResetPasswordContent() {
     password: "",
     password_confirmation: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Validasi URL (Harus ada token & email)
+  // Validate URL (Must have token & email)
   useEffect(() => {
     if (!token || !email) {
-      toast.error("Link tidak valid", { description: "Missing token or email." });
+      toast.error("Invalid link", { description: "Missing token or email." });
       router.push("/login");
     }
   }, [token, email, router]);
@@ -38,13 +40,13 @@ function ResetPasswordContent() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 👇 VALIDASI PASSWORD KETAT (Copy dari Register Page)
+  // 👇 STRICT PASSWORD VALIDATION (Copied from Register Page)
   const validatePassword = (password: string) => {
-    if (password.length < 12) return "Password minimal 12 karakter, G!";
-    if (!/[A-Z]/.test(password)) return "Harus ada huruf BESAR.";
-    if (!/[a-z]/.test(password)) return "Harus ada huruf kecil.";
-    if (!/[0-9]/.test(password)) return "Harus ada angka.";
-    if (!/[!@#$%^&*]/.test(password)) return "Harus ada simbol (!@#$%^&*).";
+    if (password.length < 12) return "Password must be at least 12 characters!";
+    if (!/[A-Z]/.test(password)) return "Must contain uppercase letter.";
+    if (!/[a-z]/.test(password)) return "Must contain lowercase letter.";
+    if (!/[0-9]/.test(password)) return "Must contain number.";
+    if (!/[!@#$%^&*]/.test(password)) return "Must contain symbol (!@#$%^&*).";
     return null;
   };
 
@@ -53,15 +55,15 @@ function ResetPasswordContent() {
     setLoading(true);
 
     if (formData.password !== formData.password_confirmation) {
-      toast.error("Password gak sama, cek lagi G!");
+      toast.error("Passwords do not match!");
       setLoading(false);
       return;
     }
 
-    // 👇 Pake Validator Strict
+    // 👇 Use Strict Validator
     const passwordError = validatePassword(formData.password);
     if (passwordError) {
-       toast.error("Password Lemah!", { description: passwordError });
+       toast.error("Weak Password!", { description: passwordError });
        setLoading(false);
        return;
     }
@@ -75,12 +77,12 @@ function ResetPasswordContent() {
       });
 
       setIsSuccess(true);
-      toast.success("Password Berhasil Direset! 🎉");
+      toast.success("Password Reset Successful! 🎉");
 
     } catch (err: unknown) {
       const error = err as AxiosError<{ message: string }>;
-      const msg = error.response?.data?.message || "Gagal reset password. Link mungkin udah kadaluwarsa.";
-      toast.error("Gagal", { description: msg });
+      const msg = error.response?.data?.message || "Failed to reset password. The link might have expired.";
+      toast.error("Failed", { description: msg });
     } finally {
       setLoading(false);
     }
@@ -94,10 +96,10 @@ function ResetPasswordContent() {
         </div>
         <h2 className="text-2xl font-black uppercase text-green-700 mb-2">All Set!</h2>
         <p className="text-muted-foreground mb-6">
-            Password lo udah diperbarui. Sekarang lo bisa login pake password baru.
+            Your password has been updated. You can now login with your new password.
         </p>
         <Button asChild className="w-full font-bold h-11">
-            <Link href="/login">LOGIN SEKARANG</Link>
+            <Link href="/login">LOGIN NOW</Link>
         </Button>
       </Card>
     );
@@ -108,27 +110,34 @@ function ResetPasswordContent() {
       <CardHeader className="space-y-1 text-center">
         <CardTitle className="text-2xl font-black uppercase tracking-tighter">Reset Password</CardTitle>
         <CardDescription>
-          Masukin password baru lo yang aman ya, G.
+          Enter a secure new password.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleReset} className="space-y-4">
           
           <div className="space-y-2">
-            <Label htmlFor="password">New Password (12+ Karakter)</Label>
+            <Label htmlFor="password">New Password (12+ Characters)</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input 
-                id="password" name="password" type="password" 
+                id="password" name="password" type={showPassword ? "text" : "password"} 
                 placeholder="••••••••••••" 
-                className="pl-10 h-11" required 
+                className="pl-10 pr-10 h-11" required 
                 value={formData.password} onChange={handleChange}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
             {/* Helper Text */}
             <div className="text-[10px] text-muted-foreground flex gap-1 items-start mt-1">
                  <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
-                 <span>Min 12 huruf, ada Huruf Besar, Kecil, Angka, & Simbol (!@#$)</span>
+                 <span>Min 12 chars, Uppercase, Lowercase, Number, & Symbol (!@#$)</span>
             </div>
           </div>
 
@@ -137,11 +146,18 @@ function ResetPasswordContent() {
             <div className="relative">
               <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input 
-                id="password_confirmation" name="password_confirmation" type="password" 
+                id="password_confirmation" name="password_confirmation" type={showConfirmPassword ? "text" : "password"} 
                 placeholder="••••••••••••" 
-                className="pl-10 h-11" required 
+                className="pl-10 pr-10 h-11" required 
                 value={formData.password_confirmation} onChange={handleChange}
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus:outline-none"
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
 

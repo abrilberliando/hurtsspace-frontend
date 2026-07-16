@@ -42,7 +42,7 @@ export default function AdminDashboard() {
         const res = await api.get("/admin/dashboard");
         setStats(res.data.data);
       } catch {
-        console.error("Gagal load stats");
+        console.error("Failed to load stats");
       } finally {
         setLoading(false);
       }
@@ -59,7 +59,7 @@ export default function AdminDashboard() {
 
   if (loading) return <div className="grid grid-cols-4 gap-4"><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" /></div>;
   
-  if (!stats) return <div>Gagal memuat data.</div>;
+  if (!stats) return <div>Failed to load data.</div>;
 
   return (
     <div className="space-y-8">

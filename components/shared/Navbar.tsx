@@ -31,7 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { useCart } from "@/lib/useCart";
@@ -98,7 +98,7 @@ export default function Navbar() {
         const cats = Array.isArray(res.data) ? res.data : res.data.data || [];
         setCategories(cats);
       } catch (err) {
-        console.error("Gagal load navbar categories:", err);
+        console.error("Failed to load navbar categories:", err);
       }
     };
     fetchCategories();
@@ -169,7 +169,7 @@ export default function Navbar() {
   return (
     <>
       {/* --- HEADER WRAPPER (Fixed Top) --- */}
-      {/* Container utama ini yang nempel di atas (Fixed), membungkus Announcement + Nav */}
+      {/* This main container sticks to the top (Fixed), wrapping Announcement + Nav */}
       <header className="fixed top-0 left-0 right-0 z-50 flex flex-col w-full">
         
         {/* A. Announcement Bar (Paling Atas) */}
@@ -478,15 +478,9 @@ export default function Navbar() {
                 {user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent hover:border-border transition-all duration-200">
-                        <AvatarImage
-                          src={
-                            user.avatar ||
-                            `https://ui-avatars.com/api/?name=${user.name}&background=000&color=fff`
-                          }
-                        />
-                        <AvatarFallback>CN</AvatarFallback>
-                      </Avatar>
+                      <div className="h-9 w-9 flex items-center justify-center rounded-full bg-muted border-2 border-transparent hover:border-border transition-all duration-200 cursor-pointer">
+                        <User className="w-5 h-5 text-muted-foreground" />
+                      </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
@@ -600,7 +594,7 @@ export default function Navbar() {
       </header>
 
       {/* --- BOTTOM NAVIGATION BAR (Mobile Only) --- */}
-      {/* Bagian ini tidak perlu dibungkus header fixed top karena dia fixed bottom */}
+      {/* This part does not need to be wrapped in fixed top header because it is fixed bottom */}
       <div className="fixed bottom-0 left-0 z-50 w-full h-[60px] bg-background/90 backdrop-blur-lg border-t border-border flex items-center justify-around lg:hidden pb-[env(safe-area-inset-bottom)]">
         <Link
           href="/"
@@ -634,14 +628,9 @@ export default function Navbar() {
           href={user ? "/dashboard" : "/login"}
           className="flex flex-col items-center justify-center w-full h-full text-muted-foreground hover:text-foreground active:scale-95 transition-all"
         >
-          {user?.avatar ? (
-            <Avatar className="w-6 h-6 border border-border">
-              <AvatarImage src={user.avatar} />
-              <AvatarFallback className="text-[10px]">MY</AvatarFallback>
-            </Avatar>
-          ) : (
-            <User className="w-5 h-5" />
-          )}
+          <div className="w-8 h-8 flex items-center justify-center rounded-full bg-muted border border-border">
+            <User className="w-4 h-4 text-muted-foreground" />
+          </div>
           <span className="text-[10px] font-bold mt-1">Profile</span>
         </Link>
       </div>

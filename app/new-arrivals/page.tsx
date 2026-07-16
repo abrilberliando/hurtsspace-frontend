@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Check } from "lucide-react";
 import Image from "next/image";
+import { ShopCard } from "@/components/ShopCard";
 
 const NEW_ARRIVAL_LIMIT_DAYS = 90;
 
@@ -109,7 +110,7 @@ function NewArrivalsContent() {
         const cats = Array.isArray(res.data) ? res.data : res.data.data || [];
         setCategories(cats);
       } catch (err) {
-        console.error("Gagal load kategori:", err);
+        console.error("Failed to load categories:", err);
       }
     };
     fetchCategories();
@@ -120,7 +121,7 @@ function NewArrivalsContent() {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        // Fetch Limit gede sekalian buat client-side filtering
+        // Fetch large limit at once for client-side filtering
         const res = await api.get("/products?limit=100"); 
 
         let dataFix: Product[] = [];
@@ -153,13 +154,13 @@ function NewArrivalsContent() {
         // Mapping biar tipe datanya konsisten boolean
         const mappedProducts: Product[] = newDrops.map((p) => ({
           ...p,
-          is_new_arrival: true, // Karena udah difilter, pasti true semua context-nya disini
+          is_new_arrival: true, // Because it's already filtered, it must be true for all contexts here
         }));
 
         setProducts(mappedProducts);
         setVisibleCount(16);
       } catch (error) {
-        console.error("❌ Gagal fetch new arrivals:", error);
+        console.error("❌ Failed to fetch new arrivals:", error);
         setProducts([]);
       } finally {
         setLoading(false);
@@ -173,7 +174,7 @@ function NewArrivalsContent() {
   const processedProducts = useMemo(() => {
     let data = [...products];
 
-    // Filter Kategori
+    // Category Filter
     if (categoryId && categoryId !== "all") {
       data = data.filter((p) => {
         const productCatId = p.category_id || p.category?.id;
@@ -189,7 +190,7 @@ function NewArrivalsContent() {
         return data.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
       case "latest":
       default:
-        // Sort by ID desc (produk terbaru di atas)
+        // Sort by ID desc (newest products on top)
         return data.sort((a, b) => b.id - a.id);
     }
   }, [products, categoryId, sortBy]);
@@ -272,7 +273,7 @@ function NewArrivalsContent() {
           <>
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 gap-y-8 md:gap-8 md:gap-y-12 justify-items-center z-0">
               {visibleProducts.map((item) => (
-                <ShopCardMemo key={item.id} item={item} />
+                <ShopCard key={item.id} item={item as any} />
               ))}
             </div>
 
@@ -380,131 +381,3 @@ const CustomDropdown = memo(function CustomDropdown({
     </div>
   );
 });
-
-// 2. Shop Card (ULTRA OPTIMIZED)
-function ShopCard({ item }: { item: Product }) {
-  const images = item.images || [];
-  const variants = item.variants || [];
-  const [activeIndex, setActiveIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Ref Caching: Simpen ukuran element biar gak getBoundingClientRect terus
-  const boundsRef = useRef<DOMRect | null>(null);
-
-  // 1. Calculate bounds ONLY on mouse enter
-  const handleMouseEnter = useCallback(() => {
-    if (containerRef.current) {
-      boundsRef.current = containerRef.current.getBoundingClientRect();
-    }
-  }, []);
-
-  // 2. Logic hover ringan tanpa calc layout ulang
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (images.length <= 1 || !boundsRef.current) return;
-
-    const { left, width } = boundsRef.current;
-    if (width === 0) return;
-
-    const x = e.clientX - left;
-    const percentage = x / width;
-    const index = Math.floor(percentage * images.length);
-    const safeIndex = Math.min(Math.max(index, 0), images.length - 1);
-
-    setActiveIndex((prev) => (prev !== safeIndex ? safeIndex : prev));
-  }, [images.length]);
-
-  const handleMouseLeave = useCallback(() => {
-    setActiveIndex(0);
-    boundsRef.current = null; // Cleanup memory
-  }, []);
-
-  return (
-    <div className="w-full max-w-[350px] group relative select-none will-change-transform">
-      <div
-        ref={containerRef}
-        className="relative aspect-3/4 bg-white overflow-hidden rounded-md mb-3 md:mb-4 cursor-pointer transform-gpu"
-        onMouseEnter={handleMouseEnter}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-      >
-        <Link
-          href={`/products/${item.slug}`}
-          className="block w-full h-full relative"
-        >
-          {images.length > 0 ? (
-            images.map((img, idx) => (
-              <Image
-                key={idx}
-                src={img.image_url}
-                alt={`${item.name}-${idx}`}
-                fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                className={`absolute inset-0 w-full h-full object-contain object-center transition-opacity duration-300 ease-in-out ${
-                  idx === activeIndex
-                    ? "opacity-100 z-10"
-                    : "opacity-0 z-0"
-                }`}
-                draggable={false}
-                priority={idx === 0}
-                loading={idx === 0 ? "eager" : "lazy"}
-                quality={60}
-              />
-            ))
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-zinc-700 font-bold text-lg md:text-2xl">
-              HURTS
-            </div>
-          )}
-        </Link>
-        {/* Badge New selalu muncul di halaman ini */}
-        <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider z-20">
-          New
-        </div>
-      </div>
-
-      <div className="space-y-1 px-1">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-1 md:gap-4">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold uppercase text-xs md:text-sm tracking-wide leading-tight truncate">
-              <Link
-                href={`/products/${item.slug}`}
-                className="hover:underline underline-offset-4"
-              >
-                {item.name}
-              </Link>
-            </h3>
-            <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate">
-              {item.category?.name || "Streetwear"}
-            </p>
-          </div>
-          <p className="text-xs md:text-sm font-bold whitespace-nowrap">
-            Rp {displayPrice(item.price).toLocaleString("id-ID")}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-1 pt-1">
-          {variants.length > 0 ? (
-            variants.map((v) => (
-              <span
-                key={v.id}
-                className={`text-[9px] md:text-[10px] px-1.5 py-0.5 border rounded-sm font-medium ${
-                  v.stock > 0
-                    ? "border-zinc-700 text-foreground"
-                    : "border-border text-muted-foreground/50 line-through bg-muted/30"
-                }`}
-              >
-                {v.size}
-              </span>
-            ))
-          ) : (
-            <span className="text-[9px] text-muted-foreground italic">
-              No size info
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 🔥 MEMOIZATION: Mencegah re-render massal saat parent update (misal load more)
-const ShopCardMemo = memo(ShopCard);

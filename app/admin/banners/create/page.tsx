@@ -22,9 +22,13 @@ import {
 } from "@/components/ui/select";
 
 
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
+
 export default function CreateBannerPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [uploadSuccess, setUploadSuccess] = useState(false);
 
     // Form State
     const [title, setTitle] = useState("");
@@ -54,9 +58,11 @@ export default function CreateBannerPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!imageLeft || !imageRight) return toast.error("Wajib upload kedua gambar (Kiri & Kanan)!");
+        if (!imageLeft || !imageRight) return toast.error("Both images (Left & Right) are required!");
 
         setLoading(true);
+        setUploadError(null);
+        setUploadSuccess(false);
         const formData = new FormData();
         formData.append("title", title);
         formData.append("position", position);
@@ -68,19 +74,36 @@ export default function CreateBannerPage() {
             await api.post("/admin/banners", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
-            toast.success("Banner berhasil dipublish!");
-            router.push("/admin/banners");
+            toast.success("Banner published successfully!");
+            setUploadSuccess(true); setLoading(false);
         } catch (error) {
             const err = error as AxiosError<{ message: string }>;
-            toast.error(err.response?.data?.message || "Gagal upload banner.");
-        } finally {
-            setLoading(false);
+            if (err.response?.status === 422) {
+                setLoading(false);
+                toast.error("Invalid data, please check your inputs.");
+            } else {
+                setUploadError(err.response?.data?.message || "Server error occurred while uploading.");
+            }
         }
     };
 
     return (
         <Suspense fallback={<div>Loading form...</div>}>
         <div className="max-w-2xl mx-auto pb-10 px-4">
+            <UploadOverlay 
+                isOpen={loading || uploadSuccess} 
+                isError={!!uploadError} 
+                isSuccess={uploadSuccess}
+                errorMessage={uploadError || undefined}
+                onRetry={() => {
+                    setUploadError(null);
+                    setLoading(false);
+                }} 
+                onCloseSuccess={() => {
+                    setUploadSuccess(false);
+                    router.push("/admin/banners");
+                }}
+            />
             <div className="flex items-center gap-4 mb-6">
                 <Button variant="ghost" size="icon" asChild>
                     <Link href="/admin/banners">
@@ -109,11 +132,11 @@ export default function CreateBannerPage() {
                                 <Label>Position</Label>
                                 <Select value={position} onValueChange={setPosition}>
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Pilih Slot" />
+                                        <SelectValue placeholder="Select Slot" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="1">Slot 1 (Hero/Atas)</SelectItem>
-                                        <SelectItem value="2">Slot 2 (Tengah/Bawah)</SelectItem>
+                                        <SelectItem value="1">Slot 1 (Hero/Top)</SelectItem>
+                                        <SelectItem value="2">Slot 2 (Middle/Bottom)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -127,7 +150,7 @@ export default function CreateBannerPage() {
                                 onChange={e => setLinkUrl(e.target.value)} 
                                 required 
                             />
-                            <p className="text-[10px] text-muted-foreground">Contoh: /shop, /lookbook, atau /products/nama-slug</p>
+                            <p className="text-[10px] text-muted-foreground">Example: /shop, /lookbook, or /products/slug-name</p>
                         </div>
 
                         {/* Area Upload Gambar */}

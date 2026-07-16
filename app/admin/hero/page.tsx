@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { Loader2, UploadCloud, Save, X, ZoomIn, Check, Image as ImageIcon, RotateCcw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Cropper, { Area } from "react-easy-crop"; 
+import { UploadOverlay } from "@/components/ui/UploadOverlay";
+import { AxiosError } from "axios";
 
 // --- UTILS: CANVAS CROPPER HELPER ---
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -54,7 +56,7 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
   });
 }
 
-// Interface buat struktur gambar di form
+// Interface for image structure in the form
 interface HeroImage {
   file: File | null;
   previewUrl: string;
@@ -64,6 +66,8 @@ interface HeroImage {
 export default function ManageHeroPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   // Form States
   const [subtitle, setSubtitle] = useState("");
@@ -111,7 +115,7 @@ export default function ManageHeroPage() {
         setHeroImages(fetchedImages);
         
       } catch {
-        toast.error("Gagal mengambil data hero.");
+        toast.error("Failed to load hero data.");
       } finally {
         setLoadingData(false);
       }
@@ -119,7 +123,7 @@ export default function ManageHeroPage() {
     fetchHero();
   }, []);
 
-  // 2. Handle Pilih File -> Masuk Mode Crop
+  // 2. Handle File Selection -> Enter Crop Mode
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -141,7 +145,7 @@ export default function ManageHeroPage() {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  // 4. Eksekusi Crop & Simpan ke State Utama
+  // 4. Execute Crop & Save to Main State
   const handleSaveCrop = async () => {
     if (!tempImgSrc || !croppedAreaPixels || activeCropIndex === null) return;
 
@@ -163,15 +167,15 @@ export default function ManageHeroPage() {
         setIsCropping(false);
         setActiveCropIndex(null);
         setTempImgSrc(null);
-        toast.success("Gambar berhasil di-crop!");
+        toast.success("Image successfully cropped!");
 
     } catch (e) {
         console.error(e);
-        toast.error("Gagal crop gambar.");
+        toast.error("Failed to crop image.");
     }
   };
 
-  // 5. Hapus Gambar
+  // 5. Delete Image
   const handleRemoveImage = (index: number) => {
     const newImages = [...heroImages];
     newImages[index] = { file: null, previewUrl: "", isNew: false };
@@ -182,6 +186,8 @@ export default function ManageHeroPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setUploadError(null);
+    setUploadSuccess(false);
 
     const formData = new FormData();
     formData.append("subtitle", subtitle);
@@ -203,11 +209,16 @@ export default function ManageHeroPage() {
       await api.post("/admin/hero-section", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      toast.success("Hero section berhasil diupdate! 🔥");
-    } catch {
-      toast.error("Gagal update hero section.");
-    } finally {
-      setSubmitting(false);
+      toast.success("Hero section updated successfully! 🔥");
+      setUploadSuccess(true); setSubmitting(false);
+    } catch (error) {
+      const err = error as AxiosError<{ message: string }>;
+      if (err.response?.status === 422) {
+          setSubmitting(false);
+          toast.error("Invalid data, please check your inputs.");
+      } else {
+          setUploadError(err.response?.data?.message || "Server error occurred while uploading.");
+      }
     }
   };
 
@@ -215,12 +226,25 @@ export default function ManageHeroPage() {
 
   return (
     <div className="max-w-5xl mx-auto pb-10 px-4">
+      <UploadOverlay 
+          isOpen={submitting || uploadSuccess} 
+          isError={!!uploadError} 
+          isSuccess={uploadSuccess}
+          errorMessage={uploadError || undefined}
+          onRetry={() => {
+              setUploadError(null);
+              setSubmitting(false);
+          }} 
+          onCloseSuccess={() => {
+              setUploadSuccess(false);
+          }}
+      />
       
       {/* MODAL CROPPER (16:9) */}
       <Dialog open={isCropping} onOpenChange={setIsCropping}>
             <DialogContent className="sm:max-w-2xl bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden">
                 <DialogHeader className="p-4 border-b border-zinc-800">
-                    <DialogTitle>Atur Posisi Gambar (16:9)</DialogTitle>
+                    <DialogTitle>Adjust Image Position (16:9)</DialogTitle>
                 </DialogHeader>
                 
                 {/* Area Crop */}
@@ -250,9 +274,9 @@ export default function ManageHeroPage() {
                         />
                     </div>
                     <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setIsCropping(false)}>Batal</Button>
+                        <Button variant="ghost" onClick={() => setIsCropping(false)}>Cancel</Button>
                         <Button onClick={handleSaveCrop} className="bg-white text-black hover:bg-zinc-200">
-                            <Check className="w-4 h-4 mr-2" /> Potong & Pakai
+                            <Check className="w-4 h-4 mr-2" /> Crop & Use
                         </Button>
                     </div>
                 </div>
@@ -267,7 +291,7 @@ export default function ManageHeroPage() {
              </div>
              <div>
                 <CardTitle className="text-2xl font-black uppercase tracking-tight">Hero Slider</CardTitle>
-                <CardDescription>Atur gambar utama (Slider) di halaman depan.</CardDescription>
+                <CardDescription>Set the main images (Slider) on the front page.</CardDescription>
              </div>
           </div>
         </CardHeader>
@@ -303,7 +327,7 @@ export default function ManageHeroPage() {
                                 <RotateCcw className="w-4 h-4" />
                             </label>
                             
-                            {/* Tombol Hapus */}
+                            {/* Delete Button */}
                             <Button 
                                 type="button" 
                                 variant="destructive" 
@@ -332,7 +356,7 @@ export default function ManageHeroPage() {
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       onChange={(e) => handleImageSelect(e, index)}
                       onClick={(e) => (e.currentTarget.value = "")}
-                      disabled={!!image.previewUrl} // Disable klik kalau udah ada gambar (harus pake tombol overlay)
+                      disabled={!!image.previewUrl} // Disable click if there is already an image (must use overlay button)
                     />
                     
                     {/* Hack biar input tetep bisa diklik walau ada gambar (lewat label overlay) */}
@@ -374,7 +398,7 @@ export default function ManageHeroPage() {
                         value={description} 
                         onChange={e => setDescription(e.target.value)} 
                         rows={3} 
-                        placeholder="Deskripsi singkat kampanye..."
+                        placeholder="Short campaign description..."
                         // Optional
                     />
                 </div>

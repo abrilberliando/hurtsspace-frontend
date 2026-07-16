@@ -18,15 +18,15 @@ export default function ThankYouPage() {
       </h1>
       
       <p className="text-muted-foreground max-w-md mb-10 text-lg">
-        Terima kasih sudah berbelanja di Hurtsspace, G! <br/>
-        Pesanan lo lagi diproses dan bakal segera dikirim.
+        Thank you for shopping at Hurtsspace, G! <br/>
+        Your order is being processed and will be shipped soon.
       </p>
 
       <div className="flex flex-col gap-4 w-full max-w-sm">
         <Button asChild size="lg" className="w-full font-bold">
             <Link href="/dashboard/orders">
                 <ShoppingBag className="w-4 h-4 mr-2" />
-                CEK PESANAN SAYA
+                CHECK MY ORDER
             </Link>
         </Button>
 
