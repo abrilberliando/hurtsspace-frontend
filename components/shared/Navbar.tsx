@@ -67,7 +67,7 @@ export default function Navbar() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, openAuthModal } = useAuth();
   const cart = useCart();
 
   // State
@@ -578,12 +578,12 @@ export default function Navbar() {
                 ) : (
                   <>
                     <Button
-                      asChild
                       variant="default"
                       size="sm"
                       className="font-bold rounded-full px-6"
+                      onClick={() => openAuthModal()}
                     >
-                      <Link href="/login">LOGIN</Link>
+                      LOGIN
                     </Button>
                   </>
                 )}
@@ -625,7 +625,13 @@ export default function Navbar() {
           <span className="text-[10px] font-bold mt-1">Cart</span>
         </Link>
         <Link
-          href={user ? "/dashboard" : "/login"}
+          href={user ? "/dashboard" : "#"}
+          onClick={(e) => {
+            if (!user) {
+              e.preventDefault();
+              openAuthModal();
+            }
+          }}
           className="flex flex-col items-center justify-center w-full h-full text-muted-foreground hover:text-foreground active:scale-95 transition-all"
         >
           <div className="w-8 h-8 flex items-center justify-center rounded-full bg-muted border border-border">
