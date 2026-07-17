@@ -1,4 +1,3 @@
-import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/shared/Navbar";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -11,8 +10,8 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import AuthCheck from "@/components/auth/AuthCheck";
 import MainLayoutWrapper from "@/components/shared/MainLayoutWrapper";
+import AuthModal from "@/components/auth/AuthModal";
 
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
     metadataBase: new URL("https://hurtsspace.com"), 
@@ -65,11 +64,12 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body className={`${inter.className} bg-background text-foreground antialiased`}>
+            <body className="font-sans bg-background text-foreground antialiased" suppressHydrationWarning>
                 {/* 1. SCRIPT MIDTRANS DINAMIS DI SINI */}
                 <MidtransScriptLoader /> 
 
                 <AuthCheck />
+                <AuthModal />
                 
                 <ThemeProvider
                     attribute="class"
