@@ -56,7 +56,7 @@ const formatRupiah = (amount: number) => {
 
 export default function CheckoutPage() {
     const router = useRouter();
-    const { user, login } = useAuth();
+    const { user, login, openAuthModal } = useAuth();
     const cart = useCart();
 
     const [checkoutData, setCheckoutData] = useState<AddressData | null>(null);
@@ -82,12 +82,12 @@ export default function CheckoutPage() {
     useEffect(() => {
         if (!isChecking) {
             if (!user) {
-                router.push("/login");
+                openAuthModal();
             } else if (cart.items.length === 0) {
                 router.push("/cart");
             }
         }
-    }, [isChecking, user, cart.items, router]);
+    }, [isChecking, user, cart.items, router, openAuthModal]);
 
     useEffect(() => {
         const fetchVouchers = async () => {

@@ -7,11 +7,12 @@ import { useCart } from "@/lib/useCart";
 import { useAuth } from "@/lib/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Heart, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCartAnimation } from "@/lib/cartAnimationContext";
 import Suggested from "@/components/shared/Suggested";
 import Image from "next/image";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // --- Tipe Data ---
 interface Variant {
@@ -167,12 +168,13 @@ const ProductInfo = memo(function ProductInfo({
   product: ProductDetail;
 }) {
   const cart = useCart();
-  const { user } = useAuth();
+  const { user, openAuthModal } = useAuth();
   const { triggerFlyAnimation } = useCartAnimation();
 
   // Size state automatically null when product changes (because of key in parent)
   const [selectedSize, setSelectedSize] = useState<Variant | null>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isCartModalOpen, setIsCartModalOpen] = useState(false);
 
   // Cek Wishlist (Client Side only when user exists)
   useEffect(() => {
@@ -206,18 +208,16 @@ const ProductInfo = memo(function ProductInfo({
     const imgUrl = product.images[0]?.image_url || "";
     triggerFlyAnimation(e.currentTarget, imgUrl); 
 
-    toast.success("Added to Cart!", {
-      description: `${product.name} (Size: ${selectedSize.size})`,
-      action: {
-        label: "View Cart",
-        onClick: () => (window.location.href = "/cart"),
-      },
-    });
+    setIsCartModalOpen(true);
   }, [cart, product, selectedSize, triggerFlyAnimation]);
 
   // Logic Wishlist
   const handleToggleWishlist = useCallback(async () => {
-    if (!user) return toast.error("Login first to save to wishlist!");
+    if (!user) {
+        toast.error("Login first to save to wishlist!");
+        openAuthModal();
+        return;
+    }
 
     // Optimistic Update
     setIsWishlisted((prev) => !prev);
@@ -319,6 +319,44 @@ const ProductInfo = memo(function ProductInfo({
           />
         </Button>
       </div>
+
+      {/* SUCCESS MODAL */}
+      <Dialog open={isCartModalOpen} onOpenChange={setIsCartModalOpen}>
+        <DialogContent className="sm:max-w-[425px] border-none bg-background rounded-none shadow-2xl p-6">
+          <DialogHeader className="mb-4">
+            <div className="mx-auto w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-6 h-6 text-green-500" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase text-center">Added to Cart!</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex items-center gap-4 mb-6 p-3 border border-border bg-muted/30">
+            <div className="relative w-16 h-16 bg-muted">
+              <Image src={product.images[0]?.image_url || ""} alt={product.name} fill className="object-cover" />
+            </div>
+            <div>
+              <p className="font-bold uppercase text-sm">{product.name}</p>
+              <p className="text-muted-foreground text-xs">Size: {selectedSize?.size}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button 
+              variant="outline" 
+              className="rounded-none border-2 font-bold uppercase text-xs h-12"
+              onClick={() => setIsCartModalOpen(false)}
+            >
+              Continue Shopping
+            </Button>
+            <Button 
+              className="rounded-none font-bold uppercase text-xs h-12"
+              onClick={() => window.location.href = "/cart"}
+            >
+              Go to Cart
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

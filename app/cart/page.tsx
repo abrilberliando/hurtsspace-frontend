@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import api from "@/lib/axios";
+import { useAuth } from "@/lib/useAuth";
 import { useCart } from "@/lib/useCart";
 import { Button } from "@/components/ui/button";
 import { Trash2, Minus, Plus, ArrowRight, RefreshCw, Loader2 } from "lucide-react";
@@ -19,6 +22,8 @@ type ProductValidation = {
 
 export default function CartPage() {
   const cart = useCart();
+  const router = useRouter();
+  const { user, openAuthModal } = useAuth();
   const [isSyncing, setIsSyncing] = useState(true);
 
   // Format Rupiah (Pake useMemo biar ga recalculate mulu kalo ga perlu, hemat CPU dikit)
@@ -45,17 +50,8 @@ export default function CartPage() {
         // We send the list of item IDs in the cart to the backend
         const itemIds = cart.items.map((item) => item.id);
 
-        // Ganti URL ini sesuai route API backend lo (Laravel/Node)
-        // Method: POST, Body: { ids: string[] }
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/validate-cart`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: itemIds }),
-        });
-
-        if (!response.ok) throw new Error("Failed to synchronize data");
-
-        const latestData: ProductValidation[] = await response.json();
+        const response = await api.post('/products/validate-cart', { ids: itemIds });
+        const latestData: ProductValidation[] = response.data;
 
         // Cek perbedaan data local vs server
         let hasChanges = false;
@@ -108,6 +104,16 @@ export default function CartPage() {
   const totalPrice = useMemo(() => {
     return cart.items.reduce((total, item) => total + item.price * item.quantity, 0);
   }, [cart.items]);
+
+  const handleCheckoutClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.info("Please login to proceed to checkout.");
+      openAuthModal();
+      return;
+    }
+    router.push("/checkout");
+  };
 
   // State Kosong
   if (cart.items.length === 0 && !isSyncing) {
@@ -245,11 +251,10 @@ export default function CartPage() {
               </div>
 
               <Button 
-                className="w-full font-bold h-12 text-base rounded-lg transition-all active:scale-[0.98]" 
-                asChild
+                className="w-full font-bold h-12 text-base rounded-none transition-all active:scale-[0.98]" 
                 disabled={isSyncing || cart.items.length === 0}
+                onClick={handleCheckoutClick}
               >
-                <Link href="/checkout">
                   {isSyncing ? (
                     <>
                       <Loader2 className="mr-2 w-4 h-4 animate-spin" /> VERIFYING...
@@ -259,7 +264,6 @@ export default function CartPage() {
                       CHECKOUT NOW <ArrowRight className="ml-2 w-4 h-4" />
                     </>
                   )}
-                </Link>
               </Button>
 
               <p className="text-[10px] text-muted-foreground mt-4 text-center leading-tight">

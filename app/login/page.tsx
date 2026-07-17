@@ -106,7 +106,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-10">
-      <Card className="w-full max-w-md border-border shadow-xl">
+      <Card className="w-full max-w-md border-none shadow-none bg-transparent">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-3xl font-black uppercase tracking-tighter">Welcome Back</CardTitle>
           <CardDescription>
@@ -117,7 +117,7 @@ export default function LoginPage() {
           
           <Button 
             variant="outline" 
-            className="w-full h-12 font-bold mb-6 flex items-center justify-center gap-2 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+            className="w-full h-12 font-bold mb-6 flex items-center justify-center gap-2 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all rounded-none"
             onClick={handleGoogleLogin}
             disabled={loading || googleLoading}
             type="button"
@@ -149,13 +149,13 @@ export default function LoginPage() {
           </div>
 
           {needsVerification && (
-              <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 p-3 rounded-md mb-4 text-sm flex flex-col gap-2 animate-in fade-in zoom-in duration-300">
+              <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 p-3 rounded-none mb-4 text-sm flex flex-col gap-2 animate-in fade-in zoom-in duration-300">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
                     <span className="font-bold">Account not active!</span>
                   </div>
                   <p className="text-xs text-muted-foreground">Check your email or click the button below to resend.</p>
-                  <Button variant="secondary" size="sm" onClick={handleResendEmail} className="w-full h-8 text-xs font-bold mt-1 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-colors">
+                  <Button variant="secondary" size="sm" onClick={handleResendEmail} className="w-full h-8 text-xs font-bold mt-1 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-colors rounded-none">
                      Resend Verification Link
                   </Button>
               </div>
@@ -169,7 +169,7 @@ export default function LoginPage() {
                 <Input 
                     id="email" name="email" type="email" 
                     placeholder="name@example.com" 
-                    className="pl-10 h-11" 
+                    className="pl-10 h-11 rounded-none border-2 focus-visible:ring-0 focus-visible:border-foreground" 
                     required 
                     value={email} onChange={(e) => setEmail(e.target.value)}
                 />
@@ -189,7 +189,7 @@ export default function LoginPage() {
                 <Input 
                     id="password" name="password" type={showPassword ? "text" : "password"} 
                     placeholder="••••••••••••" 
-                    className="pl-10 pr-10 h-11" 
+                    className="pl-10 pr-10 h-11 rounded-none border-2 focus-visible:ring-0 focus-visible:border-foreground" 
                     required 
                     value={password} onChange={(e) => setPassword(e.target.value)}
                 />
@@ -203,7 +203,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full font-bold uppercase tracking-widest mt-6 h-12" disabled={loading || googleLoading}>
+            <Button type="submit" className="w-full font-black uppercase tracking-widest mt-6 h-12 rounded-none" disabled={loading || googleLoading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "LOGIN"}
             </Button>
           </form>
