@@ -418,7 +418,7 @@ export default function ManageHeroPage() {
                     <Input 
                         value={buttonLink} 
                         onChange={e => setButtonLink(e.target.value)} 
-                        placeholder="/shop?category=new"
+                        placeholder="/shopall?category=new"
                         // Optional
                     />
                 </div>

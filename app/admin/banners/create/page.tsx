@@ -33,7 +33,7 @@ export default function CreateBannerPage() {
     // Form State
     const [title, setTitle] = useState("");
     const [position, setPosition] = useState("1");
-    const [linkUrl, setLinkUrl] = useState("/shop");
+    const [linkUrl, setLinkUrl] = useState("/shopall");
     const [imageLeft, setImageLeft] = useState<File | null>(null);
     const [imageRight, setImageRight] = useState<File | null>(null);
 
@@ -145,7 +145,7 @@ export default function CreateBannerPage() {
                         <div className="space-y-2">
                             <Label>Target Link URL</Label>
                             <Input 
-                                placeholder="/shop?collection=new" 
+                                placeholder="/shopall?collection=new" 
                                 value={linkUrl} 
                                 onChange={e => setLinkUrl(e.target.value)} 
                                 required 

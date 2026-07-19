@@ -54,7 +54,7 @@ export default function BottomNav() {
     }
   ], [pathname, cartCount, user]);
 
-  if (pathname === '/links' || pathname.startsWith('/admin')) return null;
+  if (pathname === '/shop' || pathname.startsWith('/admin')) return null;
 
   return (
     // Add inline style padding-bottom to support iOS Safe Area 

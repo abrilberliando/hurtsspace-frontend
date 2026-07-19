@@ -232,7 +232,7 @@ export default function AdminLinktreePage() {
                     <p className="text-muted-foreground">Manage your custom /links page</p>
                 </div>
                 <Button asChild variant="outline">
-                    <a href="/links" target="_blank" rel="noopener noreferrer">
+                    <a href="/shop" target="_blank" rel="noopener noreferrer">
                         <LinkIcon className="w-4 h-4 mr-2" /> View Live Page
                     </a>
                 </Button>
