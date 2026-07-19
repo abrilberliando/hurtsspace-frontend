@@ -127,7 +127,7 @@ export default function WishlistPage() {
             <h2 className="text-xl font-bold mb-2">Wishlist Empty</h2>
             <p className="text-muted-foreground mb-6">No items on your wishlist yet.</p>
             <Button asChild variant="outline">
-                <Link href="/shop">FIND ITEMS</Link>
+                <Link href="/shopall">FIND ITEMS</Link>
             </Button>
           </div>
         )}

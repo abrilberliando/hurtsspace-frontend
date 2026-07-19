@@ -296,7 +296,7 @@ function NewArrivalsContent() {
             <p className="text-muted-foreground mb-6">
               Check back later for fresh gear.
             </p>
-            <Button variant="outline" onClick={() => router.push("/shop")}>
+            <Button variant="outline" onClick={() => router.push("/shopall")}>
               Back to Shop
             </Button>
           </div>

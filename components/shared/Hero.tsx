@@ -111,7 +111,7 @@ export default function Hero() {
     subtitle: data?.subtitle || "",
     description: data?.description,
     button_text: data?.button_text || "SHOP NOW",
-    button_link: data?.button_link || "/shop",
+    button_link: data?.button_link || "/shopall",
   };
 
   // Prepare images once

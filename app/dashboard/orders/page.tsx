@@ -159,7 +159,7 @@ export default function OrderHistoryPage() {
                 <h3 className="text-lg font-bold">No orders yet</h3>
                 <p className="text-muted-foreground text-sm mb-6">You haven't checked out any items.</p>
                 <Button asChild>
-                    <a href="/shop">Start Shopping</a>
+                    <a href="/shopall">Start Shopping</a>
                 </Button>
             </div>
         ) : (

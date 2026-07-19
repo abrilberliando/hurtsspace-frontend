@@ -20,7 +20,7 @@ const Footer = memo(function Footer() {
   const currentYear = new Date().getFullYear();
   const pathname = usePathname();
 
-  if (pathname === '/links' || pathname.startsWith('/admin')) return null;
+  if (pathname === '/shop' || pathname.startsWith('/admin')) return null;
 
   return (
     <footer className="bg-black text-white pt-20 pb-10 border-t border-zinc-900">
@@ -58,7 +58,7 @@ const Footer = memo(function Footer() {
                   <Link href="/login" className="hover:text-white transition-colors">Login / Create Account</Link>
                 </li>
                 <li>
-                  <Link href="/shop" className="hover:text-white transition-colors">Shop All</Link>
+                  <Link href="/shopall" className="hover:text-white transition-colors">Shop All</Link>
                 </li>
                 <li>
                   <Link href="/lookbook" className="hover:text-white transition-colors">Lookbook</Link>
