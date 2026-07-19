@@ -154,7 +154,7 @@ export default function Navbar() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/shop?search=${encodeURIComponent(searchQuery)}`);
+      router.push(`/shopall?search=${encodeURIComponent(searchQuery)}`);
       setIsSearchOpen(false);
     }
   };
@@ -164,7 +164,7 @@ export default function Navbar() {
     return cart.items.reduce((total, item) => total + item.quantity, 0);
   }, [cart.items]);
 
-  if (pathname === '/links' || pathname.startsWith('/admin')) return null;
+  if (pathname === '/shop' || pathname.startsWith('/admin')) return null;
 
   return (
     <>
@@ -224,7 +224,7 @@ export default function Navbar() {
                         New Arrivals
                       </Link>
                       <Link
-                        href="/shop"
+                        href="/shopall"
                         className="hover:text-primary transition flex items-center gap-3"
                         onClick={() => setIsSheetOpen(false)}
                       >
@@ -238,7 +238,7 @@ export default function Navbar() {
                         </span>
                         <div className="pl-3 flex flex-col gap-3 border-l border-border/50">
                           <Link
-                            href="/shop"
+                            href="/shopall"
                             className="hover:text-primary transition text-xs font-medium normal-case"
                             onClick={() => setIsSheetOpen(false)}
                           >
@@ -247,7 +247,7 @@ export default function Navbar() {
                           {categories.map((cat) => (
                             <Link
                               key={cat.id}
-                              href={`/shop?category_id=${cat.id}`}
+                              href={`/shopall?category_id=${cat.id}`}
                               className="hover:text-primary transition text-xs font-medium normal-case"
                               onClick={() => setIsSheetOpen(false)}
                             >
@@ -318,7 +318,7 @@ export default function Navbar() {
               >
                 NEW ARRIVALS
               </Link>
-              <Link href="/shop" className="hover:text-foreground transition">
+              <Link href="/shopall" className="hover:text-foreground transition">
                 SHOP
               </Link>
 
@@ -335,7 +335,7 @@ export default function Navbar() {
                   {categories.map((cat) => (
                     <DropdownMenuItem key={cat.id} asChild>
                       <Link
-                        href={`/shop?category_id=${cat.id}`}
+                        href={`/shopall?category_id=${cat.id}`}
                         className="cursor-pointer w-full"
                       >
                         {cat.name}
@@ -604,7 +604,7 @@ export default function Navbar() {
           <span className="text-[10px] font-bold mt-1">Home</span>
         </Link>
         <Link
-          href="/shop"
+          href="/shopall"
           className="flex flex-col items-center justify-center w-full h-full text-muted-foreground hover:text-foreground active:scale-95 transition-all"
         >
           <Grid className="w-5 h-5" />

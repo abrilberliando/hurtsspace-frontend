@@ -122,7 +122,7 @@ export default function CartPage() {
         <h1 className="text-4xl font-black mb-4 text-muted-foreground/50">YOUR CART IS EMPTY</h1>
         <p className="text-muted-foreground mb-6">Just empty space, go shopping mate!</p>
         <Button asChild size="lg" className="font-bold rounded-full">
-          <Link href="/shop">SHOP NOW</Link>
+          <Link href="/shopall">SHOP NOW</Link>
         </Button>
       </div>
     );

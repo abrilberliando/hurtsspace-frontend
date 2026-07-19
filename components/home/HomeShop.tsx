@@ -94,7 +94,7 @@ export default function HomeShop() {
               size="lg"
               className="px-12 h-14 border-foreground text-foreground font-bold transition-all tracking-widest text-sm rounded-none w-full md:w-auto hover:bg-foreground hover:text-background"
             >
-              <Link href="/shop">VIEW ALL PRODUCTS</Link>
+              <Link href="/shopall">VIEW ALL PRODUCTS</Link>
             </Button>
           </div>
         </>

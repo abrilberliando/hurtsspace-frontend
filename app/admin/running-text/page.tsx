@@ -130,7 +130,7 @@ export default function AdminRunningTextPage() {
                                     <Input 
                                         value={link} 
                                         onChange={e => setLink(e.target.value)} 
-                                        placeholder="/shop?promo=sale" 
+                                        placeholder="/shopall?promo=sale" 
                                         className="pl-9"
                                     />
                                 </div>
