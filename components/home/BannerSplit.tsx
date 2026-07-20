@@ -66,11 +66,7 @@ export default function BannerSplit({ position, fallback }: BannerSplitProps) {
   }, [position]);
 
   if (loading) {
-    return (
-      <div className="h-[30vh] md:h-[90vh] w-full bg-background flex items-center justify-center">
-        <Skeleton className="h-full w-full bg-muted animate-pulse" />
-      </div>
-    );
+    return null;
   }
 
   if (!banner || isError) {
