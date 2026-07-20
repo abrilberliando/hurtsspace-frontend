@@ -91,27 +91,15 @@ export default function Hero() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="relative w-full h-[35vh] md:h-[90vh] bg-black flex items-center justify-center">
-        <Skeleton className="absolute inset-0 w-full h-full bg-zinc-900 animate-pulse" />
-        <div className="relative z-10 flex flex-col items-center gap-3 w-full max-w-2xl px-4">
-          <Skeleton className="h-3 w-24 md:w-32 bg-zinc-800" />
-          <Skeleton className="h-8 md:h-16 w-3/4 bg-zinc-800" />
-          <Skeleton className="h-3 md:h-4 w-2/3 bg-zinc-800" />
-          <div className="flex gap-2 mt-4">
-            <Skeleton className="h-10 w-28 bg-zinc-800" />
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const content = {
-    title: data?.title || "HURTSSPACE",
+    title: data?.title || "",
     subtitle: data?.subtitle || "",
-    description: data?.description,
-    button_text: data?.button_text || "SHOP NOW",
-    button_link: data?.button_link || "/shopall",
+    description: data?.description || "",
+    button_text: data?.button_text || "",
+    button_link: data?.button_link || "",
   };
 
   // Prepare images once
@@ -133,14 +121,18 @@ export default function Hero() {
       <div className="relative z-10 text-center px-2 md:px-4 max-w-6xl mx-auto flex flex-col items-center justify-center h-full">
         
         {/* Subtitle */}
-        <p className="text-zinc-300 tracking-[0.2em] md:tracking-[0.3em] text-[10px] md:text-base mb-2 md:mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 uppercase font-medium">
-          {content.subtitle}
-        </p>
+        {content.subtitle && (
+          <p className="text-zinc-300 tracking-[0.2em] md:tracking-[0.3em] text-[10px] md:text-base mb-2 md:mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 uppercase font-medium">
+            {content.subtitle}
+          </p>
+        )}
 
         {/* Judul Besar */}
-        <h1 className="text-3xl md:text-8xl font-black text-white tracking-tighter mb-3 md:mb-6 leading-none md:leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 uppercase drop-shadow-2xl px-2">
-          {content.title}
-        </h1>
+        {content.title && (
+          <h1 className="text-3xl md:text-8xl font-black text-white tracking-tighter mb-3 md:mb-6 leading-none md:leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 uppercase drop-shadow-2xl px-2">
+            {content.title}
+          </h1>
+        )}
 
         {/* Deskripsi */}
         {content.description && (
@@ -151,15 +143,17 @@ export default function Hero() {
 
         {/* Button Container */}
         <div className="flex flex-row gap-2 md:gap-4 justify-center items-center w-auto animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200">
-          <Button
-            asChild
-            size="lg"
-            className="bg-white text-black hover:bg-zinc-200 font-black px-4 py-3 md:px-10 md:py-7 text-xs md:text-xl rounded-none transition-transform hover:scale-105 tracking-wider h-auto"
-          >
-            <Link href={content.button_link}>
-              {content.button_text}
-            </Link>
-          </Button>
+          {content.button_text && content.button_link && (
+            <Button
+              asChild
+              size="lg"
+              className="bg-white text-black hover:bg-zinc-200 font-black px-4 py-3 md:px-10 md:py-7 text-xs md:text-xl rounded-none transition-transform hover:scale-105 tracking-wider h-auto"
+            >
+              <Link href={content.button_link}>
+                {content.button_text}
+              </Link>
+            </Button>
+          )}
 
           <Button
             asChild

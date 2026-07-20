@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
+import { AxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -120,10 +121,23 @@ export default function AdminLinktreePage() {
             setBgFile(null);
             setUploadSuccess(true); setSaving(false);
         } catch (error) {
-            const err = error as any;
-            setUploadError(err.response?.data?.message || "Failed to save settings");
-        } finally {
-            setSaving(false);
+            const err = error as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
+            if (err.response?.status === 422) {
+                const errorData = err.response.data.errors;
+                let errorMessage = "Invalid data, please check your input.";
+                if (errorData) {
+                    const firstErrorKey = Object.keys(errorData)[0];
+                    const firstErrorMessage = errorData[firstErrorKey][0];
+                    if (firstErrorMessage.toLowerCase().includes("kilobytes") || firstErrorMessage.toLowerCase().includes("greater than")) {
+                        errorMessage = "Gagal upload! Ukuran file media terlalu besar.";
+                    } else {
+                        errorMessage = `Validasi gagal: ${firstErrorMessage}`;
+                    }
+                }
+                setUploadError(errorMessage);
+            } else {
+                setUploadError(err.response?.data?.message || "Failed to save settings");
+            }
         }
     };
 
@@ -153,10 +167,23 @@ export default function AdminLinktreePage() {
             fetchData();
             setUploadSuccess(true); setSaving(false);
         } catch (error) {
-            const err = error as any;
-            setUploadError(err.response?.data?.message || "Failed to add link");
-        } finally {
-            setSaving(false);
+            const err = error as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
+            if (err.response?.status === 422) {
+                const errorData = err.response.data.errors;
+                let errorMessage = "Invalid data, please check your input.";
+                if (errorData) {
+                    const firstErrorKey = Object.keys(errorData)[0];
+                    const firstErrorMessage = errorData[firstErrorKey][0];
+                    if (firstErrorMessage.toLowerCase().includes("kilobytes") || firstErrorMessage.toLowerCase().includes("greater than")) {
+                        errorMessage = "Gagal upload! Ukuran file media terlalu besar.";
+                    } else {
+                        errorMessage = `Validasi gagal: ${firstErrorMessage}`;
+                    }
+                }
+                setUploadError(errorMessage);
+            } else {
+                setUploadError(err.response?.data?.message || "Failed to add link");
+            }
         }
     };
 

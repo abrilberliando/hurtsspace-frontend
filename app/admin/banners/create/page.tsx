@@ -77,10 +77,20 @@ export default function CreateBannerPage() {
             toast.success("Banner published successfully!");
             setUploadSuccess(true); setLoading(false);
         } catch (error) {
-            const err = error as AxiosError<{ message: string }>;
+            const err = error as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
             if (err.response?.status === 422) {
-                setLoading(false);
-                toast.error("Invalid data, please check your inputs.");
+                const errorData = err.response.data.errors;
+                let errorMessage = "Invalid data, please check your inputs.";
+                if (errorData) {
+                    const firstErrorKey = Object.keys(errorData)[0];
+                    const firstErrorMessage = errorData[firstErrorKey][0];
+                    if (firstErrorMessage.toLowerCase().includes("kilobytes") || firstErrorMessage.toLowerCase().includes("greater than")) {
+                        errorMessage = "Gagal upload! Ukuran file media terlalu besar.";
+                    } else {
+                        errorMessage = `Validasi gagal: ${firstErrorMessage}`;
+                    }
+                }
+                setUploadError(errorMessage);
             } else {
                 setUploadError(err.response?.data?.message || "Server error occurred while uploading.");
             }

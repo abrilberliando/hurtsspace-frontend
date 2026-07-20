@@ -55,8 +55,8 @@ export default function ManageVideoPage() {
     if (!videoFile) return toast.error("Please select a video file!");
     
     // Validasi Ukuran (2MB sesuai request lo, tapi biasanya video butuh gedean dikit sih)
-    if (videoFile.size > 7 * 1024 * 1024) {
-        return toast.error("File size too large! Maximum 7MB.");
+    if (videoFile.size > 15 * 1024 * 1024) {
+        return toast.error("File size too large! Maximum 15MB.");
     }
 
     setUploading(true);
@@ -86,10 +86,20 @@ export default function ManageVideoPage() {
         fetchVideos();
         setUploadSuccess(true); setUploading(false);
     } catch (error: unknown) {
-        const err = error as AxiosError<{ message: string }>;
+        const err = error as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
         if (err.response?.status === 422) {
-            setUploading(false);
-            toast.error("Invalid data, please check your inputs.");
+            const errorData = err.response.data.errors;
+            let errorMessage = "Invalid data, please check your inputs.";
+            if (errorData) {
+                const firstErrorKey = Object.keys(errorData)[0];
+                const firstErrorMessage = errorData[firstErrorKey][0];
+                if (firstErrorMessage.toLowerCase().includes("kilobytes") || firstErrorMessage.toLowerCase().includes("greater than")) {
+                    errorMessage = "Gagal upload! Ukuran file media terlalu besar.";
+                } else {
+                    errorMessage = `Validasi gagal: ${firstErrorMessage}`;
+                }
+            }
+            setUploadError(errorMessage);
         } else {
             setUploadError(err.response?.data?.message || "Server error occurred.");
         }
@@ -145,7 +155,7 @@ export default function ManageVideoPage() {
                         </div>
                         <h3 className="text-xl font-bold mb-2">Upload Zone</h3>
                         <p className="text-muted-foreground mb-6">
-                            Supported formats are MP4 or MOV. Please ensure the size is under 7MB.
+                            Supported formats are MP4 or MOV. Please ensure the size is under 15MB.
                         </p>
                         <div className="text-sm text-muted-foreground space-y-2">
                             <div className="flex items-center gap-2">✓ Aspect Ratio 16:9 Recommended</div>

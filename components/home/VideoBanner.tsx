@@ -35,11 +35,7 @@ export default function VideoBanner() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="w-full h-[50vh] md:h-[80vh] bg-black flex items-center justify-center">
-         <Skeleton className="w-full h-full bg-zinc-900 animate-pulse" />
-      </div>
-    );
+    return null;
   }
 
   // If no active video data, return null (component does not appear)
