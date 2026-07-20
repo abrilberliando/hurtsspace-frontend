@@ -52,9 +52,20 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
 
     if (!ctx) throw new Error("No 2d context");
 
-    // Set canvas size sesuai hasil crop
-    canvas.width = pixelCrop.width;
-    canvas.height = pixelCrop.height;
+    // Set maximum dimensions to prevent huge files (max width 1920px)
+    const MAX_WIDTH = 1920;
+    let width = pixelCrop.width;
+    let height = pixelCrop.height;
+
+    if (width > MAX_WIDTH) {
+        const ratio = MAX_WIDTH / width;
+        width = MAX_WIDTH;
+        height = height * ratio;
+    }
+
+    // Set canvas size sesuai hasil crop (dan max width)
+    canvas.width = width;
+    canvas.height = height;
 
     // Draw the cropped image to canvas
     ctx.drawImage(
@@ -65,15 +76,15 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<Blob> {
         pixelCrop.height,
         0,
         0,
-        pixelCrop.width,
-        pixelCrop.height
+        width,
+        height
     );
 
     return new Promise((resolve, reject) => {
         canvas.toBlob((blob) => {
             if (blob) resolve(blob);
             else reject(new Error("Canvas is empty"));
-        }, "image/jpeg", 0.95); // High quality JPG
+        }, "image/jpeg", 0.85); // Optimized quality for web
     });
 }
 
@@ -196,10 +207,20 @@ export default function CreateLookbookPage() {
             toast.success("Lookbook Created!");
             setUploadSuccess(true); setLoading(false);
         } catch (error) {
-            const err = error as AxiosError<{ message: string }>;
+            const err = error as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
             if (err.response?.status === 422) {
-                setLoading(false);
-                toast.error("Invalid data, please check your input.");
+                const errorData = err.response.data.errors;
+                let errorMessage = "Invalid data, please check your input.";
+                if (errorData) {
+                    const firstErrorKey = Object.keys(errorData)[0];
+                    const firstErrorMessage = errorData[firstErrorKey][0];
+                    if (firstErrorMessage.toLowerCase().includes("kilobytes") || firstErrorMessage.toLowerCase().includes("greater than")) {
+                        errorMessage = "Gagal upload! Ukuran file media terlalu besar.";
+                    } else {
+                        errorMessage = `Validasi gagal: ${firstErrorMessage}`;
+                    }
+                }
+                setUploadError(errorMessage);
             } else {
                 setUploadError(err.response?.data?.message || "Terjadi kesalahan server saat mengunggah.");
             }

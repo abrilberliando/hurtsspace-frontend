@@ -35,15 +35,18 @@ export default function CreateProductPage() {
     } catch (error) {
         const err = error as AxiosError<{ message: string, errors?: Record<string, string[]> }>;
         if (err.response?.status === 422) {
-            setLoading(false); // Only stop loading if validation error so they can fix it normally
             const errorData = err.response.data.errors;
+            let errorMessage = "Invalid data.";
             if (errorData) {
                 const firstErrorKey = Object.keys(errorData)[0];
                 const firstErrorMessage = errorData[firstErrorKey][0];
-                toast.error(`Failed: ${firstErrorMessage}`);
-            } else {
-                toast.error("Invalid data.");
+                if (firstErrorMessage.toLowerCase().includes("kilobytes") || firstErrorMessage.toLowerCase().includes("greater than")) {
+                    errorMessage = "Gagal upload! Ukuran file media terlalu besar.";
+                } else {
+                    errorMessage = `Validasi gagal: ${firstErrorMessage}`;
+                }
             }
+            setUploadError(errorMessage);
         } else {
             // Server error or upload error -> Show Overlay
             setUploadError(err.response?.data?.message || "Server error occurred while uploading.");
